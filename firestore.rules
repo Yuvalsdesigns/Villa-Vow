@@ -3,7 +3,6 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function isWeddingUser() {
       return request.auth != null
-        && request.auth.token.email_verified == true
         && request.auth.token.email in [
           'yuvalsh99@gmail.com',
           'yohan-levy@hotmail.fr'
