@@ -1,7 +1,8 @@
 /* Villa & Vow bootstrap and compatibility fixes. */
 
-/* Load shared Firebase sync before the planner code. */
+/* Load shared Firebase sync and gallery enhancements before the planner code. */
 document.write('<script src="firebase-sync.js"><\/script>');
+document.write('<script src="js/style-gallery-enhancements.js"><\/script>');
 
 /* app-2 renders venue filters before app-3 originally defines esc().
    Define it up front so venue initialization cannot abort during page load. */
