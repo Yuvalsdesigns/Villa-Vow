@@ -1,14 +1,26 @@
 /* Villa & Vow bootstrap and compatibility fixes. */
 
-/* Load shared Firebase sync and gallery enhancements before the planner code. */
+/* Load shared Firebase sync, gallery enhancements and phone-first app shell. */
 document.write('<script src="firebase-sync.js"><\/script>');
 document.write('<script src="js/style-gallery-enhancements.js"><\/script>');
+document.write('<link rel="stylesheet" href="mobile-app.css">');
+document.write('<script src="js/mobile-app.js"><\/script>');
+
+/* Ensure phones render at their real device width, including safe areas. */
+(function(){
+  var meta=document.querySelector('meta[name="viewport"]');
+  if(!meta){meta=document.createElement('meta');meta.name='viewport';document.head.appendChild(meta);}
+  meta.content='width=device-width, initial-scale=1, viewport-fit=cover';
+  var theme=document.querySelector('meta[name="theme-color"]');
+  if(!theme){theme=document.createElement('meta');theme.name='theme-color';document.head.appendChild(theme);}
+  theme.content='#fbf3ec';
+})();
 
 /* app-2 renders venue filters before app-3 originally defines esc().
    Define it up front so venue initialization cannot abort during page load. */
 window.esc = window.esc || function(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c];
   });
 };
 
@@ -30,18 +42,13 @@ window.esc = window.esc || function(s){
   document.head.appendChild(style);
 })();
 
-/* After all planner scripts load, make checklist updates optimistic so the
-   Start Here counters change immediately instead of waiting for Firestore's
-   snapshot round trip. Also re-run venue initialization defensively. */
 window.addEventListener('load', function(){
   if(typeof window.renderVenueFilters === 'function') window.renderVenueFilters();
   if(typeof window.renderVenues === 'function') window.renderVenues();
 
   ['venueSearch','venueRegionFilter','venueTagFilter'].forEach(function(id){
     var el=document.getElementById(id);
-    if(el && typeof window.renderVenues === 'function'){
-      el.addEventListener(id==='venueSearch' ? 'input' : 'change', window.renderVenues);
-    }
+    if(el && typeof window.renderVenues === 'function') el.addEventListener(id==='venueSearch' ? 'input' : 'change', window.renderVenues);
   });
 
   if(typeof window.toggleItem === 'function'){
@@ -59,9 +66,7 @@ window.addEventListener('load', function(){
           if(coll==='considerations' && typeof window.renderConsiderations==='function') window.renderConsiderations();
           if(typeof window.renderStart==='function') window.renderStart();
         });
-      }else{
-        originalToggle(coll,it);
-      }
+      }else originalToggle(coll,it);
     };
   }
 });
