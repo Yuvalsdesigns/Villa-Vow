@@ -2,11 +2,11 @@
 
 /* Load shared features with cache-busting so GitHub Pages/browser caches do not
    leave an old planner shell running after a deploy. */
-document.write('<script src="firebase-sync.js?v=20260910-3"><\/script>');
-document.write('<script src="js/style-gallery-enhancements.js?v=20260910-3"><\/script>');
-document.write('<script src="js/category-custom-styles.js?v=20260910-3"><\/script>');
-document.write('<link rel="stylesheet" href="mobile-app.css?v=20260910-3">');
-document.write('<script src="js/mobile-app.js?v=20260910-3"><\/script>');
+document.write('<script src="firebase-sync.js?v=20260910-4"><\/script>');
+document.write('<script src="js/style-gallery-enhancements.js?v=20260910-4"><\/script>');
+document.write('<script src="js/category-custom-styles.js?v=20260910-4"><\/script>');
+document.write('<link rel="stylesheet" href="mobile-app.css?v=20260910-4">');
+document.write('<script src="js/mobile-app.js?v=20260910-4"><\/script>');
 
 (function(){
   var meta=document.querySelector('meta[name="viewport"]');
@@ -35,7 +35,7 @@ window.esc = window.esc || function(s){
 
 function vvRecoverApp2(){
   if(typeof window.renderStyleSections==='function' && typeof window.renderVenues==='function') return Promise.resolve(true);
-  return fetch('app-2.js?v=20260910-3',{cache:'no-store'})
+  return fetch('app-2.js?v=20260910-4',{cache:'no-store'})
     .then(function(r){if(!r.ok)throw new Error('app-2 fetch '+r.status);return r.text();})
     .then(function(src){
       var repaired=src.replace(/\]\},\s*,\s*\{title:'Second Look \/ Party Outfit'/, "]},\n  {title:'Second Look / Party Outfit'");
