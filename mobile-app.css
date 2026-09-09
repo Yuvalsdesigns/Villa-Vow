@@ -49,13 +49,19 @@
   .budget-table td{border:0 !important;padding:6px 0 !important;position:relative;}
   .budget-table td:nth-child(1){font-size:10.5px !important;text-transform:uppercase;letter-spacing:.06em;color:var(--brass);font-family:'IBM Plex Mono',monospace;}
   .budget-table td:nth-child(2){font-size:15px !important;font-weight:700;padding-bottom:10px !important;}
-  .budget-table td:nth-child(3)::before{content:'Estimate';}
-  .budget-table td:nth-child(4)::before{content:'Actual';}
-  .budget-table td:nth-child(5)::before{content:'Payment';}
-  .budget-table td:nth-child(6)::before{content:'Notes';}
-  .budget-table td:nth-child(3),.budget-table td:nth-child(4),.budget-table td:nth-child(5),.budget-table td:nth-child(6){display:grid !important;grid-template-columns:82px 1fr !important;align-items:center;gap:8px;}
-  .budget-table td:nth-child(3)::before,.budget-table td:nth-child(4)::before,.budget-table td:nth-child(5)::before,.budget-table td:nth-child(6)::before{font-size:11px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;}
-  .budget-table .num-cell input{width:calc(100% - 18px) !important;min-height:38px;}
+
+  /* The desktop euro fix uses ::before with !important, so the mobile labels
+     also need !important. Estimate/Actual are flex rows so the label, euro
+     symbol and input stay visually distinct on small screens. */
+  .budget-table td:nth-child(3),.budget-table td:nth-child(4){display:flex !important;align-items:center !important;gap:5px !important;min-height:48px;border-top:1px solid var(--line-soft) !important;}
+  .budget-table td:nth-child(3)::before{content:'Estimate' !important;display:block !important;flex:0 0 78px;font-size:11px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;}
+  .budget-table td:nth-child(4)::before{content:'Actual' !important;display:block !important;flex:0 0 78px;font-size:11px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;}
+  .budget-table td:nth-child(3) input,.budget-table td:nth-child(4) input{flex:1 1 auto !important;width:0 !important;min-width:0 !important;min-height:40px;text-align:right !important;}
+
+  .budget-table td:nth-child(5)::before{content:'Payment' !important;display:block !important;}
+  .budget-table td:nth-child(6)::before{content:'Notes' !important;display:block !important;}
+  .budget-table td:nth-child(5),.budget-table td:nth-child(6){display:grid !important;grid-template-columns:82px 1fr !important;align-items:center;gap:8px;border-top:1px solid var(--line-soft) !important;}
+  .budget-table td:nth-child(5)::before,.budget-table td:nth-child(6)::before{font-size:11px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;}
   .budget-table td:last-child{position:absolute !important;right:9px;top:7px;width:auto !important;}
   .budget-add{grid-template-columns:1fr !important;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;}
   .budget-add .btn{min-height:44px;justify-content:center;}
