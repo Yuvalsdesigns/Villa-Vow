@@ -443,7 +443,7 @@ async function initDb(){
     }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('considerations').orderBy('order','asc').onSnapshot(snap=>{
       state.considerations = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_CONSIDERATIONS.map(([category,text],i)=>({id:'seed-consid-'+i, category, text, done:false, order:i}));
-      renderConsiderations();
+      renderConsiderations(); renderStart();
     }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('venueFavorites').onSnapshot(snap=>{
       state.venues = {};
