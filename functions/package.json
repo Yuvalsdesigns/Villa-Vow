@@ -1,6 +1,6 @@
 {
   "name": "villa-vow-functions",
-  "description": "Cloud Functions for Villa & Vow — backs the planner assistant with a real Anthropic API call, keeping the API key server-side.",
+  "description": "Cloud Functions for Villa & Vow — backs the planner assistant with a Gemini API call, keeping the API key server-side.",
   "engines": {
     "node": "20"
   },
@@ -8,7 +8,7 @@
   "dependencies": {
     "firebase-functions": "^6.0.1",
     "firebase-admin": "^12.6.0",
-    "@anthropic-ai/sdk": "^0.32.1"
+    "@google/generative-ai": "^0.21.0"
   },
   "private": true
 }
