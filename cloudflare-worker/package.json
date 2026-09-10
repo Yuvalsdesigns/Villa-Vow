@@ -1,10 +1,7 @@
 {
   "name": "villa-vow-planner-worker",
-  "description": "Cloudflare Worker for Villa & Vow's planner assistant — verifies the caller's Firebase login, then calls the free Gemini API with the key kept as a Worker secret.",
+  "description": "Cloudflare Worker for Villa & Vow's planner assistant — verifies the caller's Firebase login (using only the Web Crypto API, no dependencies), then calls the free Gemini API with the key kept as a Worker secret. index.js can be pasted directly into the Cloudflare dashboard's Worker editor; wrangler below is optional, for local dev only.",
   "private": true,
-  "dependencies": {
-    "jose": "^5.9.6"
-  },
   "devDependencies": {
     "wrangler": "^3.90.0"
   }
