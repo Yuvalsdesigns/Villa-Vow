@@ -745,10 +745,11 @@ function renderVenues(){
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'+(v.sources||[]).map(s=>'<a class="src-link" target="_blank" rel="noopener" href="'+esc(s[1])+'">'+esc(s[0])+' ↗</a>').join('')+'</div>'
       + '<div class="venue-image-credit">'+(v.image ? 'Venue / wedding source image' : 'Destination visual reference, verify the exact property photo before publishing')+'</div>'
       + '<div class="venue-note"><textarea placeholder="Notes on '+esc(v.name)+'…">'+esc(fav.note||'')+'</textarea></div>'
-      + '<div class="venue-foot"><button class="heart'+(fav.favorited?' on':'')+'">'+svg(ICON.heart)+'</button><span style="font-size:11.5px;color:var(--ink-faint)">'+(fav.favorited?'Shortlisted':'Tap to shortlist')+'</span></div>'
+      + '<div class="venue-foot"><button class="heart'+(fav.favorited?' on':'')+'">'+svg(ICON.heart)+'</button><span style="font-size:11.5px;color:var(--ink-faint)">'+(fav.favorited?'Shortlisted':'Tap to shortlist')+'</span><button class="btn small ghost ask-venue" style="margin-left:auto;">Ask planner about this</button></div>'
       + '</div>';
     card.querySelector('.heart').addEventListener('click', ()=> setVenueFav(v.id, {favorited: !fav.favorited, note: fav.note||''}));
     card.querySelector('textarea').addEventListener('change', e=> setVenueFav(v.id, {favorited: !!fav.favorited, note: e.target.value}));
+    card.querySelector('.ask-venue').addEventListener('click', ()=> askPlannerAbout('What should we know about planning a kosher, chuppah wedding in '+v.name+' ('+v.region+') specifically? We are considering it for our shortlist.'));
     grid.appendChild(card);
   });
 }

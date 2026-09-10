@@ -5,8 +5,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260910-9">
-<link rel="stylesheet" href="mobile-app.css?v=20260910-9">
+<link rel="stylesheet" href="styles.css?v=20260910-8">
+<link rel="stylesheet" href="mobile-app.css?v=20260910-8">
 
 <div class="bg-watermark no-print" style="background-image:url('watermark.jpg');"></div>
 
@@ -207,8 +207,9 @@
         <label class="field">Actual<input type="number" id="bAct" placeholder="0"></label>
         <button class="btn primary" id="btnAddBudget">+ Add line</button>
       </div>
-      <p class="no-print" style="margin-top:16px;">
+      <p class="no-print" style="margin-top:16px;display:flex;gap:10px;">
         <button class="btn small" onclick="window.print()">Print / save budget as PDF</button>
+        <button class="btn small" id="btnAskBudget">Ask planner to sanity-check this</button>
       </p>
     </section>
 
@@ -349,7 +350,28 @@
   </div>
 </div>
 
-<script src="firebase-sync.js?v=20260910-9"></script>
-<script src="app-1.js?v=20260910-9"></script>
-<script src="app-2.js?v=20260910-9"></script>
-<script src="app-3.js?v=20260910-9"></script>
+<button class="planner-fab no-print" id="plannerFab">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12c3-3 6-4 8-4s5 1 8 4c-3 3-6 4-8 4s-5-1-8-4z"/><path d="M12 16v4M9 20h6"/></svg>
+  <span>Ask your planner</span>
+</button>
+
+<div class="planner-panel no-print" id="plannerPanel">
+  <div class="planner-head">
+    <div class="pm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12c3-3 6-4 8-4s5 1 8 4c-3 3-6 4-8 4s-5-1-8-4z"/></svg></div>
+    <div><h3>Your planner</h3><p>Knows your budget, checklist & shortlist</p></div>
+    <button class="close-x" id="plannerClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="planner-body" id="plannerBody">
+    <div class="planner-intro">Ask me anything about the wedding — vendor emails, kosher menus, a ceremony timeline with a chuppah, how to phrase a tricky guest-list question. I can see your live budget, checklist and shortlisted venues, but I don't know real vendor names or prices in your exact towns — I'll say so rather than guess, and point you to who to ask.</div>
+    <div class="chip-row" id="plannerChips"></div>
+  </div>
+  <div class="planner-foot">
+    <textarea id="plannerInput" placeholder="Ask your planner…"></textarea>
+    <button class="btn primary" id="plannerSend">Send</button>
+  </div>
+</div>
+
+<script src="firebase-sync.js?v=20260910-8"></script>
+<script src="app-1.js?v=20260910-8"></script>
+<script src="app-2.js?v=20260910-8"></script>
+<script src="app-3.js?v=20260910-8"></script>

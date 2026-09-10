@@ -431,5 +431,120 @@ function syncMobileNav(activeId){
 }
 buildMobileNav();
 
+"use strict";
+/* ---------------- PLANNER ASSISTANT ---------------- */
+const SYSTEM_PROMPT = "You are the on-call wedding planner inside \"Villa & Vow\", a planning app for a destination wedding in Europe. The couple wants a chuppah, a rabbi, and kosher catering, with guests flying in from Israel and France. They're leaning toward a villa or masseria where guests stay together for about two days, with a pool party the day after the wedding, or a walkable cluster of budget hotels/Airbnbs as backup if one property can't sleep everyone. Four regions are shortlisted in the app: Tuscany, Puglia, Provence and the Algarve. "
+  + "Answer warmly and specifically, like an expert in this niche (kosher wedding logistics in Europe, Jewish wedding customs, destination-wedding travel logistics). Use short paragraphs or bullet points, not long essays. If asked to draft something (an email, a timeline, vow ideas, a toast outline) just write it well and completely. "
+  + "You do NOT have live access to real vendor names, current prices, or availability in any specific town — never invent a caterer, rabbi, planner or price. When that's what's being asked, say plainly that you don't have real vendor data and suggest exactly who to ask instead (the venue coordinator, a local kosher caterer, a Jewish destination-wedding planner). Use the live app data given to you to make answers specific to where they actually are in planning.";
+
+let sampleFn = null, plannerHistory = [];
+async function initPlanner(){
+  try{
+    if(!window.claude || !window.claude.use) return;
+    sampleFn = await window.claude.use('sample');
+  }catch(e){ sampleFn = null; }
+  if(!sampleFn){
+    document.getElementById('plannerFab').style.display = 'none';
+  }
+}
+
+const CHIPS = [
+  "Draft an email to a kosher caterer asking about a destination wedding in [region]",
+  "Suggest a kosher menu for our guest count and season",
+  "Sanity-check my budget so far",
+  "Help me plan the pool-party day after the wedding",
+  "What should I ask a venue coordinator before we book?",
+  "Suggest a ceremony timeline that includes the chuppah and badeken",
+  "Help me write our welcome-dinner speech",
+  "How do we handle a civil marriage back home alongside the religious ceremony abroad?",
+];
+function renderChips(){
+  const wrap = document.getElementById('plannerChips'); wrap.innerHTML='';
+  CHIPS.forEach(c=>{
+    const b=document.createElement('button'); b.textContent=c;
+    b.addEventListener('click', ()=>{ document.getElementById('plannerInput').value=c; sendToPlanner(); });
+    wrap.appendChild(b);
+  });
+}
+renderChips();
+
+function contextSummary(){
+  const est = state.budget.reduce((s,b)=>s+(Number(b.estCost)||0),0);
+  const paidCount = state.budget.filter(b=>b.paid).length;
+  const todoDone = state.todos.filter(t=>t.done).length;
+  const considDone = state.considerations.filter(t=>t.done).length;
+  const shortlisted = Object.keys(state.venues).filter(k=>state.venues[k] && state.venues[k].favorited);
+  const openTodos = state.todos.filter(t=>!t.done).slice(0,8).map(t=>'- ('+t.category+') '+t.text);
+  return "Current app state:\n"
+    + "- Budget: "+state.budget.length+" line items, €"+est.toLocaleString()+" estimated total, "+paidCount+" marked paid.\n"
+    + "- Checklist: "+todoDone+"/"+state.todos.length+" tasks done.\n"
+    + "- Things to get & think about: "+considDone+"/"+state.considerations.length+" settled.\n"
+    + "- Shortlisted venue region(s): "+(shortlisted.length? shortlisted.join(', ') : "none shortlisted yet")+".\n"
+    + "- Moodboard pins so far: "+state.pins.length+".\n"
+    + (openTodos.length? "- Next open checklist items:\n"+openTodos.join('\n') : "");
+}
+
+function addMsg(role, text, extraClass){
+  const body = document.getElementById('plannerBody');
+  const el = document.createElement('div'); el.className='msg '+role+(extraClass?' '+extraClass:'');
+  el.textContent = text;
+  body.appendChild(el);
+  body.scrollTop = body.scrollHeight;
+  return el;
+}
+
+let plannerBusy = false;
+async function sendToPlanner(){
+  const input = document.getElementById('plannerInput');
+  const q = input.value.trim();
+  if(!q || plannerBusy || !sampleFn) return;
+  input.value='';
+  addMsg('user', q);
+  plannerHistory.push({role:'user', content:q});
+  const thinking = addMsg('assistant', 'Thinking…', 'thinking');
+  plannerBusy = true;
+  document.getElementById('plannerSend').disabled = true;
+  try{
+    const turns = [
+      {role:'user', content: SYSTEM_PROMPT + "\n\n" + contextSummary()},
+      {role:'assistant', content: "Understood — I have the full picture of where things stand. What would you like help with?"},
+    ].concat(plannerHistory);
+    const result = await sampleFn(turns, {
+      modelTier: 'default',
+      onText: ({text})=>{ thinking.classList.remove('thinking'); thinking.textContent = text; document.getElementById('plannerBody').scrollTop = 999999; }
+    });
+    thinking.classList.remove('thinking');
+    thinking.textContent = result.text;
+    plannerHistory.push({role:'assistant', content: result.text});
+  }catch(e){
+    thinking.remove();
+    const code = e && e.code;
+    let msg = "Something went wrong reaching your planner — try again in a moment.";
+    if(code === 'not_granted'){ msg = "This view hasn't granted the planner assistant — reopen the board from your own copy of the link."; }
+    if(code === 'rate_limited'){ msg = "Your planner is fielding a lot of questions right now — try again shortly."; }
+    addMsg('assistant', msg, 'error');
+    if(e && e.text) plannerHistory.push({role:'assistant', content:e.text});
+  }
+  plannerBusy = false;
+  document.getElementById('plannerSend').disabled = false;
+}
+document.getElementById('plannerFab').addEventListener('click', ()=>{
+  document.getElementById('plannerPanel').classList.add('open');
+});
+document.getElementById('plannerClose').addEventListener('click', ()=> document.getElementById('plannerPanel').classList.remove('open'));
+document.getElementById('plannerSend').addEventListener('click', sendToPlanner);
+document.getElementById('plannerInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendToPlanner(); }
+});
+
+document.getElementById('btnAskBudget')?.addEventListener('click', ()=> askPlannerAbout('Can you sanity-check my current budget breakdown? Flag anything that looks like it might be missing for a kosher destination wedding, or unrealistically low.'));
+
+function askPlannerAbout(text){
+  document.getElementById('plannerPanel').classList.add('open');
+  document.getElementById('plannerInput').value = text;
+  sendToPlanner();
+}
+
 initDb();
+initPlanner();
 renderAll();
