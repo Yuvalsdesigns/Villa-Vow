@@ -336,7 +336,6 @@ const VENUES_PART_3 = [
       "#DDE8EC",
       "#6A8798"
     ],
-    "image": "https://static.wixstatic.com/media/5a1aa1_cd48d7e5d0ff469ab68dc3d4a7b249df~mv2.jpg/v1/fill/w_980%2Ch_735%2Cal_c%2Cq_85%2Cusm_0.66_1.00_0.01%2Cenc_avif%2Cquality_auto/5a1aa1_cd48d7e5d0ff469ab68dc3d4a7b249df~mv2.jpg",
     "desc": "A classic grand-lake alternative with historic architecture and a terrace. It can host up to around 100 guests, with limited on-site rooms, so it is more of a venue + nearby accommodation model.",
     "facts": [
       "Up to 100 guests",
