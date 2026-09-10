@@ -819,12 +819,21 @@ const STYLE_PHOTOS = {
   secondShoes:'images/style-bridal-flats.svg',
 };
 
-/* Live Pinterest pin embeds for cards where a photo isn't enough — real pins the couple picked. */
+/* Live Pinterest pin embeds for cards where a photo isn't enough — real pins the couple picked.
+   Embedded via Pinterest's own iframe (assets.pinterest.com/ext/embed.html), not the pinit.js
+   blockquote widget — the widget script depends on third-party JS that ad blockers and tracking
+   prevention commonly block, where a direct iframe just loads. */
 const STYLE_PIN_IDS = {
   suitTux: '2392606048308030',
   secondShoes: '29906785021580539',
 };
+/* native width/height of each pin's embed, so the container can hold the right aspect ratio */
+const STYLE_PIN_ASPECT = {
+  suitTux: '345/558',
+  secondShoes: '236/336',
+};
 function stylePinUrl(key){ return STYLE_PIN_IDS[key] ? 'https://www.pinterest.com/pin/'+STYLE_PIN_IDS[key]+'/' : null; }
+function stylePinEmbed(key){ return STYLE_PIN_IDS[key] ? '<iframe src="https://assets.pinterest.com/ext/embed.html?id='+STYLE_PIN_IDS[key]+'" scrolling="no" frameborder="0" loading="lazy" style="width:100%;height:100%;border:0;display:block;"></iframe>' : null; }
 
 const STYLE_SECTIONS = [
   {title:'Dress silhouettes', tint:'wine', items:[
@@ -935,9 +944,10 @@ function renderStyleSections(){
     sec.items.forEach(([key,label,desc,itemImg])=>{
       const card = document.createElement('div'); card.className='style-card';
       const pinUrl = stylePinUrl(key);
+      const pinEmbed = stylePinEmbed(key);
       const photo = itemImg || STYLE_PHOTOS[key];
-      const visual = pinUrl
-        ? '<div class="style-pin-embed"><blockquote class="pinterest-pin" data-pin-do="embedPin" data-pin-width="small"><a href="'+esc(pinUrl)+'">'+esc(label)+'</a></blockquote></div>'
+      const visual = pinEmbed
+        ? '<div class="style-pin-embed" style="aspect-ratio:'+(STYLE_PIN_ASPECT[key]||'1/1')+';">'+pinEmbed+'</div>'
         : (photo?'<img class="style-img" src="'+esc(photo)+'" alt="'+esc(label)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.textContent=\'Image unavailable — use Pinterest search\'"><div class="style-photo-source">Matching visual · '+esc(label)+'</div>':'<div class="style-icon tint-'+sec.tint+'">'+svg(ICON[key])+'</div>');
       card.innerHTML = visual+'<h5>'+label+'</h5><p>'+desc+'</p><div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;"><button class="btn small pin-style">Pin this</button><button class="btn small ghost pinterest-style">Pinterest ↗</button></div>';
       card.querySelector('.pin-style').addEventListener('click', ()=> pinStyle(key,label,sec.title));
@@ -950,7 +960,6 @@ function renderStyleSections(){
     box.appendChild(grid);
     wrap.appendChild(box);
   });
-  if(typeof ensurePinterestWidgets==='function') ensurePinterestWidgets();
   // beauty timeline
   const beauty = document.createElement('div'); beauty.className='style-section';
   beauty.innerHTML = '<div class="style-head"><h3>Beauty countdown</h3></div>';
