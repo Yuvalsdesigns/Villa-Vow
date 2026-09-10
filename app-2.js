@@ -825,12 +825,12 @@ const STYLE_PHOTOS = {
    prevention commonly block, where a direct iframe just loads. */
 const STYLE_PIN_IDS = {
   suitTux: '2392606048308030',
-  secondShoes: '29906785021580539',
+  secondShoes: '230879918390807624',
 };
 /* native width/height of each pin's embed, so the container can hold the right aspect ratio */
 const STYLE_PIN_ASPECT = {
   suitTux: '345/558',
-  secondShoes: '236/336',
+  secondShoes: '236/384',
 };
 function stylePinUrl(key){ return STYLE_PIN_IDS[key] ? 'https://www.pinterest.com/pin/'+STYLE_PIN_IDS[key]+'/' : null; }
 function stylePinEmbed(key){ return STYLE_PIN_IDS[key] ? '<iframe src="https://assets.pinterest.com/ext/embed.html?id='+STYLE_PIN_IDS[key]+'" scrolling="no" frameborder="0" loading="lazy" style="width:100%;height:100%;border:0;display:block;"></iframe>' : null; }
