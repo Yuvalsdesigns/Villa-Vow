@@ -569,8 +569,8 @@ function renderBudget(){
   state.budget.forEach(b=>{
     const tr = document.createElement('tr');
     tr.innerHTML = '<td>'+esc(b.category)+'</td><td>'+esc(b.item)+'</td>'
-      +'<td class="num-cell mono">€'+numInput('est',b)+'</td>'
-      +'<td class="num-cell mono">€'+numInput('act',b)+'</td>'
+      +'<td class="num-cell mono">'+numInput('est',b)+'</td>'
+      +'<td class="num-cell mono">'+numInput('act',b)+'</td>'
       +'<td></td><td></td><td></td>';
     body.appendChild(tr);
     const paidCell = tr.children[4];
