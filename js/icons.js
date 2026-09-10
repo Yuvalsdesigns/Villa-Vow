@@ -1,76 +1,50 @@
-/* Villa & Vow bootstrap, recovery and compatibility fixes. */
+/* Villa & Vow bootstrap and compatibility layer. */
 
-/* Load shared features with cache-busting so GitHub Pages/browser caches do not
-   leave an old planner shell running after a deploy. */
-document.write('<script src="firebase-sync.js?v=20260910-5"><\/script>');
-document.write('<script src="js/style-gallery-enhancements.js?v=20260910-5"><\/script>');
-document.write('<script src="js/category-custom-styles.js?v=20260910-5"><\/script>');
-document.write('<link rel="stylesheet" href="mobile-app.css?v=20260910-5">');
-document.write('<script src="js/mobile-app.js?v=20260910-5"><\/script>');
-document.write('<script src="js/mobile-and-style-fixes.js?v=20260910-5"><\/script>');
+/* Firebase must be available before app-1 initialises the shared database. */
+document.write('<script src="firebase-sync.js?v=20260910-6"><\/script>');
+document.write('<link rel="stylesheet" href="mobile-app.css?v=20260910-6">');
 
 (function(){
   var meta=document.querySelector('meta[name="viewport"]');
   if(!meta){meta=document.createElement('meta');meta.name='viewport';document.head.appendChild(meta);}
   meta.content='width=device-width, initial-scale=1, viewport-fit=cover';
-  var theme=document.querySelector('meta[name="theme-color"]');
-  if(!theme){theme=document.createElement('meta');theme.name='theme-color';document.head.appendChild(theme);}
-  theme.content='#fbf3ec';
 })();
 
-window.esc = window.esc || function(s){
-  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c];
+/* app-2 uses esc() while building venue filters. Define it before app-2. */
+window.esc=window.esc||function(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 };
 
-(function(){
-  var style=document.createElement('style');
-  style.textContent=`
-    .budget-table .num-cell::before{content:none !important;display:none !important;}
-    .budget-table .num-cell{white-space:nowrap;vertical-align:middle !important;}
-    .budget-table .num-cell input{display:inline-block !important;width:calc(100% - 18px) !important;padding-left:6px !important;vertical-align:middle !important;text-align:right !important;}
-  `;
-  document.head.appendChild(style);
-})();
-
-function vvRecoverApp2(){
-  if(typeof window.renderStyleSections==='function' && typeof window.renderVenues==='function') return Promise.resolve(true);
-  return fetch('app-2.js?v=20260910-5',{cache:'no-store'})
-    .then(function(r){if(!r.ok)throw new Error('app-2 fetch '+r.status);return r.text();})
-    .then(function(src){
-      var repaired=src.replace(/\]\},\s*,\s*\{title:'Second Look \/ Party Outfit'/, "]},\n  {title:'Second Look / Party Outfit'");
-      if(repaired===src) repaired=src.replace(']},,\n  {title:\'Second Look / Party Outfit\'', ']},\n  {title:\'Second Look / Party Outfit\'');
-      (0,eval)(repaired);
-      return true;
-    })
-    .catch(function(err){console.error('Villa & Vow could not recover app-2.js',err);return false;});
+function vvLoadScript(src){
+  return new Promise(function(resolve,reject){
+    var s=document.createElement('script');s.src=src;s.async=false;
+    s.onload=resolve;s.onerror=reject;document.body.appendChild(s);
+  });
 }
 
-function vvInstallLiveCountFix(){
-  if(typeof window.renderConsiderations==='function' && !window.renderConsiderations.__vvStartSync){
-    var originalRenderConsiderations=window.renderConsiderations;
-    var wrapped=function(){var out=originalRenderConsiderations.apply(this,arguments);if(typeof window.renderStart==='function')window.renderStart();return out;};
-    wrapped.__vvStartSync=true;window.renderConsiderations=wrapped;
-  }
-  if(typeof window.toggleItem==='function' && !window.toggleItem.__vvImmediateSync){
-    var originalToggle=window.toggleItem;
-    var toggleWrapped=function(coll,it){
-      if(typeof dbReady!=='undefined' && dbReady && typeof db!=='undefined' && db){
-        it.done=!it.done;
-        if(coll==='todos'&&typeof window.renderTodos==='function')window.renderTodos();
-        if(coll==='considerations'&&typeof window.renderConsiderations==='function')window.renderConsiderations();
-        if(typeof window.renderStart==='function')window.renderStart();
-        return db.collection(coll).doc(it.id).update({done:it.done}).catch(function(err){
-          console.error('Could not save checklist change',err);it.done=!it.done;
-          if(coll==='todos'&&typeof window.renderTodos==='function')window.renderTodos();
-          if(coll==='considerations'&&typeof window.renderConsiderations==='function')window.renderConsiderations();
-          if(typeof window.renderStart==='function')window.renderStart();
-        });
-      }
-      return originalToggle.apply(this,arguments);
-    };
-    toggleWrapped.__vvImmediateSync=true;window.toggleItem=toggleWrapped;
+/* app-2 in the original export has one extra comma in STYLE_SECTIONS. Because
+   a syntax error prevents the entire file from executing, recover the same
+   source, repair only that typo, expose the style data globally, then execute. */
+function vvRecoverApp2(){
+  if(typeof window.renderStyleSections==='function'&&typeof window.renderVenues==='function')return Promise.resolve();
+  return fetch('app-2.js?v=20260910-6',{cache:'no-store'})
+    .then(function(r){if(!r.ok)throw new Error('app-2 fetch '+r.status);return r.text();})
+    .then(function(src){
+      src=src.replace(/\]\},\s*,\s*\{title:'Second Look \/ Party Outfit'/,"]},\n  {title:'Second Look / Party Outfit'");
+      src=src.replace('const STYLE_PHOTOS =','window.STYLE_PHOTOS =');
+      src=src.replace('const STYLE_SECTIONS =','window.STYLE_SECTIONS =');
+      (0,eval)(src);
+      if(typeof window.renderStyleSections!=='function')throw new Error('Style bundle did not initialise');
+    });
+}
+
+function vvInstallCountFix(){
+  if(typeof window.renderConsiderations==='function'&&!window.renderConsiderations.__vvStartSync){
+    var original=window.renderConsiderations;
+    window.renderConsiderations=function(){var out=original.apply(this,arguments);if(typeof window.renderStart==='function')window.renderStart();return out;};
+    window.renderConsiderations.__vvStartSync=true;
   }
   if(typeof window.renderStart==='function')window.renderStart();
 }
@@ -80,11 +54,13 @@ window.addEventListener('load',function(){
     if(typeof window.renderVenueFilters==='function')window.renderVenueFilters();
     if(typeof window.renderVenues==='function')window.renderVenues();
     if(typeof window.renderStyleSections==='function')window.renderStyleSections();
-    vvInstallLiveCountFix();
-    ['venueSearch','venueRegionFilter','venueTagFilter'].forEach(function(id){
-      var el=document.getElementById(id);
-      if(el&&typeof window.renderVenues==='function'&&!el.__vvVenueListener){el.addEventListener(id==='venueSearch'?'input':'change',window.renderVenues);el.__vvVenueListener=true;}
-    });
-  });
-  setTimeout(vvInstallLiveCountFix,1200);
+    vvInstallCountFix();
+
+    /* These depend on the recovered style renderer, so load them afterwards. */
+    return vvLoadScript('js/style-gallery-enhancements.js?v=20260910-6')
+      .then(function(){return vvLoadScript('js/category-custom-styles.js?v=20260910-6');})
+      .then(function(){return vvLoadScript('js/mobile-app.js?v=20260910-6');})
+      .then(function(){return vvLoadScript('js/mobile-and-style-fixes.js?v=20260910-6');});
+  }).catch(function(err){console.error('Villa & Vow bootstrap error',err);});
+  setTimeout(vvInstallCountFix,1200);
 });
