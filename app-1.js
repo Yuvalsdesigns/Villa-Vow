@@ -1,5 +1,8 @@
 "use strict";
 
+/* ---------------- SHARED UTILS ---------------- */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 /* ---------------- ICONS ---------------- */
 const ICON = {
   home:'<path d="M12 3.5l1.5 4.1 4.1 1.5-4.1 1.5-1.5 4.1-1.5-4.1-4.1-1.5 4.1-1.5L12 3.5z"/><path d="M5 16.5l.8 2.1 2.2.8-2.2.8L5 22.3l-.8-2.1-2.2-.8 2.2-.8L5 16.5z"/><path d="M18.5 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z"/>',
@@ -85,6 +88,7 @@ function showTab(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+id));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
   window.scrollTo(0,0);
+  if(typeof syncMobileNav==='function') syncMobileNav(id);
 }
 document.querySelectorAll('[data-jump]').forEach(el=>el.addEventListener('click', ()=>showTab(el.dataset.jump)));
 showTab('start');
@@ -118,7 +122,7 @@ function tile(n,l,accent){ return '<div class="stat-tile'+(accent?' accent':'')+
 "use strict";
 
 let db = null, dbReady=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{} };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[] };
 
 const SEED_BUDGET = [
   {category:'Venue', item:'Villa / masseria rental (multi-day)', estCost:0, actCost:0, paid:0, order:0},
@@ -445,6 +449,10 @@ async function initDb(){
       state.venues = {};
       snap.docs.forEach(d=> state.venues[d.id] = d.data());
       renderVenues();
+    }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('customStyles').orderBy('createdAt','desc').onSnapshot(snap=>{
+      state.customStyles = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(typeof renderStyleSections==='function') renderStyleSections();
     }, err=>setSync(false,'sync error')));
   }catch(e){ setSync(false,'no live sync — changes stay on this device only'); renderAll(); }
 }

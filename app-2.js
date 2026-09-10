@@ -772,7 +772,7 @@ const STYLE_PHOTOS = {
   dressSheath:'https://www.hola.com/horizon/original_aspect_ratio/38c4717da006-rosa-clara-z.jpg',
   dressBoho:'https://www.kissprom.com/cdn/shop/files/a-line-long-sleeves-chiffon-wedding-dress-in-ivory_2.jpg?v=1779083839&width=700',
   dressTwopc:'https://cdn.shopify.com/s/files/1/0251/5215/9837/files/IMG-4963.jpg?v=1749196191',
-  suitTux:'https://www.alandavid.com/wp-content/uploads/2020/08/black-tie-wedding-tuxedo.jpg',
+  suitTux:'images/style-classic-tuxedo.svg',
   suitLinen:'https://i.etsystatic.com/61416082/r/il/395a5b/7825575885/il_570xN.7825575885_te3j.jpg',
   suitJacket:'https://dunniotailor.com/sites/default/files/u614/beige-suit-wedding-combination-pants/09-beige-blazer-with-navy-dress-pants.png',
   suitGuayabera:'https://www.camasha.com/cdn/shop/articles/Diseno_sin_titulo_7_f54a5362-e849-415f-adb8-99bd45d4a595.jpg?crop=region&crop_height=674&crop_left=0&crop_top=62&crop_width=1200&v=1771365079&width=1225',
@@ -817,7 +817,7 @@ const STYLE_PHOTOS = {
   secondSlip:'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=900&q=85',
   secondJumpsuit:'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=900&q=85',
   secondSparkle:'https://images.unsplash.com/photo-1568252542512-9fe8fe9c87bb?auto=format&fit=crop&w=900&q=85',
-  secondShoes:'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=900&q=85',
+  secondShoes:'images/style-bridal-flats.svg',
 };
 
 const STYLE_SECTIONS = [
@@ -877,13 +877,13 @@ const STYLE_SECTIONS = [
     ['inviteMinimal','Minimalist modern','Clean type, lots of white space — easy to read at a glance across three languages.'],
     ['inviteWatercolor','Watercolor floral','A painted floral motif tying back to your bouquet and venue colors.'],
     ['inviteBilingual','Bilingual / trilingual card','Hebrew, French and the local language side by side — worth planning the layout early with your designer or printer.'],
-  ]},,
-  {title:'Second Look / Party Outfit', tint:'blush', items:[
-    ['secondMini','Mini party dress','Short, light and easy to dance in.'],
-    ['secondSlip','Silk slip dress','Minimal, elegant and easier to move in.'],
-    ['secondJumpsuit','Bridal jumpsuit','Comfortable and modern for a late-night change.'],
-    ['secondSparkle','Embellished party dress','A fun celebratory look for dancing.'],
-    ['secondShoes','Dancing shoes','Comfortable flats, low heels or bridal sneakers.']
+  ]},
+  {title:'Second Look / Reception Outfit', tint:'blush', items:[
+    ['secondMini','Short bridal mini','Still unmistakably bridal in white or ivory, but lighter, shorter and much easier to dance in.'],
+    ['secondSlip','Fluid satin slip','A soft white or ivory slip dress that keeps the wedding feeling while removing weight and structure.'],
+    ['secondJumpsuit','White bridal jumpsuit / two-piece','A clean ivory tailoring option with room to move, especially good if you want trousers for the late-night party.'],
+    ['secondSparkle','Tea-length bridal dress','A mid-calf white wedding look with less volume and no train, so you can move comfortably without losing the bridal silhouette.'],
+    ['secondShoes','Comfortable bridal flats','White or ivory flats, low heels or elegant bridal sneakers for dancing without changing the overall wedding palette.']
   ]}
 ];
 
@@ -919,6 +919,11 @@ function renderStyleSections(){
     const box = document.createElement('div'); box.className='style-section';
     const head = document.createElement('div'); head.className='style-head';
     head.innerHTML = '<h3>'+sec.title+'</h3>';
+    const addBtn = document.createElement('button');
+    addBtn.type='button'; addBtn.className='btn small add-style-category';
+    addBtn.textContent='+ Add style';
+    addBtn.addEventListener('click', ()=> openStyleModal(sec.title));
+    head.appendChild(addBtn);
     box.appendChild(head);
     const grid = document.createElement('div'); grid.className='style-grid';
     sec.items.forEach(([key,label,desc,itemImg])=>{
@@ -928,6 +933,9 @@ function renderStyleSections(){
       card.querySelector('.pin-style').addEventListener('click', ()=> pinStyle(key,label,sec.title));
       card.querySelector('.pinterest-style').addEventListener('click', ()=> window.open('https://www.pinterest.com/search/pins/?q='+encodeURIComponent(label+' wedding inspiration'),'_blank','noopener'));
       grid.appendChild(card);
+    });
+    state.customStyles.filter(s=>normalizeCategory(s.category)===normalizeCategory(sec.title)).forEach(s=>{
+      grid.appendChild(customStyleCard(s, sec.title));
     });
     box.appendChild(grid);
     wrap.appendChild(box);
@@ -973,4 +981,111 @@ function sectionTag(section){
   if(section.includes('Invitation')) return 'stationery';
   return 'other';
 }
+
+/* ---------------- CUSTOM STYLES (per-category "+ Add style") ---------------- */
+function normalizeCategory(v){
+  let x = String(v||'').trim().toLowerCase();
+  if(x==='second look / party outfit') x='second look / reception outfit';
+  return x;
+}
+function customStyleCard(s, sectionTitle){
+  const card = document.createElement('div'); card.className='style-card';
+  card.innerHTML = '<img class="style-img" src="'+esc(s.image||'')+'" alt="'+esc(s.name||'Custom style')+'">'
+    + '<div class="style-photo-source">Your style</div><h5>'+esc(s.name||'Untitled')+'</h5><p>'+esc(s.description||'')+'</p>'
+    + '<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;"><button class="btn small pin-custom">Pin this</button><button class="btn small ghost del-custom">Delete</button></div>';
+  card.querySelector('.pin-custom').addEventListener('click', ()=>{
+    const data = {type:'photo', imageDataUrl:s.image, title:s.name, note:s.description||'', tag:sectionTag(sectionTitle), createdAt:Date.now()};
+    if(dbReady) db.collection('pinboard').add(data); else { localAdd(state.pins,data); renderBoard(); renderStart(); }
+    showTab('board');
+  });
+  card.querySelector('.del-custom').addEventListener('click', ()=>{
+    if(!confirm('Delete this style?')) return;
+    if(dbReady && s.id) db.collection('customStyles').doc(s.id).delete();
+  });
+  return card;
+}
+
+let pendingStyleImage='', activeStyleCategory='';
+function ensureStyleModal(){
+  let m = document.getElementById('styleModal');
+  if(m) return m;
+  m = document.createElement('div'); m.id='styleModal'; m.className='modal-backdrop';
+  m.innerHTML = '<div class="modal">'
+    + '<button class="close-x" id="styleModalClose">'+svg(ICON.x)+'</button>'
+    + '<div class="eyebrow">Add to <span id="styleModalCategory"></span></div>'
+    + '<h3>Add your own style</h3>'
+    + '<div class="drop-zone" id="styleDropZone">Click to choose an image, or drag one here</div>'
+    + '<input type="file" id="styleFileInput" accept="image/*" style="display:none;">'
+    + '<div id="stylePreviewWrap" style="display:none;"><img id="stylePreview" style="width:100%;border-radius:8px;max-height:200px;object-fit:cover;"></div>'
+    + '<label class="field">Style name<input type="text" id="styleName" placeholder="e.g. Square-neck silk A-line"></label>'
+    + '<label class="field">Description<textarea id="styleDesc" placeholder="What you like about it, fabric, silhouette, styling notes…"></textarea></label>'
+    + '<p class="warn" id="styleWarn" style="display:none;"></p>'
+    + '<div class="modal-foot"><button class="btn" id="styleCancel">Cancel</button><button class="btn primary" id="styleSave" disabled>Add style</button></div>'
+    + '</div>';
+  document.body.appendChild(m);
+  const close = ()=> m.classList.remove('open');
+  m.querySelector('#styleModalClose').addEventListener('click', close);
+  m.addEventListener('click', e=>{ if(e.target===m) close(); });
+  m.querySelector('#styleCancel').addEventListener('click', close);
+  const drop = m.querySelector('#styleDropZone'), file = m.querySelector('#styleFileInput');
+  drop.addEventListener('click', ()=> file.click());
+  file.addEventListener('change', ()=>{ if(file.files[0]) readStyleFile(file.files[0]); });
+  ['dragover','dragleave','drop'].forEach(evt=>{
+    drop.addEventListener(evt, e=>{
+      e.preventDefault();
+      drop.classList.toggle('drag', evt==='dragover');
+      if(evt==='drop' && e.dataTransfer.files[0]) readStyleFile(e.dataTransfer.files[0]);
+    });
+  });
+  m.querySelector('#styleSave').addEventListener('click', saveCustomStyle);
+  return m;
+}
+function openStyleModal(category){
+  activeStyleCategory = category;
+  pendingStyleImage = '';
+  const m = ensureStyleModal();
+  m.querySelector('#styleModalCategory').textContent = category;
+  m.querySelector('#styleName').value=''; m.querySelector('#styleDesc').value=''; m.querySelector('#styleFileInput').value='';
+  m.querySelector('#stylePreviewWrap').style.display='none';
+  m.querySelector('#styleSave').disabled = true;
+  m.querySelector('#styleWarn').style.display='none';
+  m.classList.add('open');
+}
+function readStyleFile(file){
+  const m = document.getElementById('styleModal');
+  const warn = m.querySelector('#styleWarn'); warn.style.display='none';
+  if(!file || !/^image\//.test(file.type)){ warn.textContent='Please choose an image.'; warn.style.display='block'; return; }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const max = 1100, scale = Math.min(1, max/Math.max(img.width,img.height));
+      const canvas = document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      let q=.82, url=canvas.toDataURL('image/jpeg',q);
+      while(url.length>420000 && q>.42){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
+      if(url.length>500000){ warn.textContent='Image is too large. Try a smaller one.'; warn.style.display='block'; return; }
+      pendingStyleImage = url;
+      m.querySelector('#stylePreview').src = url;
+      m.querySelector('#stylePreviewWrap').style.display='block';
+      m.querySelector('#styleSave').disabled = false;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function saveCustomStyle(){
+  const m = document.getElementById('styleModal');
+  const name = m.querySelector('#styleName').value.trim();
+  const desc = m.querySelector('#styleDesc').value.trim();
+  const warn = m.querySelector('#styleWarn');
+  if(!pendingStyleImage){ warn.textContent='Add an image first.'; warn.style.display='block'; return; }
+  if(!name){ warn.textContent='Give the style a name.'; warn.style.display='block'; return; }
+  if(!dbReady || !db){ warn.textContent='Shared sync is not connected yet — sign in to add a style.'; warn.style.display='block'; return; }
+  m.querySelector('#styleSave').disabled = true;
+  db.collection('customStyles').add({name, description:desc, category:activeStyleCategory, image:pendingStyleImage, createdAt:Date.now()})
+    .then(()=> m.classList.remove('open'))
+    .catch(err=>{ console.error(err); warn.textContent='Could not save style.'; warn.style.display='block'; m.querySelector('#styleSave').disabled = false; });
+}
+
 renderStyleSections();

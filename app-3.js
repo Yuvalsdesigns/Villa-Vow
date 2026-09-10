@@ -387,10 +387,49 @@ document.getElementById('saveLink').addEventListener('click', ()=>{
   closeModal();
 });
 
-/* ---------------- utils ---------------- */
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* ---------------- MOBILE NAV ---------------- */
+const MOBILE_NAV_ICONS = {
+  home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M9.5 20v-6h5v6"/>',
+  check:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8l1.5 1.5L12 7"/><path d="M14 8h3"/><path d="M8 14l1.5 1.5L12 13"/><path d="M14 14h3"/>',
+  board:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 16l3-4 2 2 3-4 2 6"/><circle cx="9" cy="9" r="1"/>',
+  venue:'<path d="M3 20h18"/><path d="M5 20V9l7-5 7 5v11"/><path d="M9 20v-6h6v6"/>',
+  more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+};
+const MOBILE_NAV_PRIMARY = [['start','home','Home'],['todo','check','Checklist'],['board','board','Moodboard'],['venues','venue','Venues']];
+const MOBILE_NAV_MORE = [['budget','Budget'],['style','Style Gallery'],['considerations','Things to Get'],['emails','Email Templates'],['guestapp','Guest App']];
 
+function buildMobileNav(){
+  if(document.getElementById('vvMobileNav')) return;
+  const nav = document.createElement('nav'); nav.id='vvMobileNav'; nav.setAttribute('aria-label','Wedding planner navigation');
+  MOBILE_NAV_PRIMARY.forEach(([id,icon,label])=>{
+    const b = document.createElement('button'); b.type='button'; b.dataset.tab=id;
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+MOBILE_NAV_ICONS[icon]+'</svg><span>'+label+'</span>';
+    b.addEventListener('click', ()=> showTab(id));
+    nav.appendChild(b);
+  });
+  const more = document.createElement('button'); more.type='button'; more.id='vvMoreButton';
+  more.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+MOBILE_NAV_ICONS.more+'</svg><span>More</span>';
+  more.addEventListener('click', ()=> document.getElementById('vvMobileMore')?.classList.add('open'));
+  nav.appendChild(more);
+  document.body.appendChild(nav);
 
+  const overlay = document.createElement('div'); overlay.id='vvMobileMore';
+  overlay.innerHTML = '<div class="sheet"><div class="handle"></div></div>';
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
+  document.body.appendChild(overlay);
+  const sheet = overlay.querySelector('.sheet');
+  MOBILE_NAV_MORE.forEach(([id,label])=>{
+    const b = document.createElement('button'); b.type='button'; b.textContent=label;
+    b.addEventListener('click', ()=>{ overlay.classList.remove('open'); showTab(id); });
+    sheet.appendChild(b);
+  });
+}
+function syncMobileNav(activeId){
+  document.querySelectorAll('#vvMobileNav button[data-tab]').forEach(b=> b.classList.toggle('active', b.dataset.tab===activeId));
+  const more = document.getElementById('vvMoreButton');
+  if(more) more.classList.toggle('active', MOBILE_NAV_MORE.some(([id])=>id===activeId));
+}
+buildMobileNav();
 
 "use strict";
 /* ---------------- PLANNER ASSISTANT ---------------- */
