@@ -548,3 +548,4 @@ function askPlannerAbout(text){
 initDb();
 initPlanner();
 renderAll();
+ensurePinterestWidgets();

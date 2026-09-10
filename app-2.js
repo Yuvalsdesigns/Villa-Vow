@@ -496,7 +496,7 @@ const VENUES_PART_4 = [
       "#C9DFC3",
       "#7FA07A"
     ],
-    "image": "https://www.wherewedding.co.uk/uploads/il-pilaccio-nel-cilento/galeria-il-pilaccio-nel-cilento-gdzie-wesele-2711.jpeg",
+    "image": "https://cdn0.matrimonio.com/vendor/5176/original/1280/jpg/tramonto_2_35176-171994256032286.webp",
     "desc": "A poolside wedding setting with greenery and distant sea views. A good example of the lesser-known southern Italian estate category we should keep searching.",
     "facts": [
       "Poolside ceremonies / receptions",
@@ -507,7 +507,7 @@ const VENUES_PART_4 = [
     "sources": [
       [
         "Venue profile",
-        "https://www.wherewedding.co.uk/wedding-venues/il-pilaccio-nel-cilento"
+        "https://www.matrimonio.com/location-matrimoni/tenuta-il-pilaccio-nel-cilento--e35176"
       ]
     ]
   },
@@ -521,7 +521,7 @@ const VENUES_PART_4 = [
       "#C9DFC3",
       "#7FA07A"
     ],
-    "image": "https://cdn0.hitched.co.uk/vendor/2931/3_2/960/jpg/monastero-santa-margherita_293162-163656267696955.jpeg",
+    "image": "https://cdn0.hitched.co.uk/vendor/3162/3_2/1280/jpg/andresofia1021_4_293162-172615153412482.webp",
     "desc": "Historic stone monastery, pool and countryside. Umbria is a major 'Tuscany but quieter' search zone, and this shows the exact visual direction.",
     "facts": [
       "Historic stone estate",
@@ -819,6 +819,13 @@ const STYLE_PHOTOS = {
   secondShoes:'images/style-bridal-flats.svg',
 };
 
+/* Live Pinterest pin embeds for cards where a photo isn't enough — real pins the couple picked. */
+const STYLE_PIN_IDS = {
+  suitTux: '2392606048308030',
+  secondShoes: '29906785021580539',
+};
+function stylePinUrl(key){ return STYLE_PIN_IDS[key] ? 'https://www.pinterest.com/pin/'+STYLE_PIN_IDS[key]+'/' : null; }
+
 const STYLE_SECTIONS = [
   {title:'Dress silhouettes', tint:'wine', items:[
     ['dressA','A-line','Fitted through the bodice, flares gently from the waist — flattering on the widest range of body types.'],
@@ -927,10 +934,14 @@ function renderStyleSections(){
     const grid = document.createElement('div'); grid.className='style-grid';
     sec.items.forEach(([key,label,desc,itemImg])=>{
       const card = document.createElement('div'); card.className='style-card';
+      const pinUrl = stylePinUrl(key);
       const photo = itemImg || STYLE_PHOTOS[key];
-      card.innerHTML = (photo?'<img class="style-img" src="'+esc(photo)+'" alt="'+esc(label)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.textContent=\'Image unavailable — use Pinterest search\'"><div class="style-photo-source">Matching visual · '+esc(label)+'</div>':'<div class="style-icon tint-'+sec.tint+'">'+svg(ICON[key])+'</div>')+'<h5>'+label+'</h5><p>'+desc+'</p><div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;"><button class="btn small pin-style">Pin this</button><button class="btn small ghost pinterest-style">Pinterest ↗</button></div>';
+      const visual = pinUrl
+        ? '<div class="style-pin-embed"><blockquote class="pinterest-pin" data-pin-do="embedPin" data-pin-width="small"><a href="'+esc(pinUrl)+'">'+esc(label)+'</a></blockquote></div>'
+        : (photo?'<img class="style-img" src="'+esc(photo)+'" alt="'+esc(label)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.textContent=\'Image unavailable — use Pinterest search\'"><div class="style-photo-source">Matching visual · '+esc(label)+'</div>':'<div class="style-icon tint-'+sec.tint+'">'+svg(ICON[key])+'</div>');
+      card.innerHTML = visual+'<h5>'+label+'</h5><p>'+desc+'</p><div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;"><button class="btn small pin-style">Pin this</button><button class="btn small ghost pinterest-style">Pinterest ↗</button></div>';
       card.querySelector('.pin-style').addEventListener('click', ()=> pinStyle(key,label,sec.title));
-      card.querySelector('.pinterest-style').addEventListener('click', ()=> window.open('https://www.pinterest.com/search/pins/?q='+encodeURIComponent(label+' wedding inspiration'),'_blank','noopener'));
+      card.querySelector('.pinterest-style').addEventListener('click', ()=> window.open(pinUrl || ('https://www.pinterest.com/search/pins/?q='+encodeURIComponent(label+' wedding inspiration')),'_blank','noopener'));
       grid.appendChild(card);
     });
     state.customStyles.filter(s=>normalizeCategory(s.category)===normalizeCategory(sec.title)).forEach(s=>{
@@ -939,6 +950,7 @@ function renderStyleSections(){
     box.appendChild(grid);
     wrap.appendChild(box);
   });
+  if(typeof ensurePinterestWidgets==='function') ensurePinterestWidgets();
   // beauty timeline
   const beauty = document.createElement('div'); beauty.className='style-section';
   beauty.innerHTML = '<div class="style-head"><h3>Beauty countdown</h3></div>';
@@ -963,8 +975,11 @@ function renderStyleSections(){
   wrap.appendChild(note);
 }
 function pinStyle(key,label,section){
+  const pinUrl = stylePinUrl(key);
   const photo = STYLE_PHOTOS[key];
-  const data = photo ? {type:'photo', imageDataUrl:photo, title:label, note:section, tag:sectionTag(section), createdAt:Date.now()} : {type:'style', icon:key, title:label, note:section, tag:sectionTag(section), createdAt:Date.now()};
+  const data = pinUrl ? {type:'pinterest', url:pinUrl, title:label, note:section, tag:sectionTag(section), createdAt:Date.now()}
+    : photo ? {type:'photo', imageDataUrl:photo, title:label, note:section, tag:sectionTag(section), createdAt:Date.now()}
+    : {type:'style', icon:key, title:label, note:section, tag:sectionTag(section), createdAt:Date.now()};
   if(dbReady) db.collection('pinboard').add(data);
   else { localAdd(state.pins,data); renderBoard(); renderStart(); }
   showTab('board');
