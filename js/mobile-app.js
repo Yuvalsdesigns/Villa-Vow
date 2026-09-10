@@ -27,14 +27,17 @@
     overlay.addEventListener('click',function(e){if(e.target===overlay)closeMore();});
     document.body.appendChild(overlay);
     var sheet=overlay.querySelector('.sheet');
-    [['budget','Budget'],['style','Style Gallery'],['considerations','Things to Get'],['templates','Email Templates'],['guests','Guest App']].forEach(function(x){
+    [['budget','Budget'],['style','Style Gallery'],['considerations','Things to Get'],['emails','Email Templates'],['guestapp','Guest App']].forEach(function(x){
       var b=document.createElement('button');b.type='button';b.textContent=x[1];b.addEventListener('click',function(){closeMore();go(x[0]);});sheet.appendChild(b);
     });
     syncActive();
   }
   function go(tab){
     if(typeof window.showTab==='function') window.showTab(tab);
-    else {var el=document.querySelector('[data-tab="'+tab+'"]');if(el)el.click();}
+    else {
+      var view=document.getElementById('view-'+tab);
+      if(view){document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});view.classList.add('active');}
+    }
     window.scrollTo({top:0,behavior:'smooth'});setTimeout(syncActive,30);
   }
   function openMore(){var o=document.getElementById('vvMobileMore');if(o)o.classList.add('open');}
@@ -42,7 +45,7 @@
   function syncActive(){
     var active=document.querySelector('.view.active');var id=active?active.id.replace('view-',''):'';
     document.querySelectorAll('#vvMobileNav button[data-tab]').forEach(function(b){b.classList.toggle('active',b.dataset.tab===id);});
-    var more=document.getElementById('vvMoreButton');if(more)more.classList.toggle('active',['budget','style','considerations','templates','guests'].indexOf(id)>-1);
+    var more=document.getElementById('vvMoreButton');if(more)more.classList.toggle('active',['budget','style','considerations','emails','guestapp'].indexOf(id)>-1);
   }
   var observer=new MutationObserver(syncActive);
   function init(){build();document.querySelectorAll('.view').forEach(function(v){observer.observe(v,{attributes:true,attributeFilter:['class']});});}
