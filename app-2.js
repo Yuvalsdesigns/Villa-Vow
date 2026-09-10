@@ -771,7 +771,7 @@ const STYLE_PHOTOS = {
   dressSheath:'https://www.hola.com/horizon/original_aspect_ratio/38c4717da006-rosa-clara-z.jpg',
   dressBoho:'https://www.kissprom.com/cdn/shop/files/a-line-long-sleeves-chiffon-wedding-dress-in-ivory_2.jpg?v=1779083839&width=700',
   dressTwopc:'https://cdn.shopify.com/s/files/1/0251/5215/9837/files/IMG-4963.jpg?v=1749196191',
-  suitTux:'images/style-classic-tuxedo.svg',
+  suitTux:'https://i.pinimg.com/1200x/f1/57/49/f15749e52b0fc9ef686a36dea1c90f04.jpg',
   suitLinen:'https://i.etsystatic.com/61416082/r/il/395a5b/7825575885/il_570xN.7825575885_te3j.jpg',
   suitJacket:'https://dunniotailor.com/sites/default/files/u614/beige-suit-wedding-combination-pants/09-beige-blazer-with-navy-dress-pants.png',
   suitGuayabera:'https://www.camasha.com/cdn/shop/articles/Diseno_sin_titulo_7_f54a5362-e849-415f-adb8-99bd45d4a595.jpg?crop=region&crop_height=674&crop_left=0&crop_top=62&crop_width=1200&v=1771365079&width=1225',
@@ -816,24 +816,9 @@ const STYLE_PHOTOS = {
   secondSlip:'https://i.etsystatic.com/62002792/r/il/1768fe/7925049893/il_794xN.7925049893_mp2m.jpg',
   secondJumpsuit:'https://weddingwild.b-cdn.net/from-ceremony-to-after-party-the-best-bridal-jumpsuits/dancing-bride-jumpsuit-wedding-reception-7ym9e__w672.webp',
   secondSparkle:'https://assets-hvmag-com.s3-accelerate.amazonaws.com/2023/05/whvw_image002_2005507.jpg',
-  secondShoes:'images/style-bridal-flats.svg',
+  secondShoes:'https://dolcevita.ca/cdn/shop/files/xbZHK_2000x2400_8c872fb3-875c-43a7-84df-35a1e08bb8d9.webp?v=1714662010',
 };
 
-/* Live Pinterest pin embeds for cards where a photo isn't enough — real pins the couple picked.
-   Embedded via Pinterest's own iframe (assets.pinterest.com/ext/embed.html), not the pinit.js
-   blockquote widget — the widget script depends on third-party JS that ad blockers and tracking
-   prevention commonly block, where a direct iframe just loads. */
-const STYLE_PIN_IDS = {
-  suitTux: '2392606048308030',
-  secondShoes: '230879918390807624',
-};
-/* native width/height of each pin's embed, so the container can hold the right aspect ratio */
-const STYLE_PIN_ASPECT = {
-  suitTux: '345/558',
-  secondShoes: '236/384',
-};
-function stylePinUrl(key){ return STYLE_PIN_IDS[key] ? 'https://www.pinterest.com/pin/'+STYLE_PIN_IDS[key]+'/' : null; }
-function stylePinEmbed(key){ return STYLE_PIN_IDS[key] ? '<iframe src="https://assets.pinterest.com/ext/embed.html?id='+STYLE_PIN_IDS[key]+'" scrolling="no" frameborder="0" loading="lazy" style="width:100%;height:100%;border:0;display:block;"></iframe>' : null; }
 
 const STYLE_SECTIONS = [
   {title:'Dress silhouettes', tint:'wine', items:[
@@ -943,15 +928,11 @@ function renderStyleSections(){
     const grid = document.createElement('div'); grid.className='style-grid';
     sec.items.forEach(([key,label,desc,itemImg])=>{
       const card = document.createElement('div'); card.className='style-card';
-      const pinUrl = stylePinUrl(key);
-      const pinEmbed = stylePinEmbed(key);
       const photo = itemImg || STYLE_PHOTOS[key];
-      const visual = pinEmbed
-        ? '<div class="style-pin-embed" style="aspect-ratio:'+(STYLE_PIN_ASPECT[key]||'1/1')+';">'+pinEmbed+'</div>'
-        : (photo?'<img class="style-img" src="'+esc(photo)+'" alt="'+esc(label)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.textContent=\'Image unavailable — use Pinterest search\'"><div class="style-photo-source">Matching visual · '+esc(label)+'</div>':'<div class="style-icon tint-'+sec.tint+'">'+svg(ICON[key])+'</div>');
+      const visual = photo?'<img class="style-img" src="'+esc(photo)+'" alt="'+esc(label)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.textContent=\'Image unavailable — use Pinterest search\'"><div class="style-photo-source">Matching visual · '+esc(label)+'</div>':'<div class="style-icon tint-'+sec.tint+'">'+svg(ICON[key])+'</div>';
       card.innerHTML = visual+'<h5>'+label+'</h5><p>'+desc+'</p><div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;"><button class="btn small pin-style">Pin this</button><button class="btn small ghost pinterest-style">Pinterest ↗</button></div>';
       card.querySelector('.pin-style').addEventListener('click', ()=> pinStyle(key,label,sec.title));
-      card.querySelector('.pinterest-style').addEventListener('click', ()=> window.open(pinUrl || ('https://www.pinterest.com/search/pins/?q='+encodeURIComponent(label+' wedding inspiration')),'_blank','noopener'));
+      card.querySelector('.pinterest-style').addEventListener('click', ()=> window.open('https://www.pinterest.com/search/pins/?q='+encodeURIComponent(label+' wedding inspiration'),'_blank','noopener'));
       grid.appendChild(card);
     });
     state.customStyles.filter(s=>normalizeCategory(s.category)===normalizeCategory(sec.title)).forEach(s=>{
@@ -984,10 +965,8 @@ function renderStyleSections(){
   wrap.appendChild(note);
 }
 function pinStyle(key,label,section){
-  const pinUrl = stylePinUrl(key);
   const photo = STYLE_PHOTOS[key];
-  const data = pinUrl ? {type:'pinterest', url:pinUrl, title:label, note:section, tag:sectionTag(section), createdAt:Date.now()}
-    : photo ? {type:'photo', imageDataUrl:photo, title:label, note:section, tag:sectionTag(section), createdAt:Date.now()}
+  const data = photo ? {type:'photo', imageDataUrl:photo, title:label, note:section, tag:sectionTag(section), createdAt:Date.now()}
     : {type:'style', icon:key, title:label, note:section, tag:sectionTag(section), createdAt:Date.now()};
   if(dbReady) db.collection('pinboard').add(data);
   else { localAdd(state.pins,data); renderBoard(); renderStart(); }
