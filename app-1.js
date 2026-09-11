@@ -153,6 +153,7 @@ const TODO_SEED_PART_1 = [
   ['12+ months out', 'Confirm a kosher caterer can work at your venue before signing anything'],
   ['12+ months out', 'Confirm your rabbi or officiant is available and can travel'],
   ['12+ months out', 'Confirm the venue has a real rain plan — indoor space that fits your full guest count, plus a clear Plan B and how last-minute the call can be — before signing anything'],
+  ['12+ months out', 'Check how much on-site parking the venue has, and the backup plan for guests and vendors if it’s limited'],
   ['12+ months out', 'Put a deposit down on the venue'],
   ['12+ months out', 'Decide on your overall color palette and wedding theme'],
   ['12+ months out', 'Choose your wedding party (bridesmaids, groomsmen, honor attendants)'],
