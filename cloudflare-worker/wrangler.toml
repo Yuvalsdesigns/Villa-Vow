@@ -1,7 +1,11 @@
-# Redeploy trigger: rebind GEMINI_API_KEY to the live version.
 name = "villa-vow"
 main = "index.js"
 compatibility_date = "2024-11-01"
+
+[[secrets_store_secrets]]
+binding = "GEMINI_API_KEY"
+store_id = "8f911c88b9e046709ab0d7a6e1522cc3"
+secret_name = "gemini-api-key"
 
 [observability.logs]
 enabled = true
