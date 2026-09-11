@@ -8,7 +8,7 @@ const FIREBASE_PROJECT_ID = 'villa-vow';
 
 /* Double-check this is still a current model name at
    https://ai.google.dev/gemini-api/docs/models before deploying. */
-const MODEL_NAME = 'gemini-2.0-flash';
+const MODEL_NAME = 'gemini-3.6-flash';
 
 /* Only this origin may call the worker from a browser. */
 const ALLOWED_ORIGIN = 'https://yuvalsdesigns.github.io';
