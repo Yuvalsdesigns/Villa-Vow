@@ -131,7 +131,7 @@ export default {
     }));
 
     if (!env.GEMINI_API_KEY) {
-      return json({ error: 'The planner assistant could not reach the model right now.', debug: 'GEMINI_API_KEY is not set on this Worker.' }, 502);
+      return json({ error: 'The planner assistant could not reach the model right now.', debug: 'GEMINI_API_KEY is not set on this Worker. Bindings this Worker actually sees: [' + Object.keys(env).join(', ') + ']' }, 502);
     }
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${env.GEMINI_API_KEY}`;
