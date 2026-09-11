@@ -133,8 +133,13 @@ export default {
     if (!env.GEMINI_API_KEY) {
       return json({ error: 'The planner assistant could not reach the model right now.', debug: 'GEMINI_API_KEY is not set on this Worker. Bindings this Worker actually sees: [' + Object.keys(env).join(', ') + ']' }, 502);
     }
+    /* Secrets Store bindings are objects with a .get() method rather than
+       plain strings, unlike classic Worker secrets. Support both. */
+    const geminiApiKey = typeof env.GEMINI_API_KEY.get === 'function'
+      ? await env.GEMINI_API_KEY.get()
+      : env.GEMINI_API_KEY;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${env.GEMINI_API_KEY}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${geminiApiKey}`;
     let geminiData;
     try {
       const r = await fetch(geminiUrl, {
