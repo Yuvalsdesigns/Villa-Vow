@@ -1,3 +1,4 @@
+# Redeploy trigger: rebind GEMINI_API_KEY to the live version.
 name = "villa-vow"
 main = "index.js"
 compatibility_date = "2024-11-01"
