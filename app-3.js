@@ -391,12 +391,13 @@ document.getElementById('saveLink').addEventListener('click', ()=>{
 const MOBILE_NAV_ICONS = {
   home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M9.5 20v-6h5v6"/>',
   check:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8l1.5 1.5L12 7"/><path d="M14 8h3"/><path d="M8 14l1.5 1.5L12 13"/><path d="M14 14h3"/>',
-  board:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 16l3-4 2 2 3-4 2 6"/><circle cx="9" cy="9" r="1"/>',
   venue:'<path d="M3 20h18"/><path d="M5 20V9l7-5 7 5v11"/><path d="M9 20v-6h6v6"/>',
   more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+  budget:'<path d="M4 7.5h13.5a2.5 2.5 0 012.5 2.5v7a2.5 2.5 0 01-2.5 2.5h-11A2.5 2.5 0 014 17V7.5z"/><path d="M4.5 7.5l1.5-3h10l1.5 3M15.5 12h4.5v3h-4.5a1.5 1.5 0 010-3z"/><circle cx="16.8" cy="13.5" r=".4" fill="currentColor" stroke="none"/>',
+  list:'<path d="M7 4h10l2 3v13H5V7l2-3z"/><path d="M8.5 10.5l1.4 1.4 2.5-2.8M8.5 16l1.4 1.4 2.5-2.8M14 10.5h2M14 16h2"/>',
 };
-const MOBILE_NAV_PRIMARY = [['start','home','Home'],['todo','check','Checklist'],['board','board','Moodboard'],['venues','venue','Venues']];
-const MOBILE_NAV_MORE = [['budget','Budget'],['style','Style Gallery'],['considerations','Things to Get'],['emails','Email Templates'],['guestapp','Guest App']];
+const MOBILE_NAV_PRIMARY = [['start','home','Home'],['todo','check','Checklist'],['budget','budget','Budget'],['considerations','list','Things to Get'],['venues','venue','Venues']];
+const MOBILE_NAV_MORE = [['board','Moodboard'],['style','Style Gallery'],['emails','Email Templates'],['guestapp','Guest App']];
 
 function buildMobileNav(){
   if(document.getElementById('vvMobileNav')) return;

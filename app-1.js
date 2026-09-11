@@ -67,12 +67,12 @@ function svg(paths, extra){ return '<svg viewBox="0 0 24 24" fill="none" stroke=
 /* ---------------- TAB NAV ---------------- */
 const TABS = [
   {id:'start', label:'Start Here', icon:ICON.home},
-  {id:'board', label:'Moodboard', icon:ICON.board},
   {id:'todo', label:'Checklist', icon:ICON.check},
   {id:'budget', label:'Budget', icon:ICON.budget},
-  {id:'venues', label:'Venues & Destinations', icon:ICON.map},
-  {id:'style', label:'Style Gallery', icon:ICON.style},
   {id:'considerations', label:'Things to Get', icon:ICON.list},
+  {id:'venues', label:'Venues & Destinations', icon:ICON.map},
+  {id:'board', label:'Moodboard', icon:ICON.board},
+  {id:'style', label:'Style Gallery', icon:ICON.style},
   {id:'emails', label:'Email Templates', icon:ICON.mail},
   {id:'guestapp', label:'Guest App', icon:ICON.guests},
 ];
