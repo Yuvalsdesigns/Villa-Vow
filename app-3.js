@@ -394,7 +394,6 @@ const MOBILE_NAV_ICONS = {
   board:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 16l3-4 2 2 3-4 2 6"/><circle cx="9" cy="9" r="1"/>',
   venue:'<path d="M3 20h18"/><path d="M5 20V9l7-5 7 5v11"/><path d="M9 20v-6h6v6"/>',
   more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
-  planner:'<path d="M4 12c3-3 6-4 8-4s5 1 8 4c-3 3-6 4-8 4s-5-1-8-4z"/><path d="M12 16v4M9 20h6"/>',
 };
 const MOBILE_NAV_PRIMARY = [['start','home','Home'],['todo','check','Checklist'],['board','board','Moodboard'],['venues','venue','Venues']];
 const MOBILE_NAV_MORE = [['budget','Budget'],['style','Style Gallery'],['considerations','Things to Get'],['emails','Email Templates'],['guestapp','Guest App']];
@@ -412,12 +411,6 @@ function buildMobileNav(){
   more.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+MOBILE_NAV_ICONS.more+'</svg><span>More</span>';
   more.addEventListener('click', ()=> document.getElementById('vvMobileMore')?.classList.add('open'));
   nav.appendChild(more);
-
-  const planner = document.createElement('button'); planner.type='button'; planner.id='vvPlannerNavButton'; planner.style.display='none';
-  planner.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+MOBILE_NAV_ICONS.planner+'</svg><span>Planner</span>';
-  planner.addEventListener('click', ()=> document.getElementById('plannerPanel').classList.add('open'));
-  nav.appendChild(planner);
-
   document.body.appendChild(nav);
 
   const overlay = document.createElement('div'); overlay.id='vvMobileMore';
@@ -452,9 +445,6 @@ async function initPlanner(){
   }catch(e){ sampleFn = null; }
   if(!sampleFn){
     document.getElementById('plannerFab').style.display = 'none';
-  }else{
-    const navBtn = document.getElementById('vvPlannerNavButton');
-    if(navBtn) navBtn.style.display = '';
   }
 }
 
