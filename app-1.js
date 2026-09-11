@@ -152,6 +152,7 @@ const TODO_SEED_PART_1 = [
   ['12+ months out', 'Shortlist destination regions and specific venues'],
   ['12+ months out', 'Confirm a kosher caterer can work at your venue before signing anything'],
   ['12+ months out', 'Confirm your rabbi or officiant is available and can travel'],
+  ['12+ months out', 'Confirm the venue has a real rain plan — indoor space that fits your full guest count, plus a clear Plan B and how last-minute the call can be — before signing anything'],
   ['12+ months out', 'Put a deposit down on the venue'],
   ['12+ months out', 'Decide on your overall color palette and wedding theme'],
   ['12+ months out', 'Choose your wedding party (bridesmaids, groomsmen, honor attendants)'],
@@ -320,6 +321,7 @@ const CONSID_SEED_PART_1 = [
   ['Beauty countdown', 'Tan plan'],
   ['Beauty countdown', 'Book a stylist/dresser for wedding-day steaming and bustling'],
   ['Weather & backup plan', 'Indoor backup for the ceremony'],
+  ['Weather & backup plan', "Get the venue's rain plan in writing — which indoor space, its capacity, and how last-minute the call can be"],
   ['Weather & backup plan', 'Shade and water for an outdoor ceremony'],
   ['Weather & backup plan', 'Backup plan for the pool party'],
   ['Language & culture', 'Bilingual/trilingual MC'],
@@ -407,8 +409,29 @@ const CONSID_SEED_PART_3 = [
   ['Décor & styling', 'Décor transport and storage plan']
 ];
 
+const CONSID_SEED_PART_4 = [
+  ['Wedding Day Survival Kit', 'Pain relievers (ibuprofen & paracetamol)'],
+  ['Wedding Day Survival Kit', 'Antacids'],
+  ['Wedding Day Survival Kit', 'Blister plasters / moleskin'],
+  ['Wedding Day Survival Kit', 'Stain-removing pen'],
+  ['Wedding Day Survival Kit', 'Safety pins'],
+  ['Wedding Day Survival Kit', 'Small sewing kit (needle, thread, spare buttons)'],
+  ['Wedding Day Survival Kit', 'Bobby pins and hair ties'],
+  ['Wedding Day Survival Kit', 'Hairspray or static-cling spray'],
+  ['Wedding Day Survival Kit', 'Deodorant'],
+  ['Wedding Day Survival Kit', 'Dental floss'],
+  ['Wedding Day Survival Kit', 'Mints or gum'],
+  ['Wedding Day Survival Kit', 'Tissues'],
+  ['Wedding Day Survival Kit', 'Eye drops'],
+  ['Wedding Day Survival Kit', 'Hand sanitizer'],
+  ['Wedding Day Survival Kit', 'Clear nail polish (stops stocking runs)'],
+  ['Wedding Day Survival Kit', 'Double-sided fashion tape'],
+  ['Wedding Day Survival Kit', 'Portable phone charger / battery pack'],
+  ['Wedding Day Survival Kit', 'Snacks and water bottles']
+];
+
 const SEED_TODOS = [...TODO_SEED_PART_1,...TODO_SEED_PART_2,...TODO_SEED_PART_3,...TODO_SEED_PART_4];
-const SEED_CONSIDERATIONS = [...CONSID_SEED_PART_1,...CONSID_SEED_PART_2,...CONSID_SEED_PART_3];
+const SEED_CONSIDERATIONS = [...CONSID_SEED_PART_1,...CONSID_SEED_PART_2,...CONSID_SEED_PART_3,...CONSID_SEED_PART_4];
 const ORIGINAL_CONSIDERATION_COUNT = 33;
 
 state.todos = SEED_TODOS.map(([category,text],i)=>({id:'seed-todo-'+i, category, text, done:false, order:i}));
@@ -520,7 +543,8 @@ function deleteItem(coll, it){
 /* ---------------- CONSIDERATIONS ---------------- */
 const CONSID_GROUPS = ['Ceremony essentials','Kosher & catering','Legal & paperwork','Guests & travel','Beauty countdown','Weather & backup plan','Language & culture',
   'Attire & accessories',
-  'Décor & styling'];
+  'Décor & styling',
+  'Wedding Day Survival Kit'];
 function renderConsiderations(){
   const wrap = document.getElementById('considGroups');
   const done = state.considerations.filter(t=>t.done).length;
