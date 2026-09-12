@@ -130,7 +130,7 @@
     let pins=state.pins;
     if(activeFilter!=='all'){
       pins=pins.filter(function(p){
-        return activeFilter==='photo'?p.type==='photo':activeFilter==='link'?p.type==='link':activeFilter==='pinterest'?p.type==='pinterest':p.tag===activeFilter;
+        return activeFilter==='photo'?p.type==='photo':activeFilter==='link'?p.type==='link':activeFilter==='pinterest'?(p.type==='pinterest'||!!classifyPinterestUrl(p.url)):p.tag===activeFilter;
       });
     }
     grid.innerHTML='';
@@ -144,7 +144,12 @@
         inner='<img src="'+p.imageDataUrl+'" alt="">';
       }else if(p.type==='style'){
         inner='<div class="pin-icon-wrap tint-'+({dress:'wine',suit:'cypress',flowers:'cypress',venue:'brass',music:'cypress',hair:'wine',makeup:'brass',stationery:'brass'}[p.tag]||'cypress')+'">'+svg(ICON[p.icon])+'</div>';
-      }else if(p.type==='pinterest'){
+      }else if(p.type==='pinterest'||p.type==='link'){
+        /* Classify from the URL itself on every render, rather than trusting
+           the stored type/pinterestKind fields — those depend on a one-time
+           migration or on which code path originally saved the pin, and a
+           pin added (or re-added) after that migration already ran once
+           would otherwise be stuck showing the generic icon forever. */
         const parsed=classifyPinterestUrl(p.url);
         const kind=p.pinterestKind||(parsed&&parsed.kind);
         const clean=(parsed&&parsed.url)||p.url;
