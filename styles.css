@@ -79,13 +79,10 @@
     padding:0 6px;
   }
   .brand-mark{
-    width:34px;height:34px;border-radius:50%;
-    background:var(--surface);
-    display:flex;align-items:center;justify-content:center;
-    overflow:hidden;
+    width:34px;height:34px;min-width:34px;min-height:34px;max-width:34px;max-height:34px;border-radius:50%;
+    background:var(--surface) url('brand-mark.png?v=20260912-21') center/cover no-repeat;
     flex:none;
   }
-  .brand-mark img{width:100%;height:100%;object-fit:cover;}
   .brand-text h1{font-size:19px;line-height:1.1;font-style:italic;color:var(--wine);}
   .brand-text span{font-size:11px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;letter-spacing:.03em;}
 
