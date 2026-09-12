@@ -158,7 +158,7 @@ function renderPinterestBoard(url){
   const shelf=document.getElementById('pinterestBoardShelf'); if(!shelf) return;
   url=(url||'').trim();
   if(!url){ shelf.innerHTML=''; return; }
-  if(!/^https?:\/\/(www\.)?pinterest\.[^/]+\//i.test(url)){
+  if(!/^https?:\/\/(www\.)?(pinterest\.[^/]+\/.+|pin\.it\/.+)/i.test(url)){
     shelf.innerHTML='<div class="warn">That does not look like a Pinterest board URL.</div>'; return;
   }
   localStorage.setItem('vv_pinterest_board_url',url);
