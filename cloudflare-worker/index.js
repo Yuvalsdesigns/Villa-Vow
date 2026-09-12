@@ -89,6 +89,52 @@ async function verifyFirebaseIdToken(token) {
   return payload;
 }
 
+/* Pinterest's own embed widget (pinit.js) is a well-known third-party
+   tracker and is routinely blocked by ad blockers and browser tracking
+   protection (notably Safari's Intelligent Tracking Prevention on iOS) —
+   which is why pins could silently fail to show a picture on some
+   devices/browsers even when added correctly. Fetching the pin's oEmbed
+   data server-side sidesteps that entirely: this Worker (not the user's
+   browser) resolves the pin.it redirect if needed and asks Pinterest's
+   oEmbed endpoint for a real thumbnail image URL, which the page then
+   renders as a plain <img>, no third-party script required. Restricted
+   to Pinterest hosts so this can't be used as an open URL-follower. */
+async function handleResolvePin(rawUrl) {
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return json({ error: 'Invalid URL' }, 400);
+  }
+  const host = url.hostname.toLowerCase();
+  const isPinit = host === 'pin.it' || host === 'www.pin.it';
+  const isPinterest = host === 'pinterest.com' || host.endsWith('.pinterest.com');
+  if (!isPinit && !isPinterest) {
+    return json({ error: 'Not a Pinterest link' }, 400);
+  }
+  let canonicalUrl = url.toString();
+  if (isPinit) {
+    try {
+      const redirectResp = await fetch(canonicalUrl, { redirect: 'follow', method: 'GET' });
+      canonicalUrl = redirectResp.url;
+    } catch (err) {
+      return json({ error: 'Could not resolve pin.it link' }, 502);
+    }
+  }
+  try {
+    const oembedResp = await fetch('https://www.pinterest.com/oembed.json?url=' + encodeURIComponent(canonicalUrl));
+    if (!oembedResp.ok) throw new Error('oEmbed request failed: ' + oembedResp.status);
+    const data = await oembedResp.json();
+    return json({
+      url: canonicalUrl,
+      title: data.title || '',
+      thumbnailUrl: data.thumbnail_url || '',
+    });
+  } catch (err) {
+    return json({ error: 'Could not fetch Pinterest preview', url: canonicalUrl }, 502);
+  }
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') {
@@ -120,6 +166,11 @@ export default {
     } catch {
       return json({ error: 'Invalid JSON body' }, 400);
     }
+
+    if (body && body.action === 'resolvePin') {
+      return handleResolvePin(body.url);
+    }
+
     const messages = body && body.messages;
     if (!Array.isArray(messages) || messages.length === 0) {
       return json({ error: 'messages array is required' }, 400);

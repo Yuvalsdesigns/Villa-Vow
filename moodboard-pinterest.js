@@ -49,6 +49,40 @@
   window.ensurePinterestWidgets=ensurePinterestScript;
   window.classifyPinterestUrl=classifyPinterestUrl;
 
+  /* Pinterest's client-side embed widget is a well-known tracker and gets
+     silently blocked by ad blockers and Safari's tracking prevention on
+     some devices, which is why a pin could look "added" but never show a
+     picture. Individual pins are previewed via our own Worker instead,
+     which fetches Pinterest's oEmbed thumbnail server-side and hands back
+     a plain image URL — no third-party script involved. */
+  const pinPreviewCache=new Map();
+  const pinPreviewInFlight=new Set();
+
+  async function resolvePinPreview(pin, cleanUrl){
+    if(pinPreviewInFlight.has(cleanUrl)) return;
+    pinPreviewInFlight.add(cleanUrl);
+    try{
+      const user=window.firebase&&firebase.auth&&firebase.auth().currentUser;
+      if(!user||!window.VV_WORKER_URL){ pinPreviewCache.set(cleanUrl,{failed:true}); return; }
+      const idToken=await user.getIdToken();
+      const resp=await fetch(window.VV_WORKER_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
+        body:JSON.stringify({action:'resolvePin',url:cleanUrl})
+      });
+      const data=await resp.json();
+      if(!resp.ok||!data.thumbnailUrl){ pinPreviewCache.set(cleanUrl,{failed:true}); return; }
+      pinPreviewCache.set(cleanUrl,{thumbnailUrl:data.thumbnailUrl,title:data.title,resolvedUrl:data.url});
+      if(dbReady&&pin.id) db.collection('pinboard').doc(pin.id).update({pinThumbnail:data.thumbnailUrl,pinResolvedUrl:data.url});
+      else { pin.pinThumbnail=data.thumbnailUrl; pin.pinResolvedUrl=data.url; }
+      window.renderBoard();
+    }catch(e){
+      pinPreviewCache.set(cleanUrl,{failed:true});
+    }finally{
+      pinPreviewInFlight.delete(cleanUrl);
+    }
+  }
+
   window.renderPinterestBoard=function(rawUrl){
     const shelf=document.getElementById('pinterestBoardShelf');
     if(!shelf) return;
@@ -98,7 +132,13 @@
         if(kind==='board'){
           inner='<div class="pin-pinterest pin-pinterest-board"><a data-pin-do="embedBoard" data-pin-board-width="320" data-pin-scale-height="240" data-pin-scale-width="80" href="'+esc(clean)+'"></a></div>';
         }else if(kind==='pin'||kind==='short'){
-          inner='<div class="pin-pinterest"><blockquote class="pinterest-pin" data-pin-do="embedPin" data-pin-width="medium"><a href="'+esc(clean)+'">'+esc(p.title||'View on Pinterest')+'</a></blockquote></div>';
+          const preview=(p.pinThumbnail&&{thumbnailUrl:p.pinThumbnail})||pinPreviewCache.get(clean);
+          if(preview&&preview.thumbnailUrl){
+            inner='<img src="'+esc(preview.thumbnailUrl)+'" alt="">';
+          }else{
+            inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
+            if(!preview||!preview.failed) resolvePinPreview(p,clean);
+          }
         }else{
           inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
         }
