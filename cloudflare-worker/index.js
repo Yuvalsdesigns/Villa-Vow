@@ -129,6 +129,16 @@ async function handleResolvePin(rawUrl) {
       return json({ error: 'Could not resolve pin.it link', debug: String(err && err.message || err) }, 502);
     }
   }
+  /* A resolved pin.it link (and some copied share links) lands on the
+     tracked share-link shape — /pin/<id>/sent/?invite_code=...&sender=...
+     — on whichever regional subdomain (fr.pinterest.com, etc.) the visitor
+     who shared it was on. Pinterest's oEmbed endpoint rejects that shape
+     outright ("Url was not found"); it only recognizes the bare canonical
+     pin URL, so normalize down to just the numeric pin ID before asking. */
+  const pinIdMatch = canonicalUrl.match(/\/pin\/(\d+)/);
+  if (pinIdMatch) {
+    canonicalUrl = 'https://www.pinterest.com/pin/' + pinIdMatch[1] + '/';
+  }
   try {
     const oembedResp = await fetch(
       'https://www.pinterest.com/oembed.json?url=' + encodeURIComponent(canonicalUrl),
