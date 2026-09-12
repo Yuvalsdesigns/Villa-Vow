@@ -65,7 +65,11 @@
     pinPreviewInFlight.add(cleanUrl);
     try{
       const user=window.firebase&&firebase.auth&&firebase.auth().currentUser;
-      if(!user||!window.VV_WORKER_URL){ console.error('[Pinterest preview] not signed in or no worker URL configured',{hasUser:!!user,workerUrl:window.VV_WORKER_URL}); pinPreviewCache.set(cleanUrl,{failed:true}); return; }
+      if(!user||!window.VV_WORKER_URL){
+        const reason='Not signed in yet, or the worker URL is missing.';
+        console.error('[Pinterest preview]',reason,{hasUser:!!user,workerUrl:window.VV_WORKER_URL});
+        pinPreviewCache.set(cleanUrl,{failed:true,reason}); return;
+      }
       const idToken=await user.getIdToken();
       const resp=await fetch(window.VV_WORKER_URL,{
         method:'POST',
@@ -73,15 +77,24 @@
         body:JSON.stringify({action:'resolvePin',url:cleanUrl})
       });
       let data;
-      try{ data=await resp.json(); }catch(parseErr){ console.error('[Pinterest preview] worker response was not JSON',{status:resp.status,statusText:resp.statusText,url:cleanUrl}); pinPreviewCache.set(cleanUrl,{failed:true}); return; }
-      if(!resp.ok||!data.thumbnailUrl){ console.error('[Pinterest preview] worker did not return a thumbnail',{status:resp.status,data,url:cleanUrl}); pinPreviewCache.set(cleanUrl,{failed:true}); return; }
+      try{ data=await resp.json(); }catch(parseErr){
+        const reason='HTTP '+resp.status+' '+resp.statusText+' (response was not JSON)';
+        console.error('[Pinterest preview]',reason,{url:cleanUrl});
+        pinPreviewCache.set(cleanUrl,{failed:true,reason}); return;
+      }
+      if(!resp.ok||!data.thumbnailUrl){
+        const reason='HTTP '+resp.status+': '+(data&&(data.error||JSON.stringify(data).slice(0,140))||'no thumbnail returned');
+        console.error('[Pinterest preview]',reason,{status:resp.status,data,url:cleanUrl});
+        pinPreviewCache.set(cleanUrl,{failed:true,reason}); return;
+      }
       pinPreviewCache.set(cleanUrl,{thumbnailUrl:data.thumbnailUrl,title:data.title,resolvedUrl:data.url});
       if(dbReady&&pin.id) db.collection('pinboard').doc(pin.id).update({pinThumbnail:data.thumbnailUrl,pinResolvedUrl:data.url});
       else { pin.pinThumbnail=data.thumbnailUrl; pin.pinResolvedUrl=data.url; }
       window.renderBoard();
     }catch(e){
-      console.error('[Pinterest preview] request failed',{error:String(e),url:cleanUrl});
-      pinPreviewCache.set(cleanUrl,{failed:true});
+      const reason='Request failed: '+String(e&&e.message||e);
+      console.error('[Pinterest preview]',reason,{url:cleanUrl});
+      pinPreviewCache.set(cleanUrl,{failed:true,reason});
     }finally{
       pinPreviewInFlight.delete(cleanUrl);
     }
@@ -126,6 +139,7 @@
     pins.forEach(function(p){
       const el=document.createElement('div'); el.className='pin';
       let inner='';
+      let previewError=null;
       if(p.type==='photo'){
         inner='<img src="'+p.imageDataUrl+'" alt="">';
       }else if(p.type==='style'){
@@ -143,7 +157,8 @@
             inner='<img src="'+esc(preview.thumbnailUrl)+'" alt="">';
           }else{
             inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
-            if(!preview||!preview.failed) resolvePinPreview(p,clean);
+            if(preview&&preview.failed) previewError=preview.reason||'Preview failed';
+            else resolvePinPreview(p,clean);
           }
         }else{
           inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
@@ -151,7 +166,7 @@
       }else{
         inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
       }
-      el.innerHTML=inner+'<div class="pin-body"><div class="pin-tag">'+(p.tag||'other')+'</div><h5>'+esc(p.title||'')+'</h5>'+(p.note?'<p>'+esc(p.note)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
+      el.innerHTML=inner+'<div class="pin-body"><div class="pin-tag">'+(p.tag||'other')+'</div><h5>'+esc(p.title||'')+'</h5>'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:\'IBM Plex Mono\',monospace;">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
       el.querySelector('.del-pin').addEventListener('click',function(){
         if(dbReady) db.collection('pinboard').doc(p.id).delete();
         else {state.pins=state.pins.filter(function(x){return x.id!==p.id;});renderBoard();renderStart();}
