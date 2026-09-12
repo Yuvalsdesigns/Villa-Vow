@@ -116,34 +116,44 @@ function renderStart(){
   });
 }
 function tile(n,l,accent){ return '<div class="stat-tile'+(accent?' accent':'')+'"><div class="n mono">'+n+'</div><div class="l">'+l+'</div></div>'; }
+function goalTile(goal, diff){
+  const status = !goal ? '' : diff>=0 ? '<span class="under">€'+diff.toLocaleString()+' left to plan</span>' : '<span class="over">€'+Math.abs(diff).toLocaleString()+' over goal</span>';
+  return '<div class="stat-tile goal-tile"><div class="n mono">€<input type="number" id="budgetGoalInput" value="'+goal+'" min="0" step="500"></div><div class="l">Goal budget<br>'+status+'</div></div>';
+}
 
 
 
 "use strict";
 
 let db = null, dbReady=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[] };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000 };
 
+/* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
+   Italy or Portugal (Provence would run similar or a bit higher). These
+   are rough planning-guide figures, not real vendor quotes — replace
+   each one as you get actual quotes. Kosher catering runs well above
+   standard European wedding catering because of the mashgiach and
+   imported/kosher-certified ingredients. */
 const SEED_BUDGET = [
-  {category:'Venue', item:'Villa / masseria rental (multi-day)', estCost:0, actCost:0, paid:0, order:0},
-  {category:'Accommodation', item:'Overflow hotel/Airbnb room block', estCost:0, actCost:0, paid:0, order:1},
-  {category:'Catering', item:'Kosher dinner + mashgiach fee', estCost:0, actCost:0, paid:0, order:2},
-  {category:'Catering', item:'Welcome dinner', estCost:0, actCost:0, paid:0, order:3},
-  {category:'Ceremony', item:'Rabbi travel & officiant fee', estCost:0, actCost:0, paid:0, order:4},
-  {category:'Ceremony', item:'Chuppah', estCost:0, actCost:0, paid:0, order:5},
-  {category:'Flowers', item:'Bouquets & ceremony florals', estCost:0, actCost:0, paid:0, order:6},
-  {category:'Attire', item:'Dress & alterations', estCost:0, actCost:0, paid:0, order:7},
-  {category:'Attire', item:"Partner's attire", estCost:0, actCost:0, paid:0, order:8},
-  {category:'Beauty', item:'Hair & makeup (trial + day-of)', estCost:0, actCost:0, paid:0, order:9},
-  {category:'Media', item:'Photography & video', estCost:0, actCost:0, paid:0, order:10},
-  {category:'Entertainment', item:'Music / DJ or band', estCost:0, actCost:0, paid:0, order:11},
-  {category:'Guest travel', item:'Shuttles & welcome bags', estCost:0, actCost:0, paid:0, order:12},
-  {category:'Legal', item:'Marriage license & paperwork', estCost:0, actCost:0, paid:0, order:13},
-  {category:'Contingency', item:'Buffer (~10% of total)', estCost:0, actCost:0, paid:0, order:14},
-  {category:'Stationery', item:'Save-the-dates, invitations & day-of signage', estCost:0, actCost:0, paid:0, order:15},
-  {category:'Cake & desserts', item:'Cake or dessert table (kosher-friendly)', estCost:0, actCost:0, paid:0, order:16},
-  {category:'Honeymoon', item:'Honeymoon travel & stay', estCost:0, actCost:0, paid:0, order:17},
-  {category:'Gifts & favors', item:'Wedding party gifts & guest favors', estCost:0, actCost:0, paid:0, order:18}
+  {category:'Venue', item:'Villa / masseria rental (multi-day)', estCost:18000, actCost:0, paid:0, order:0},
+  {category:'Accommodation', item:'Overflow hotel/Airbnb room block', estCost:5000, actCost:0, paid:0, order:1},
+  {category:'Catering', item:'Kosher dinner + mashgiach fee', estCost:16000, actCost:0, paid:0, order:2},
+  {category:'Catering', item:'Welcome dinner', estCost:7000, actCost:0, paid:0, order:3},
+  {category:'Ceremony', item:'Rabbi travel & officiant fee', estCost:3000, actCost:0, paid:0, order:4},
+  {category:'Ceremony', item:'Chuppah', estCost:1500, actCost:0, paid:0, order:5},
+  {category:'Flowers', item:'Bouquets & ceremony florals', estCost:5500, actCost:0, paid:0, order:6},
+  {category:'Attire', item:'Dress & alterations', estCost:4000, actCost:0, paid:0, order:7},
+  {category:'Attire', item:"Partner's attire", estCost:1200, actCost:0, paid:0, order:8},
+  {category:'Beauty', item:'Hair & makeup (trial + day-of)', estCost:900, actCost:0, paid:0, order:9},
+  {category:'Media', item:'Photography & video', estCost:7500, actCost:0, paid:0, order:10},
+  {category:'Entertainment', item:'Music / DJ or band', estCost:5000, actCost:0, paid:0, order:11},
+  {category:'Guest travel', item:'Shuttles & welcome bags', estCost:3000, actCost:0, paid:0, order:12},
+  {category:'Legal', item:'Marriage license & paperwork', estCost:500, actCost:0, paid:0, order:13},
+  {category:'Contingency', item:'Buffer (~10% of total)', estCost:9000, actCost:0, paid:0, order:14},
+  {category:'Stationery', item:'Save-the-dates, invitations & day-of signage', estCost:2000, actCost:0, paid:0, order:15},
+  {category:'Cake & desserts', item:'Cake or dessert table (kosher-friendly)', estCost:1000, actCost:0, paid:0, order:16},
+  {category:'Honeymoon', item:'Honeymoon travel & stay', estCost:5000, actCost:0, paid:0, order:17},
+  {category:'Gifts & favors', item:'Wedding party gifts & guest favors', estCost:2000, actCost:0, paid:0, order:18}
 ];
 
 const TODO_SEED_PART_1 = [
@@ -461,6 +471,10 @@ async function initDb(){
       state.budget = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderBudget(); renderStart();
     }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('meta').doc('budgetGoal').onSnapshot(doc=>{
+      state.budgetGoal = doc.exists ? (Number(doc.data().amount)||0) : state.budgetGoal;
+      renderBudget(); renderStart();
+    }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('pinboard').orderBy('createdAt','desc').onSnapshot(snap=>{
       state.pins = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderBoard(); renderStart();
@@ -584,12 +598,21 @@ function renderBudget(){
   const est = state.budget.reduce((s,b)=>s+(Number(b.estCost)||0),0);
   const act = state.budget.reduce((s,b)=>s+(Number(b.actCost)||0),0);
   const paid = state.budget.filter(b=>b.paid).reduce((s,b)=>s+(Number(b.actCost)||Number(b.estCost)||0),0);
+  const goal = Number(state.budgetGoal)||0;
+  const diff = goal - est;
   document.getElementById('budgetStats').innerHTML = [
     tile('€'+est.toLocaleString(),'Estimated total', true),
+    goalTile(goal, diff),
     tile('€'+act.toLocaleString(),'Actual (quoted/booked)'),
     tile('€'+paid.toLocaleString(),'Paid so far'),
     tile(String(state.budget.length),'Line items'),
   ].join('');
+  document.getElementById('budgetGoalInput').addEventListener('change', e=>{
+    const val = Math.max(0, Number(e.target.value)||0);
+    state.budgetGoal = val;
+    if(dbReady) db.collection('meta').doc('budgetGoal').set({amount: val});
+    else renderBudget();
+  });
   body.innerHTML='';
   state.budget.forEach(b=>{
     const tr = document.createElement('tr');
