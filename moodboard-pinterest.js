@@ -83,7 +83,9 @@
         pinPreviewCache.set(cleanUrl,{failed:true,reason}); window.renderBoard(); return;
       }
       if(!resp.ok||!data.thumbnailUrl){
-        const reason='HTTP '+resp.status+': '+(data&&(data.error||JSON.stringify(data).slice(0,140))||'no thumbnail returned');
+        let reason='HTTP '+resp.status+': '+(data&&(data.error||'no thumbnail returned')||'no thumbnail returned');
+        if(data&&data.status) reason+=' (Pinterest responded '+data.status+')';
+        if(data&&data.bodySnippet) reason+=' — '+String(data.bodySnippet).slice(0,160);
         console.error('[Pinterest preview]',reason,{status:resp.status,data,url:cleanUrl});
         pinPreviewCache.set(cleanUrl,{failed:true,reason}); window.renderBoard(); return;
       }
