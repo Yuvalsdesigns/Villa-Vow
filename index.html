@@ -5,8 +5,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260912-17">
-<link rel="stylesheet" href="mobile-app.css?v=20260912-17">
+<link rel="stylesheet" href="styles.css?v=20260912-18">
+<link rel="stylesheet" href="mobile-app.css?v=20260912-18">
 
 <div class="bg-watermark no-print" style="background-image:url('watermark.jpg');"></div>
 
@@ -259,22 +259,68 @@
 <!-- GUEST APP -->
     <section class="view" id="view-guestapp">
       <div class="view-head">
-        <h2>Guest app</h2>
-        <p>"Who's Coming" — your shared guest list, split by side and reorderable, with RSVP, plus-ones, dietary/kosher notes and table groups.</p>
+        <h2>Who's Coming</h2>
+        <p>One shared guest list, split by side, reorderable however you like — for seating, for calling down a phone list, or just to see it the way you think about it.</p>
       </div>
-      <div class="card" style="padding:28px;display:flex;flex-direction:column;align-items:flex-start;gap:14px;max-width:520px;">
-        <div class="style-icon tint-cypress" style="width:52px;height:52px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:30px;height:30px;">
-            <circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M14.5 14.3c2.6.3 4.5 2.3 4.5 5.7"/>
-          </svg>
+
+      <div class="stat-row" id="guestStatRow"></div>
+
+      <div class="sides">
+        <div class="side" data-side="mine">
+          <div class="side-head mine">
+            <input class="side-label" id="labelMine" value="Your guests">
+            <span class="side-count" id="countMine">0</span>
+          </div>
+          <div class="side-mini" id="miniMine"></div>
+          <div class="guest-list" id="listMine"></div>
+          <div class="empty-side" id="emptyMine" style="display:none;">No one on this side yet — add your first guest below.</div>
+          <div class="add-row no-print">
+            <input type="text" id="addNameMine" placeholder="Add a guest…">
+            <button class="btn primary small" data-side="mine">Add</button>
+          </div>
+          <div class="paste-toggle no-print"><button class="btn small link-btn" data-paste-toggle="mine">Paste a list instead</button></div>
+          <div class="paste-panel no-print" id="pastePanelMine" hidden>
+            <textarea id="pasteTextMine" rows="7" placeholder="Paste names, one per line — e.g.&#10;Dana Cohen&#10;+1&#10;The Levi family +3&#10;Aunt Ruth&#10;+X"></textarea>
+            <p class="paste-hint">One name per line. A <b>+2</b> or <b>+X</b> works either at the end of a name, or by itself on the line right below it (like a Notes app list). <b>+X</b> means the number of plus-ones isn't confirmed yet.</p>
+            <div class="paste-actions"><button class="btn small" data-paste-cancel="mine">Cancel</button><button class="btn primary small" data-paste-import="mine">Import list</button></div>
+          </div>
         </div>
-        <div>
-          <h3 style="font-size:18px;margin-bottom:6px;">Who's Coming</h3>
-          <p style="font-size:13.5px;color:var(--ink-soft);line-height:1.55;">Your shared guest list — split into your side and your fiancé's side, drag-to-reorder, RSVP status, plus-ones, dietary/kosher notes and table groups. It lives on its own page and opens in a new tab — a published artifact like this one can't embed another inline, the same sandboxing that keeps every board here private also stops pages from nesting each other.</p>
+        <div class="side" data-side="partner">
+          <div class="side-head partner">
+            <input class="side-label" id="labelPartner" value="Fiancé's guests">
+            <span class="side-count" id="countPartner">0</span>
+          </div>
+          <div class="side-mini" id="miniPartner"></div>
+          <div class="guest-list" id="listPartner"></div>
+          <div class="empty-side" id="emptyPartner" style="display:none;">No one on this side yet — add your first guest below.</div>
+          <div class="add-row no-print">
+            <input type="text" id="addNamePartner" placeholder="Add a guest…">
+            <button class="btn primary small" data-side="partner">Add</button>
+          </div>
+          <div class="paste-toggle no-print"><button class="btn small link-btn" data-paste-toggle="partner">Paste a list instead</button></div>
+          <div class="paste-panel no-print" id="pastePanelPartner" hidden>
+            <textarea id="pasteTextPartner" rows="7" placeholder="Paste names, one per line — e.g.&#10;Dana Cohen&#10;+1&#10;The Levi family +3&#10;Aunt Ruth&#10;+X"></textarea>
+            <p class="paste-hint">One name per line. A <b>+2</b> or <b>+X</b> works either at the end of a name, or by itself on the line right below it (like a Notes app list). <b>+X</b> means the number of plus-ones isn't confirmed yet.</p>
+            <div class="paste-actions"><button class="btn small" data-paste-cancel="partner">Cancel</button><button class="btn primary small" data-paste-import="partner">Import list</button></div>
+          </div>
         </div>
-        <a class="btn primary" href="https://claude.ai/code/artifact/c1268b31-e229-4a8b-b569-3d3f9710870c" target="_blank" rel="noopener">Open Who's Coming ↗</a>
       </div>
+
+      <p class="no-print" style="margin-top:16px;font-size:11.5px;color:var(--ink-faint);line-height:1.6;">
+        Drag the grip on the left of a row to reorder within its side. Use the − / + stepper to adjust plus-ones without typing, and the small "+1:" dropdown next to it if the plus-one's own status differs from the guest's. Click a row to expand dietary/kosher notes, table, and free-text notes.
+        <br><button class="btn small" style="margin-top:10px;" onclick="window.print()">Print guest list</button>
+      </p>
     </section>
+
+    <div class="confirm-backdrop no-print" id="confirmBackdrop">
+      <div class="confirm-box">
+        <p id="confirmMessage">Are you sure?</p>
+        <div class="confirm-actions">
+          <button class="btn" id="confirmNo">No</button>
+          <button class="btn danger" id="confirmYes">Yes, delete</button>
+        </div>
+      </div>
+    </div>
 
 </main>
 </div>
@@ -371,7 +417,8 @@
   </div>
 </div>
 
-<script src="firebase-sync.js?v=20260912-17"></script>
-<script src="app-1.js?v=20260912-17"></script>
-<script src="app-2.js?v=20260912-17"></script>
-<script src="app-3.js?v=20260912-17"></script>
+<script src="firebase-sync.js?v=20260912-18"></script>
+<script src="app-1.js?v=20260912-18"></script>
+<script src="app-4.js?v=20260912-18"></script>
+<script src="app-2.js?v=20260912-18"></script>
+<script src="app-3.js?v=20260912-18"></script>

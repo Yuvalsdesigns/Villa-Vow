@@ -16,6 +16,8 @@ const ICON = {
   x:'<path d="M6 6l12 12M18 6L6 18"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   trash:'<path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/>',
+  grip:'<circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/>',
+  chevron:'<path d="M6 9l6 6 6-6"/>',
   external:'<path d="M14 5h5v5M19 5l-9 9M9 5H6a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1v-3"/>',
   check2:'<path d="M4 12l5 5L20 6"/>',
   dressA:'<path d="M12 3v6M9.5 9l-4 12h13l-4-12M9.5 9c0-2 1-3 2.5-3s2.5 1 2.5 3"/>',
@@ -126,7 +128,7 @@ function goalTile(goal, diff){
 "use strict";
 
 let db = null, dbReady=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000 };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"} };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -483,6 +485,18 @@ async function initDb(){
       state.considerations = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_CONSIDERATIONS.map(([category,text],i)=>({id:'seed-consid-'+i, category, text, done:false, order:i}));
       renderConsiderations(); renderStart();
     }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('guests').orderBy('order','asc').onSnapshot(snap=>{
+      state.guests = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      renderGuestApp();
+    }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('meta').doc('labels').onSnapshot(doc=>{
+      if(doc.exists){
+        const d = doc.data();
+        if(d.mineLabel) state.labels.mineLabel = d.mineLabel;
+        if(d.partnerLabel) state.labels.partnerLabel = d.partnerLabel;
+        renderGuestApp();
+      }
+    }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('venueFavorites').onSnapshot(snap=>{
       state.venues = {};
       snap.docs.forEach(d=> state.venues[d.id] = d.data());
@@ -494,7 +508,7 @@ async function initDb(){
     }, err=>setSync(false,'sync error')));
   }catch(e){ setSync(false,'no live sync — changes stay on this device only'); renderAll(); }
 }
-function renderAll(){ renderTodos(); renderBudget(); renderBoard(); renderConsiderations(); renderVenues(); renderStart(); }
+function renderAll(){ renderTodos(); renderBudget(); renderBoard(); renderConsiderations(); renderVenues(); renderGuestApp(); renderStart(); }
 
 /* fallback local id for no-db mode */
 function localAdd(arr, data){ data.id = 'local-'+Math.random().toString(36).slice(2); arr.unshift(data); return data; }
