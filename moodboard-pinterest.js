@@ -1,6 +1,5 @@
 "use strict";
-/* Moodboard-only Pinterest integration.
-   This file intentionally touches only the Moodboard Pinterest behavior. */
+/* Moodboard-only Pinterest integration. */
 (function(){
   const PINTEREST_SCRIPT='https://assets.pinterest.com/js/pinit.js';
   let buildTimer=null;
@@ -14,21 +13,18 @@
       if(host==='pin.it'||host==='www.pin.it') return {kind:'short',url:raw};
       if(host!=='pinterest.com'&&!host.endsWith('.pinterest.com')) return null;
       const parts=u.pathname.split('/').filter(Boolean);
-      if(parts[0]&&parts[0].toLowerCase()==='pin'&&parts[1]){
-        return {kind:'pin',url:'https://www.pinterest.com/pin/'+encodeURIComponent(parts[1])+'/'};
-      }
-      if(parts.length>=2){
-        return {kind:'board',url:'https://www.pinterest.com/'+encodeURIComponent(parts[0])+'/'+encodeURIComponent(parts[1])+'/'};
-      }
+      if(parts[0]&&parts[0].toLowerCase()==='pin'&&parts[1]) return {kind:'pin',url:'https://www.pinterest.com/pin/'+encodeURIComponent(parts[1])+'/'};
+      if(parts.length>=2) return {kind:'board',url:'https://www.pinterest.com/'+encodeURIComponent(parts[0])+'/'+encodeURIComponent(parts[1])+'/'};
       return null;
     }catch(e){ return null; }
   }
+  window.classifyPinterestUrl=classifyPinterestUrl;
 
   function requestPinterestBuild(){
     clearTimeout(buildTimer);
     buildTimer=setTimeout(function(){
       if(window.PinUtils&&typeof window.PinUtils.build==='function') window.PinUtils.build();
-    },80);
+    },120);
   }
 
   function ensurePinterestScript(){
@@ -41,56 +37,29 @@
     script=document.createElement('script');
     script.src=PINTEREST_SCRIPT;
     script.async=true;
+    script.defer=true;
     script.dataset.vvPinterest='1';
     script.addEventListener('load',requestPinterestBuild,{once:true});
     document.body.appendChild(script);
   }
-
   window.ensurePinterestWidgets=ensurePinterestScript;
-  window.classifyPinterestUrl=classifyPinterestUrl;
 
-  /* Pinterest's client-side embed widget is a well-known tracker and gets
-     silently blocked by ad blockers and Safari's tracking prevention on
-     some devices, which is why a pin could look "added" but never show a
-     picture. Individual pins are previewed via our own Worker instead,
-     which fetches Pinterest's oEmbed thumbnail server-side and hands back
-     a plain image URL — no third-party script involved. */
-  const pinPreviewCache=new Map();
-  const pinPreviewInFlight=new Set();
-
-  async function resolvePinPreview(pin, cleanUrl){
-    if(pinPreviewInFlight.has(cleanUrl)) return;
-    pinPreviewInFlight.add(cleanUrl);
-    try{
-      const user=window.firebase&&firebase.auth&&firebase.auth().currentUser;
-      if(!user||!window.VV_WORKER_URL){ pinPreviewCache.set(cleanUrl,{failed:true}); return; }
-      const idToken=await user.getIdToken();
-      const resp=await fetch(window.VV_WORKER_URL,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
-        body:JSON.stringify({action:'resolvePin',url:cleanUrl})
-      });
-      const data=await resp.json();
-      if(!resp.ok||!data.thumbnailUrl){ pinPreviewCache.set(cleanUrl,{failed:true}); return; }
-      pinPreviewCache.set(cleanUrl,{thumbnailUrl:data.thumbnailUrl,title:data.title,resolvedUrl:data.url});
-      if(dbReady&&pin.id) db.collection('pinboard').doc(pin.id).update({pinThumbnail:data.thumbnailUrl,pinResolvedUrl:data.url});
-      else { pin.pinThumbnail=data.thumbnailUrl; pin.pinResolvedUrl=data.url; }
-      window.renderBoard();
-    }catch(e){
-      pinPreviewCache.set(cleanUrl,{failed:true});
-    }finally{
-      pinPreviewInFlight.delete(cleanUrl);
+  function pinterestEmbed(parsed,title){
+    if(!parsed) return '';
+    if(parsed.kind==='board'){
+      return '<div class="pin-pinterest pin-pinterest-board"><a data-pin-do="embedBoard" data-pin-board-width="320" data-pin-scale-height="240" data-pin-scale-width="80" href="'+esc(parsed.url)+'"></a></div>';
     }
+    if(parsed.kind==='pin'){
+      return '<div class="pin-pinterest"><a data-pin-do="embedPin" data-pin-width="medium" href="'+esc(parsed.url)+'">'+esc(title||'View on Pinterest')+'</a></div>';
+    }
+    return '';
   }
 
   window.renderPinterestBoard=function(rawUrl){
     const shelf=document.getElementById('pinterestBoardShelf');
     if(!shelf) return;
     const parsed=classifyPinterestUrl(rawUrl);
-    if(!parsed){
-      shelf.innerHTML='<div class="warn">That does not look like a Pinterest board URL.</div>';
-      return;
-    }
+    if(!parsed){ shelf.innerHTML='<div class="warn">That does not look like a Pinterest board URL.</div>'; return; }
     if(parsed.kind==='short'){
       shelf.innerHTML='<div class="warn">Pinterest short links need the full board address first. <a target="_blank" rel="noopener" href="'+esc(parsed.url)+'">Open Pinterest ↗</a>, then copy the full board URL from the address bar and paste it here.</div>';
       return;
@@ -108,52 +77,43 @@
   };
 
   window.renderBoard=function(){
-    const grid=document.getElementById('boardGrid'), empty=document.getElementById('boardEmpty');
+    const grid=document.getElementById('boardGrid'),empty=document.getElementById('boardEmpty');
     if(!grid||!empty) return;
     let pins=state.pins;
     if(activeFilter!=='all'){
       pins=pins.filter(function(p){
-        return activeFilter==='photo'?p.type==='photo':activeFilter==='link'?p.type==='link':activeFilter==='pinterest'?p.type==='pinterest':p.tag===activeFilter;
+        if(activeFilter==='photo') return p.type==='photo';
+        if(activeFilter==='link') return p.type==='link';
+        if(activeFilter==='pinterest') return p.type==='pinterest'||!!classifyPinterestUrl(p.url);
+        return p.tag===activeFilter;
       });
     }
     grid.innerHTML='';
     empty.style.display=pins.length?'none':'block';
+    let hasPinterest=false;
     pins.forEach(function(p){
       const el=document.createElement('div'); el.className='pin';
       let inner='';
+      const parsedPinterest=classifyPinterestUrl(p.url);
       if(p.type==='photo'){
         inner='<img src="'+p.imageDataUrl+'" alt="">';
       }else if(p.type==='style'){
         inner='<div class="pin-icon-wrap tint-'+({dress:'wine',suit:'cypress',flowers:'cypress',venue:'brass',music:'cypress',hair:'wine',makeup:'brass',stationery:'brass'}[p.tag]||'cypress')+'">'+svg(ICON[p.icon])+'</div>';
-      }else if(p.type==='pinterest'){
-        const parsed=classifyPinterestUrl(p.url);
-        const kind=p.pinterestKind||(parsed&&parsed.kind);
-        const clean=(parsed&&parsed.url)||p.url;
-        if(kind==='board'){
-          inner='<div class="pin-pinterest pin-pinterest-board"><a data-pin-do="embedBoard" data-pin-board-width="320" data-pin-scale-height="240" data-pin-scale-width="80" href="'+esc(clean)+'"></a></div>';
-        }else if(kind==='pin'||kind==='short'){
-          const preview=(p.pinThumbnail&&{thumbnailUrl:p.pinThumbnail})||pinPreviewCache.get(clean);
-          if(preview&&preview.thumbnailUrl){
-            inner='<img src="'+esc(preview.thumbnailUrl)+'" alt="">';
-          }else{
-            inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
-            if(!preview||!preview.failed) resolvePinPreview(p,clean);
-          }
-        }else{
-          inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
-        }
+      }else if(parsedPinterest&&(parsedPinterest.kind==='pin'||parsedPinterest.kind==='board')){
+        /* This also upgrades older Pinterest URLs that were originally saved as ordinary links. */
+        inner=pinterestEmbed(parsedPinterest,p.title);
+        hasPinterest=true;
       }else{
         inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
       }
-      el.innerHTML=inner+'<div class="pin-body"><div class="pin-tag">'+(p.tag||'other')+'</div><h5>'+esc(p.title||'')+'</h5>'+(p.note?'<p>'+esc(p.note)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
+      el.innerHTML=inner+'<div class="pin-body"><div class="pin-tag">'+(p.tag||'other')+'</div><h5>'+esc(p.title||'')+'</h5>'+(p.note?'<p>'+esc(p.note)+'</p>':'')+((p.type==='link'||p.type==='pinterest'||parsedPinterest)?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
       el.querySelector('.del-pin').addEventListener('click',function(){
         if(dbReady) db.collection('pinboard').doc(p.id).delete();
         else {state.pins=state.pins.filter(function(x){return x.id!==p.id;});renderBoard();renderStart();}
       });
       grid.appendChild(el);
     });
-    ensurePinterestScript();
-    requestPinterestBuild();
+    if(hasPinterest){ ensurePinterestScript(); requestPinterestBuild(); }
   };
 
   function replacePinterestSaveHandler(){
@@ -171,9 +131,12 @@
         if(warn){warn.textContent='That does not look like a Pinterest URL.';warn.style.display='block';}
         return;
       }
-      const url=parsed.url;
-      const defaultTitle=parsed.kind==='board'?'Pinterest Board':'Pinterest Pin';
-      const data={type:'pinterest',pinterestKind:parsed.kind,url:url,title:document.getElementById('pinterestTitle').value.trim()||defaultTitle,note:document.getElementById('pinterestNote').value.trim(),tag:document.getElementById('pinterestTag').value,createdAt:Date.now()};
+      if(parsed.kind==='short'){
+        const warn=document.getElementById('pasteWarn');
+        if(warn){warn.textContent='Open that Pinterest short link first, then paste the full Pin URL here so its picture can be displayed.';warn.style.display='block';}
+        return;
+      }
+      const data={type:'pinterest',pinterestKind:parsed.kind,url:parsed.url,title:document.getElementById('pinterestTitle').value.trim()||(parsed.kind==='board'?'Pinterest Board':'Pinterest Pin'),note:document.getElementById('pinterestNote').value.trim(),tag:document.getElementById('pinterestTag').value,createdAt:Date.now()};
       if(dbReady) db.collection('pinboard').add(data);
       else {localAdd(state.pins,data);renderBoard();renderStart();}
       document.getElementById('pinterestUrl').value='';
