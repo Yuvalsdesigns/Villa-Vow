@@ -68,7 +68,7 @@
       if(!user||!window.VV_WORKER_URL){
         const reason='Not signed in yet, or the worker URL is missing.';
         console.error('[Pinterest preview]',reason,{hasUser:!!user,workerUrl:window.VV_WORKER_URL});
-        pinPreviewCache.set(cleanUrl,{failed:true,reason}); return;
+        pinPreviewCache.set(cleanUrl,{failed:true,reason}); window.renderBoard(); return;
       }
       const idToken=await user.getIdToken();
       const resp=await fetch(window.VV_WORKER_URL,{
@@ -80,12 +80,12 @@
       try{ data=await resp.json(); }catch(parseErr){
         const reason='HTTP '+resp.status+' '+resp.statusText+' (response was not JSON)';
         console.error('[Pinterest preview]',reason,{url:cleanUrl});
-        pinPreviewCache.set(cleanUrl,{failed:true,reason}); return;
+        pinPreviewCache.set(cleanUrl,{failed:true,reason}); window.renderBoard(); return;
       }
       if(!resp.ok||!data.thumbnailUrl){
         const reason='HTTP '+resp.status+': '+(data&&(data.error||JSON.stringify(data).slice(0,140))||'no thumbnail returned');
         console.error('[Pinterest preview]',reason,{status:resp.status,data,url:cleanUrl});
-        pinPreviewCache.set(cleanUrl,{failed:true,reason}); return;
+        pinPreviewCache.set(cleanUrl,{failed:true,reason}); window.renderBoard(); return;
       }
       pinPreviewCache.set(cleanUrl,{thumbnailUrl:data.thumbnailUrl,title:data.title,resolvedUrl:data.url});
       if(dbReady&&pin.id) db.collection('pinboard').doc(pin.id).update({pinThumbnail:data.thumbnailUrl,pinResolvedUrl:data.url});
@@ -95,6 +95,7 @@
       const reason='Request failed: '+String(e&&e.message||e);
       console.error('[Pinterest preview]',reason,{url:cleanUrl});
       pinPreviewCache.set(cleanUrl,{failed:true,reason});
+      window.renderBoard();
     }finally{
       pinPreviewInFlight.delete(cleanUrl);
     }
