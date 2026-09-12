@@ -24,6 +24,27 @@
     }catch(e){ return null; }
   }
 
+  /* YouTube and TikTok both run a free, public oEmbed endpoint that needs
+     no API key or account — unlike Instagram/Google Drive, which require
+     a registered app and, in practice, a paid-tier setup to get a real
+     thumbnail. Scoped to just these two for that reason. */
+  function classifyVideoUrl(raw){
+    raw=(raw||'').trim();
+    if(!raw) return null;
+    try{
+      const u=new URL(raw);
+      const host=u.hostname.toLowerCase();
+      if(host==='youtube.com'||host==='www.youtube.com'||host==='m.youtube.com'||host==='youtu.be'){
+        return {provider:'youtube',url:raw};
+      }
+      if(host==='tiktok.com'||host==='www.tiktok.com'||host==='vm.tiktok.com'||host==='vt.tiktok.com'){
+        return {provider:'tiktok',url:raw};
+      }
+      return null;
+    }catch(e){ return null; }
+  }
+  window.classifyVideoUrl=classifyVideoUrl;
+
   function requestPinterestBuild(){
     clearTimeout(buildTimer);
     buildTimer=setTimeout(function(){
@@ -60,7 +81,7 @@
   const pinPreviewCache=new Map();
   const pinPreviewInFlight=new Set();
 
-  async function resolvePinPreview(pin, cleanUrl){
+  async function resolvePinPreview(pin, cleanUrl, provider){
     if(pinPreviewInFlight.has(cleanUrl)) return;
     pinPreviewInFlight.add(cleanUrl);
     try{
@@ -71,10 +92,11 @@
         pinPreviewCache.set(cleanUrl,{failed:true,reason}); window.renderBoard(); return;
       }
       const idToken=await user.getIdToken();
+      const body=provider?{action:'resolveEmbed',provider,url:cleanUrl}:{action:'resolvePin',url:cleanUrl};
       const resp=await fetch(window.VV_WORKER_URL,{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
-        body:JSON.stringify({action:'resolvePin',url:cleanUrl})
+        body:JSON.stringify(body)
       });
       let data;
       try{ data=await resp.json(); }catch(parseErr){
@@ -169,7 +191,19 @@
             else resolvePinPreview(p,clean);
           }
         }else{
-          inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
+          const video=classifyVideoUrl(p.url);
+          if(video){
+            const preview=(p.pinThumbnail&&{thumbnailUrl:p.pinThumbnail})||pinPreviewCache.get(video.url);
+            if(preview&&preview.thumbnailUrl){
+              inner='<img src="'+esc(preview.thumbnailUrl)+'" alt="">';
+            }else{
+              inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
+              if(preview&&preview.failed) previewError=preview.reason||'Preview failed';
+              else resolvePinPreview(p,video.url,video.provider);
+            }
+          }else{
+            inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
+          }
         }
       }else{
         inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';

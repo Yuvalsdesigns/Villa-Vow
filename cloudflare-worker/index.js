@@ -167,6 +167,70 @@ async function handleResolvePin(rawUrl) {
   }
 }
 
+/* YouTube and TikTok both run a free, public oEmbed endpoint that needs no
+   API key or app registration — unlike Instagram or Google Drive, which
+   require a registered app (and in practice a paid setup) to get a real
+   thumbnail, so those aren't supported here. */
+async function handleResolveEmbed(provider, rawUrl) {
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return json({ error: 'Invalid URL' }, 400);
+  }
+  const host = url.hostname.toLowerCase();
+  const browserHeaders = {
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+    'Accept': 'application/json',
+  };
+  let oembedEndpoint;
+  if (provider === 'youtube') {
+    if (!['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be'].includes(host)) {
+      return json({ error: 'Not a YouTube link' }, 400);
+    }
+    oembedEndpoint = 'https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(url.toString());
+  } else if (provider === 'tiktok') {
+    if (!['tiktok.com', 'www.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com'].includes(host)) {
+      return json({ error: 'Not a TikTok link' }, 400);
+    }
+    let canonicalUrl = url.toString();
+    if (host === 'vm.tiktok.com' || host === 'vt.tiktok.com') {
+      try {
+        const redirectResp = await fetch(canonicalUrl, { redirect: 'follow', method: 'GET', headers: browserHeaders });
+        canonicalUrl = redirectResp.url;
+      } catch (err) {
+        return json({ error: 'Could not resolve TikTok short link', debug: String(err && err.message || err) }, 502);
+      }
+    }
+    oembedEndpoint = 'https://www.tiktok.com/oembed?url=' + encodeURIComponent(canonicalUrl);
+  } else {
+    return json({ error: 'Unsupported provider' }, 400);
+  }
+  try {
+    const resp = await fetch(oembedEndpoint, { headers: browserHeaders });
+    const raw = await resp.text();
+    if (!resp.ok) {
+      return json({ error: 'oEmbed request failed', status: resp.status, bodySnippet: raw.slice(0, 300) }, 502);
+    }
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return json({ error: 'oEmbed response was not JSON', bodySnippet: raw.slice(0, 300) }, 502);
+    }
+    if (!data.thumbnail_url) {
+      return json({ error: 'oEmbed response had no thumbnail_url', data }, 502);
+    }
+    return json({
+      url: url.toString(),
+      title: data.title || '',
+      thumbnailUrl: data.thumbnail_url,
+    });
+  } catch (err) {
+    return json({ error: 'Could not fetch ' + provider + ' preview', debug: String(err && err.message || err) }, 502);
+  }
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') {
@@ -201,6 +265,9 @@ export default {
 
     if (body && body.action === 'resolvePin') {
       return handleResolvePin(body.url);
+    }
+    if (body && body.action === 'resolveEmbed') {
+      return handleResolveEmbed(body.provider, body.url);
     }
 
     const messages = body && body.messages;
