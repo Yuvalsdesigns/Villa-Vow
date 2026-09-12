@@ -513,6 +513,8 @@
   .stepper button:disabled{opacity:.35;cursor:not-allowed;}
   .stepper .val{font-family:'IBM Plex Mono',monospace;font-size:11.5px;min-width:16px;text-align:center;color:var(--ink-soft);}
   .stepper .val.tbd{color:var(--wine);font-weight:700;}
+  .stepper.plus-confirmed{background:var(--cypress-soft);border-color:var(--cypress-soft);}
+  .stepper.plus-confirmed .val{min-width:auto;padding:0 4px;white-space:nowrap;color:var(--cypress-ink);font-weight:600;}
   select.rsvp.small{font-size:10px;padding:3px 6px;}
   .grip{cursor:grab;color:var(--ink-faint);flex:none;touch-action:none;}
   .grip svg{width:16px;height:16px;}

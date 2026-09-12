@@ -28,12 +28,11 @@ function renderGuestApp(){
   renderGuestStats();
 }
 
-function effectivePlusStatus(g){ return (g.plusOneStatus && g.plusOneStatus!=='same') ? g.plusOneStatus : g.rsvp; }
 function headcountBreakdown(list){
   let base=0, plus=0;
   list.forEach(g=>{
     if(g.rsvp==='confirmed') base += 1;
-    if(!g.plusOnesTBD && g.plusOnes>0 && effectivePlusStatus(g)==='confirmed') plus += g.plusOnes;
+    if(!g.plusOnesTBD) plus += Math.min(g.plusOnesConfirmed||0, g.plusOnes||0);
   });
   return {base, plus, total: base+plus};
 }
@@ -96,8 +95,8 @@ function buildGuestRow(g, side){
   row.draggable = true;
 
   const main = document.createElement('div'); main.className='row-main';
-  const hasPlus = g.plusOnesTBD || (g.plusOnes||0) > 0;
-  const plusStatus = (g.plusOneStatus && g.plusOneStatus!=='same') ? g.plusOneStatus : g.rsvp;
+  const hasPlus = !g.plusOnesTBD && (g.plusOnes||0) > 0;
+  const plusConfirmed = Math.min(g.plusOnesConfirmed||0, g.plusOnes||0);
   main.innerHTML = '<span class="grip">'+svg(ICON.grip)+'</span>'
     + '<input class="row-name" value="'+esc(g.name)+'">'
     + '<select class="rsvp '+g.rsvp+'">'
@@ -106,18 +105,16 @@ function buildGuestRow(g, side){
       + '<option value="unlikely"'+(g.rsvp==='unlikely'?' selected':'')+'>Unlikely</option>'
       + '<option value="declined"'+(g.rsvp==='declined'?' selected':'')+'>Declined</option>'
     + '</select>'
-    + '<span class="stepper" title="Plus-ones">'
+    + '<span class="stepper" title="Plus-ones invited">'
       + '<button class="step-minus" '+(g.plusOnesTBD?'disabled':'')+'>−</button>'
       + '<span class="val'+(g.plusOnesTBD?' tbd':'')+'">'+(g.plusOnesTBD? 'X' : '+'+(g.plusOnes||0))+'</span>'
       + '<button class="step-plus">+</button>'
     + '</span>'
-    + (hasPlus? '<select class="rsvp small plus-status '+plusStatus+'" title="Plus-one status">'
-        + '<option value="same"'+(!g.plusOneStatus||g.plusOneStatus==='same'?' selected':'')+'>+1: same as above</option>'
-        + '<option value="pending"'+(g.plusOneStatus==='pending'?' selected':'')+'>+1: Pending</option>'
-        + '<option value="confirmed"'+(g.plusOneStatus==='confirmed'?' selected':'')+'>+1: Confirmed</option>'
-        + '<option value="unlikely"'+(g.plusOneStatus==='unlikely'?' selected':'')+'>+1: Unlikely</option>'
-        + '<option value="declined"'+(g.plusOneStatus==='declined'?' selected':'')+'>+1: Declined</option>'
-      + '</select>' : '')
+    + (hasPlus? '<span class="stepper plus-confirmed" title="Of those plus-ones, how many are actually confirmed">'
+        + '<button class="plusconf-minus" '+(plusConfirmed<=0?'disabled':'')+'>−</button>'
+        + '<span class="val">'+plusConfirmed+' of '+g.plusOnes+' confirmed</span>'
+        + '<button class="plusconf-plus" '+(plusConfirmed>=g.plusOnes?'disabled':'')+'>+</button>'
+      + '</span>' : '')
     + (g.dietary? '<span class="tag-chip">'+esc(g.dietary)+'</span>' : '')
     + '<button class="icon-btn expand-btn">'+svg(ICON.chevron)+'</button>'
     + '<button class="icon-btn del-btn">'+svg(ICON.trash)+'</button>';
@@ -133,9 +130,13 @@ function buildGuestRow(g, side){
 
   main.querySelector('.row-name').addEventListener('change', e=> updateGuest(g, {name: e.target.value.trim() || g.name}));
   main.querySelector('.rsvp').addEventListener('change', e=>{ e.target.className='rsvp '+e.target.value; updateGuest(g, {rsvp: e.target.value}); });
-  main.querySelector('.step-minus').addEventListener('click', ()=> updateGuest(g, {plusOnes: Math.max(0, (g.plusOnes||0)-1), plusOnesTBD:false}));
+  main.querySelector('.step-minus').addEventListener('click', ()=>{
+    const newPlusOnes = Math.max(0, (g.plusOnes||0)-1);
+    updateGuest(g, {plusOnes: newPlusOnes, plusOnesTBD:false, plusOnesConfirmed: Math.min(g.plusOnesConfirmed||0, newPlusOnes)});
+  });
   main.querySelector('.step-plus').addEventListener('click', ()=> updateGuest(g, {plusOnes: (g.plusOnesTBD?0:(g.plusOnes||0))+1, plusOnesTBD:false}));
-  main.querySelector('.plus-status')?.addEventListener('change', e=>{ e.target.className='rsvp small plus-status '+e.target.value; updateGuest(g, {plusOneStatus: e.target.value}); });
+  main.querySelector('.plusconf-minus')?.addEventListener('click', ()=> updateGuest(g, {plusOnesConfirmed: Math.max(0, plusConfirmed-1)}));
+  main.querySelector('.plusconf-plus')?.addEventListener('click', ()=> updateGuest(g, {plusOnesConfirmed: Math.min(g.plusOnes||0, plusConfirmed+1)}));
   main.querySelector('.expand-btn').addEventListener('click', ()=>{ expandedGuestId = expandedGuestId===g.id? null : g.id; renderGuestApp(); });
   main.querySelector('.del-btn').addEventListener('click', ()=>{
     confirmAction('Are you sure you want to delete '+(g.name||'this guest')+'?', ()=>{ if(dbReady) db.collection('guests').doc(g.id).delete(); });
@@ -143,7 +144,7 @@ function buildGuestRow(g, side){
 
   const plusTbdCk = detail.querySelector('.tbd-ck');
   const plusNotes = detail.querySelector('.notes-field input[type=text]');
-  plusTbdCk.addEventListener('change', ()=> updateGuest(g, {plusOnesTBD: plusTbdCk.checked, plusOnes: plusTbdCk.checked? 0 : (g.plusOnes||0)}));
+  plusTbdCk.addEventListener('change', ()=> updateGuest(g, {plusOnesTBD: plusTbdCk.checked, plusOnes: plusTbdCk.checked? 0 : (g.plusOnes||0), plusOnesConfirmed: plusTbdCk.checked? 0 : (g.plusOnesConfirmed||0)}));
   plusNotes.addEventListener('change', ()=> updateGuest(g, {plusOneNotes: plusNotes.value.trim()}));
   detail.querySelector('.dietary-field input').addEventListener('change', e=> updateGuest(g, {dietary: e.target.value.trim()}));
   detail.querySelector('.table-field input').addEventListener('change', e=> updateGuest(g, {table: e.target.value.trim()}));
@@ -204,7 +205,7 @@ function addGuest(side){
   if(!name) return;
   const existing = guestsFor(side);
   const maxOrder = existing.reduce((m,g)=>Math.max(m,g.order||0),0);
-  const data = {name, side, rsvp:'pending', plusOnes:0, plusOnesTBD:false, plusOneStatus:'same', plusOneNotes:'', dietary:'', table:'', notes:'', order:maxOrder+1};
+  const data = {name, side, rsvp:'pending', plusOnes:0, plusOnesTBD:false, plusOnesConfirmed:0, plusOneNotes:'', dietary:'', table:'', notes:'', order:maxOrder+1};
   if(dbReady) db.collection('guests').add(data);
   input.value='';
 }
@@ -271,7 +272,7 @@ document.querySelectorAll('[data-paste-import]').forEach(btn=>{
     let maxOrder = guestsFor(side).reduce((m,g)=>Math.max(m,g.order||0),0);
     entries.forEach(parsed=>{
       maxOrder += 1;
-      const data = {name:parsed.name, side, rsvp:'pending', plusOnes:parsed.plusOnes, plusOnesTBD:parsed.plusOnesTBD, plusOneStatus:'same', plusOneNotes:'', dietary:'', table:'', notes:'', order:maxOrder};
+      const data = {name:parsed.name, side, rsvp:'pending', plusOnes:parsed.plusOnes, plusOnesTBD:parsed.plusOnesTBD, plusOnesConfirmed:0, plusOneNotes:'', dietary:'', table:'', notes:'', order:maxOrder};
       if(dbReady) db.collection('guests').add(data);
     });
     textarea.value='';

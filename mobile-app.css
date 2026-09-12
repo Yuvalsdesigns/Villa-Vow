@@ -21,7 +21,7 @@
   .row-name{order:0;flex:1 1 100%;font-size:14.5px;}
   .row-main select.rsvp:not(.small){order:1;}
   .row-main .stepper{order:2;}
-  .row-main select.rsvp.plus-status{order:3;max-width:130px;}
+  .row-main .stepper.plus-confirmed{order:3;}
   .row-main .tag-chip{order:4;}
   .row-main .expand-btn{order:5;}
   .row-main .del-btn{order:6;}
