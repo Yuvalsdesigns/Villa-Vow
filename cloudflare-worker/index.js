@@ -112,26 +112,48 @@ async function handleResolvePin(rawUrl) {
   if (!isPinit && !isPinterest) {
     return json({ error: 'Not a Pinterest link' }, 400);
   }
+  /* Pinterest actively distinguishes bot/server traffic from real
+     browsers and can respond with a login-wall page instead of the real
+     redirect/JSON if the request doesn't look like one, so both fetches
+     below send a realistic browser User-Agent and Accept header. */
+  const browserHeaders = {
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  };
   let canonicalUrl = url.toString();
   if (isPinit) {
     try {
-      const redirectResp = await fetch(canonicalUrl, { redirect: 'follow', method: 'GET' });
+      const redirectResp = await fetch(canonicalUrl, { redirect: 'follow', method: 'GET', headers: browserHeaders });
       canonicalUrl = redirectResp.url;
     } catch (err) {
-      return json({ error: 'Could not resolve pin.it link' }, 502);
+      return json({ error: 'Could not resolve pin.it link', debug: String(err && err.message || err) }, 502);
     }
   }
   try {
-    const oembedResp = await fetch('https://www.pinterest.com/oembed.json?url=' + encodeURIComponent(canonicalUrl));
-    if (!oembedResp.ok) throw new Error('oEmbed request failed: ' + oembedResp.status);
-    const data = await oembedResp.json();
+    const oembedResp = await fetch(
+      'https://www.pinterest.com/oembed.json?url=' + encodeURIComponent(canonicalUrl),
+      { headers: browserHeaders }
+    );
+    const raw = await oembedResp.text();
+    if (!oembedResp.ok) {
+      return json({ error: 'oEmbed request failed', status: oembedResp.status, canonicalUrl, bodySnippet: raw.slice(0, 300) }, 502);
+    }
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return json({ error: 'oEmbed response was not JSON (likely blocked/login-walled)', canonicalUrl, bodySnippet: raw.slice(0, 300) }, 502);
+    }
+    if (!data.thumbnail_url) {
+      return json({ error: 'oEmbed response had no thumbnail_url', canonicalUrl, data }, 502);
+    }
     return json({
       url: canonicalUrl,
       title: data.title || '',
-      thumbnailUrl: data.thumbnail_url || '',
+      thumbnailUrl: data.thumbnail_url,
     });
   } catch (err) {
-    return json({ error: 'Could not fetch Pinterest preview', url: canonicalUrl }, 502);
+    return json({ error: 'Could not fetch Pinterest preview', url: canonicalUrl, debug: String(err && err.message || err) }, 502);
   }
 }
 
