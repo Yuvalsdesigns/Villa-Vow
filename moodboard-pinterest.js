@@ -47,6 +47,7 @@
   }
 
   window.ensurePinterestWidgets=ensurePinterestScript;
+  window.classifyPinterestUrl=classifyPinterestUrl;
 
   window.renderPinterestBoard=function(rawUrl){
     const shelf=document.getElementById('pinterestBoardShelf');
@@ -96,7 +97,7 @@
         const clean=(parsed&&parsed.url)||p.url;
         if(kind==='board'){
           inner='<div class="pin-pinterest pin-pinterest-board"><a data-pin-do="embedBoard" data-pin-board-width="320" data-pin-scale-height="240" data-pin-scale-width="80" href="'+esc(clean)+'"></a></div>';
-        }else if(kind==='pin'){
+        }else if(kind==='pin'||kind==='short'){
           inner='<div class="pin-pinterest"><blockquote class="pinterest-pin" data-pin-do="embedPin" data-pin-width="medium"><a href="'+esc(clean)+'">'+esc(p.title||'View on Pinterest')+'</a></blockquote></div>';
         }else{
           inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';

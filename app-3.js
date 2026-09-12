@@ -402,7 +402,16 @@ document.getElementById('cancelPinterest')?.addEventListener('click', closeModal
 document.getElementById('saveLink').addEventListener('click', ()=>{
   const url = document.getElementById('linkUrl').value.trim();
   if(!url) return;
-  const data = {type:'link', url, title:document.getElementById('linkTitle').value.trim()||url, note:document.getElementById('linkNote').value.trim(), tag:document.getElementById('linkTag').value, createdAt:Date.now()};
+  const title = document.getElementById('linkTitle').value.trim();
+  const note = document.getElementById('linkNote').value.trim();
+  const tag = document.getElementById('linkTag').value;
+  const parsed = window.classifyPinterestUrl && window.classifyPinterestUrl(url);
+  let data;
+  if(parsed && (parsed.kind==='pin' || parsed.kind==='short' || parsed.kind==='board')){
+    data = {type:'pinterest', pinterestKind:parsed.kind, url:parsed.url, title:title||(parsed.kind==='board'?'Pinterest Board':'Pinterest Pin'), note, tag, createdAt:Date.now()};
+  }else{
+    data = {type:'link', url, title:title||url, note, tag, createdAt:Date.now()};
+  }
   if(dbReady) db.collection('pinboard').add(data);
   else { localAdd(state.pins,data); renderBoard(); renderStart(); }
   document.getElementById('linkUrl').value=''; document.getElementById('linkTitle').value=''; document.getElementById('linkNote').value='';
