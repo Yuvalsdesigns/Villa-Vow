@@ -154,16 +154,38 @@ function runPinterestSearch(q){
 document.getElementById('searchPinterest')?.addEventListener('click',()=>runPinterestSearch());
 document.getElementById('pinterestSearch')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runPinterestSearch();}});
 document.querySelectorAll('#pinterestQuick [data-q]').forEach(b=>b.addEventListener('click',()=>runPinterestSearch(b.dataset.q)));
+
+function normalizePinterestBoardUrl(raw){
+  raw=(raw||'').trim();
+  if(!raw) return null;
+  try{
+    const u=new URL(raw);
+    const host=u.hostname.toLowerCase();
+    if(host==='pin.it' || host==='www.pin.it') return {short:true,url:raw};
+    if(host!=='pinterest.com' && !host.endsWith('.pinterest.com')) return null;
+    const parts=u.pathname.split('/').filter(Boolean);
+    if(parts.length<2 || parts[0].toLowerCase()==='pin') return null;
+    const clean='https://www.pinterest.com/'+parts.slice(0,2).map(encodeURIComponent).join('/')+'/';
+    return {short:false,url:clean};
+  }catch(e){ return null; }
+}
 function renderPinterestBoard(url){
   const shelf=document.getElementById('pinterestBoardShelf'); if(!shelf) return;
-  url=(url||'').trim();
-  if(!url){ shelf.innerHTML=''; return; }
-  if(!/^https?:\/\/(www\.)?(pinterest\.[^/]+\/.+|pin\.it\/.+)/i.test(url)){
+  const normalized=normalizePinterestBoardUrl(url);
+  if(!normalized){
     shelf.innerHTML='<div class="warn">That does not look like a Pinterest board URL.</div>'; return;
   }
+  if(normalized.short){
+    localStorage.setItem('vv_pinterest_board_url',normalized.url);
+    shelf.innerHTML='<div class="warn">Pinterest short links need to be opened once first. Open this link, then copy the full board URL from the address bar and paste it here: <a target="_blank" rel="noopener" href="'+esc(normalized.url)+'">Open Pinterest ↗</a></div>';
+    return;
+  }
+  url=normalized.url;
+  const input=document.getElementById('pinterestBoardUrl'); if(input) input.value=url;
   localStorage.setItem('vv_pinterest_board_url',url);
   shelf.innerHTML='<a data-pin-do="embedBoard" data-pin-board-width="900" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(url)+'"></a>';
   ensurePinterestWidgets();
+  setTimeout(()=>{ if(window.PinUtils && window.PinUtils.build) window.PinUtils.build(); },250);
 }
 document.getElementById('embedPinterestBoard')?.addEventListener('click',()=>renderPinterestBoard(document.getElementById('pinterestBoardUrl')?.value));
 const savedPinterestBoard=localStorage.getItem('vv_pinterest_board_url');
@@ -214,7 +236,7 @@ function renderBoard(){
 
 function ensurePinterestWidgets(){
   if(!document.querySelector('script[data-vv-pinterest]')){
-    const s=document.createElement('script'); s.src='https://assets.pinterest.com/js/pinit.js'; s.async=true; s.dataset.vvPinterest='1'; document.head.appendChild(s);
+    const s=document.createElement('script'); s.src='https://assets.pinterest.com/js/pinit.js'; s.async=true; s.dataset.vvPinterest='1'; s.onload=()=>{ if(window.PinUtils && window.PinUtils.build) window.PinUtils.build(); }; document.head.appendChild(s);
   } else if(window.PinUtils && window.PinUtils.build){ window.PinUtils.build(); }
 }
 /* ---- add photo / link modal ---- */
