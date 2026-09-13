@@ -197,6 +197,84 @@ function renderEmails(){
 renderEmails();
 renderGiftIdeas();
 
+/* ---------------- WEDDING DIY ---------------- */
+let pendingDiyThumb = '';
+function readDiyThumb(file){
+  if(!file || !/^image\//.test(file.type)) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const max = 300, scale = Math.min(1, max/Math.max(img.width,img.height));
+      const canvas = document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      let q=.8, url=canvas.toDataURL('image/jpeg',q);
+      while(url.length>150000 && q>.4){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
+      pendingDiyThumb = url;
+      const preview = document.getElementById('diyThumbPreview');
+      preview.src = url; preview.style.display='inline-block';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+document.getElementById('diyThumbInput').addEventListener('change', e=>{ if(e.target.files[0]) readDiyThumb(e.target.files[0]); });
+
+document.getElementById('diySaveBtn').addEventListener('click', ()=>{
+  const urlInput = document.getElementById('diyUrl');
+  const descInput = document.getElementById('diyDesc');
+  let url = urlInput.value.trim();
+  const description = descInput.value.trim();
+  if(!url || !description){ alert('Add both a link and a short description.'); return; }
+  if(!/^https?:\/\//i.test(url)) url = 'https://'+url;
+  const data = {url, description, thumbnail: pendingDiyThumb, createdAt: Date.now()};
+  if(dbReady) db.collection('diyIdeas').add(data).catch(err=>{ console.error('[DIY] add failed', err); alert('Could not save this idea: '+err.message); });
+  else { localAdd(state.diyIdeas, data); renderDiyIdeas(); }
+  urlInput.value=''; descInput.value=''; pendingDiyThumb='';
+  document.getElementById('diyThumbPreview').style.display='none';
+  document.getElementById('diyThumbInput').value='';
+});
+
+let editingDiyId = null;
+function renderDiyIdeas(){
+  const wrap = document.getElementById('diyGrid'); if(!wrap) return;
+  wrap.innerHTML='';
+  if(!state.diyIdeas.length){ wrap.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">No saved ideas yet. Paste a link above to start your DIY collection.</p>'; return; }
+  state.diyIdeas.forEach(idea=>{
+    const card = document.createElement('div'); card.className='card diy-card';
+    const editing = editingDiyId === idea.id;
+    let host = idea.url;
+    try{ host = new URL(idea.url).hostname.replace(/^www\./,''); }catch(e){}
+    card.innerHTML =
+      (idea.thumbnail ? '<img src="'+esc(idea.thumbnail)+'" class="diy-thumb" alt="">' : '<div class="diy-thumb diy-thumb-empty">'+svg(ICON.scissors)+'</div>')
+      + '<div class="diy-body">'
+      + (editing
+          ? '<textarea class="diy-desc-edit" rows="3">'+esc(idea.description)+'</textarea>'
+          : '<p class="diy-desc">'+esc(idea.description)+'</p>')
+      + '<div class="diy-meta"><a href="'+esc(idea.url)+'" target="_blank" rel="noopener">'+esc(host)+' ↗</a></div>'
+      + '<div class="diy-actions">'
+      + (editing ? '<button class="btn small save-diy">Save</button>' : '<button class="btn small ghost edit-diy">Edit</button>')
+      + '<button class="btn small ghost del-diy">Delete</button>'
+      + '</div></div>';
+    card.querySelector('.edit-diy')?.addEventListener('click', ()=>{ editingDiyId = idea.id; renderDiyIdeas(); });
+    card.querySelector('.save-diy')?.addEventListener('click', ()=>{
+      const text = card.querySelector('.diy-desc-edit').value.trim();
+      if(!text) return;
+      if(dbReady) db.collection('diyIdeas').doc(idea.id).update({description:text}).catch(err=>{ console.error('[DIY] update failed', err); alert('Could not save: '+err.message); });
+      else idea.description = text;
+      editingDiyId = null; renderDiyIdeas();
+    });
+    card.querySelector('.del-diy').addEventListener('click', ()=>{
+      confirmAction('Delete this saved idea?', ()=>{
+        if(dbReady) db.collection('diyIdeas').doc(idea.id).delete().catch(err=>{ console.error('[DIY] delete failed', err); alert('Could not delete: '+err.message); });
+        else { state.diyIdeas = state.diyIdeas.filter(x=>x.id!==idea.id); renderDiyIdeas(); }
+      });
+    });
+    wrap.appendChild(card);
+  });
+}
+renderDiyIdeas();
+
 
 
 "use strict";
@@ -475,7 +553,7 @@ const MOBILE_NAV_ICONS = {
   list:'<path d="M7 4h10l2 3v13H5V7l2-3z"/><path d="M8.5 10.5l1.4 1.4 2.5-2.8M8.5 16l1.4 1.4 2.5-2.8M14 10.5h2M14 16h2"/>',
 };
 const MOBILE_NAV_PRIMARY = [['start','home','Home'],['todo','check','Checklist'],['budget','budget','Budget'],['considerations','list','Things to Get'],['venues','venue','Venues']];
-const MOBILE_NAV_MORE = [['board','Moodboard'],['style','Style Gallery'],['emails','Emails and Gifts'],['guestapp','Guest App']];
+const MOBILE_NAV_MORE = [['board','Moodboard'],['style','Style Gallery'],['emails','Emails and Gifts'],['guestapp','Guest App'],['diy','Wedding DIY']];
 
 function buildMobileNav(){
   if(document.getElementById('vvMobileNav')) return;

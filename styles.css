@@ -359,6 +359,18 @@
     padding:14px 16px;font-size:13px;color:var(--ink-soft);line-height:1.6;margin-bottom:20px;
   }
   .note-box b{color:var(--ink);}
+
+  .diy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+  .diy-card{overflow:hidden;display:flex;flex-direction:column;}
+  .diy-thumb{width:100%;height:120px;object-fit:cover;display:block;}
+  .diy-thumb-empty{width:100%;height:120px;display:flex;align-items:center;justify-content:center;background:var(--lilac-soft);color:var(--lilac);}
+  .diy-thumb-empty svg{width:32px;height:32px;stroke:currentColor;stroke-width:1.6;}
+  .diy-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+  .diy-desc{font-size:13.5px;line-height:1.45;}
+  .diy-desc-edit{width:100%;font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;resize:vertical;}
+  .diy-meta a{font-size:11.5px;color:var(--wine);text-decoration:none;}
+  .diy-meta a:hover{text-decoration:underline;}
+  .diy-actions{display:flex;gap:6px;}
   .love-notes{
     background:var(--blush-soft);border:1px dashed var(--blush);border-radius:var(--radius);
     padding:14px 16px 16px;margin-bottom:20px;

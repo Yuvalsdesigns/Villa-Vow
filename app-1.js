@@ -63,6 +63,7 @@ const ICON = {
   suitJacket:'<path d="M7 21v-7.5l5-4.5 5 4.5V21"/><path d="M9 9l3 5 3-5"/><path d="M8 21v-6h8v6"/>',
   suitGuayabera:'<path d="M7 21V9l5-3 5 3v12"/><path d="M9 21V12M15 21V12"/><path d="M9.8 14h1M13.2 14h1M9.8 17h1M13.2 17h1"/>',
   mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 6l9 7 9-7"/>',
+  scissors:'<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M20 4L7.9 15.9M14.5 14.5L20 20M7.9 8.1L12 12"/>',
 };
 function svg(paths, extra){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" '+(extra||'')+'>'+paths+'</svg>'; }
 
@@ -78,9 +79,10 @@ const TABS = [
   {id:'style', label:'Style Gallery', icon:ICON.style},
   {id:'emails', label:'Emails and Gifts', icon:ICON.mail},
   {id:'guestapp', label:'Guest App', icon:ICON.guests},
+  {id:'diy', label:'Wedding DIY', icon:ICON.scissors},
 ];
-const DESKTOP_NAV_MORE = ['board','style','emails','guestapp'];
-const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral'};
+const DESKTOP_NAV_MORE = ['board','style','emails','guestapp','diy'];
+const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac'};
 const tabNav = document.getElementById('tabNav');
 const navMoreWrap = document.createElement('div'); navMoreWrap.className = 'nav-more-wrap';
 const navMoreToggle = document.createElement('button'); navMoreToggle.type = 'button'; navMoreToggle.className = 'nav-more-toggle';
@@ -226,7 +228,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 "use strict";
 
 let db = null, dbReady=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], loveNotes:[] };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], loveNotes:[], diyIdeas:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -586,6 +588,10 @@ async function initDb(){
     unsub.push(db.collection('loveNotes').orderBy('createdAt','desc').limit(30).onSnapshot(snap=>{
       state.loveNotes = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderLoveNotes();
+    }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('diyIdeas').orderBy('createdAt','desc').onSnapshot(snap=>{
+      state.diyIdeas = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(typeof renderDiyIdeas==='function') renderDiyIdeas();
     }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('considerations').orderBy('order','asc').onSnapshot(snap=>{
       state.considerations = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_CONSIDERATIONS.map(([category,text],i)=>({id:'seed-consid-'+i, category, text, done:false, order:i}));

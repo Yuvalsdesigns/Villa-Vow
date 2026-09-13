@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260913-38">
+<link rel="stylesheet" href="styles.css?v=20260913-39">
 <link rel="stylesheet" href="mobile-app.css?v=20260913-24">
 
 <div class="bg-watermark no-print" style="background-image:url('watermark.jpg');"></div>
@@ -243,8 +243,9 @@
 
 <!-- GUEST APP -->
     <section class="view" id="view-guestapp">
-      <div class="view-head">
-        <h2>Who's Coming</h2>
+      <div class="view-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <h2 style="margin-bottom:0;">Who's Coming</h2>
+        <button class="btn small" id="exportEmailsBtn">Download email list (CSV)</button>
       </div>
 
       <div class="stat-row" id="guestStatRow"></div>
@@ -294,6 +295,25 @@
         Drag the grip on the left of a row to reorder within its side. Use the − / + stepper to adjust plus-ones without typing, and the small "+1:" dropdown next to it if the plus-one's own status differs from the guest's. Click a row to expand dietary/kosher notes, table, and free-text notes.
         <br><button class="btn small" style="margin-top:10px;" onclick="window.print()">Print guest list</button>
       </p>
+    </section>
+
+<!-- WEDDING DIY -->
+    <section class="view" id="view-diy">
+      <div class="view-head">
+        <h2>Wedding DIY</h2>
+      </div>
+      <div class="card" style="padding:16px;margin-bottom:20px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input type="url" id="diyUrl" placeholder="Paste a link to a tutorial, product, or idea">
+          <textarea id="diyDesc" rows="2" placeholder="What is this, and why did you save it?"></textarea>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label class="btn small" style="cursor:pointer;">Add thumbnail (optional)<input type="file" id="diyThumbInput" accept="image/*" style="display:none;"></label>
+            <img id="diyThumbPreview" style="display:none;width:44px;height:44px;object-fit:cover;border-radius:8px;">
+            <button class="btn primary small" id="diySaveBtn">Save idea</button>
+          </div>
+        </div>
+      </div>
+      <div id="diyGrid" class="diy-grid"></div>
     </section>
 
     <div class="confirm-backdrop no-print" id="confirmBackdrop">
@@ -402,8 +422,8 @@
 </div>
 
 <script src="firebase-sync.js?v=20260913-23"></script>
-<script src="app-1.js?v=20260913-29"></script>
-<script src="app-4.js?v=20260912-20"></script>
+<script src="app-1.js?v=20260913-30"></script>
+<script src="app-4.js?v=20260913-21"></script>
 <script src="app-2.js?v=20260913-23"></script>
-<script src="app-3.js?v=20260913-27"></script>
+<script src="app-3.js?v=20260913-28"></script>
 <script src="moodboard-pinterest.js?v=14"></script>

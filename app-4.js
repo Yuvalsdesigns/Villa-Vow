@@ -123,6 +123,7 @@ function buildGuestRow(g, side){
   const detail = document.createElement('div'); detail.className='row-detail'+(expandedGuestId===g.id?' open':'');
   detail.innerHTML = '<label class="plusone-field" style="flex:1 1 160px;"><span style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;"><input type="checkbox" style="width:auto;" class="tbd-ck" '+(g.plusOnesTBD?'checked':'')+'> Plus-ones unverified (+X, count not confirmed yet)</span></label>'
     + '<label class="notes-field" style="flex:1 1 160px;">Plus-one names (if known)<input type="text" placeholder="e.g. Ben & Noa" value="'+esc(g.plusOneNotes||'')+'"></label>'
+    + '<label class="email-field">Email (for e-vites)<input type="email" value="'+esc(g.email||'')+'" placeholder="name@email.com"></label>'
     + '<label class="dietary-field">Dietary / kosher<input type="text" value="'+esc(g.dietary||'')+'" placeholder="e.g. Kosher, gluten-free"></label>'
     + '<label class="table-field">Table / group<input type="text" value="'+esc(g.table||'')+'" placeholder="e.g. Family table"></label>'
     + '<label class="notes-field">Notes<textarea placeholder="Anything else">'+esc(g.notes||'')+'</textarea></label>';
@@ -146,6 +147,7 @@ function buildGuestRow(g, side){
   const plusNotes = detail.querySelector('.notes-field input[type=text]');
   plusTbdCk.addEventListener('change', ()=> updateGuest(g, {plusOnesTBD: plusTbdCk.checked, plusOnes: plusTbdCk.checked? 0 : (g.plusOnes||0), plusOnesConfirmed: plusTbdCk.checked? 0 : (g.plusOnesConfirmed||0)}));
   plusNotes.addEventListener('change', ()=> updateGuest(g, {plusOneNotes: plusNotes.value.trim()}));
+  detail.querySelector('.email-field input').addEventListener('change', e=> updateGuest(g, {email: e.target.value.trim()}));
   detail.querySelector('.dietary-field input').addEventListener('change', e=> updateGuest(g, {dietary: e.target.value.trim()}));
   detail.querySelector('.table-field input').addEventListener('change', e=> updateGuest(g, {table: e.target.value.trim()}));
   detail.querySelector('.notes-field textarea').addEventListener('change', e=> updateGuest(g, {notes: e.target.value.trim()}));
@@ -205,7 +207,7 @@ function addGuest(side){
   if(!name) return;
   const existing = guestsFor(side);
   const maxOrder = existing.reduce((m,g)=>Math.max(m,g.order||0),0);
-  const data = {name, side, rsvp:'pending', plusOnes:0, plusOnesTBD:false, plusOnesConfirmed:0, plusOneNotes:'', dietary:'', table:'', notes:'', order:maxOrder+1};
+  const data = {name, side, rsvp:'pending', plusOnes:0, plusOnesTBD:false, plusOnesConfirmed:0, plusOneNotes:'', dietary:'', table:'', notes:'', email:'', order:maxOrder+1};
   if(dbReady) db.collection('guests').add(data);
   input.value='';
 }
@@ -272,7 +274,7 @@ document.querySelectorAll('[data-paste-import]').forEach(btn=>{
     let maxOrder = guestsFor(side).reduce((m,g)=>Math.max(m,g.order||0),0);
     entries.forEach(parsed=>{
       maxOrder += 1;
-      const data = {name:parsed.name, side, rsvp:'pending', plusOnes:parsed.plusOnes, plusOnesTBD:parsed.plusOnesTBD, plusOnesConfirmed:0, plusOneNotes:'', dietary:'', table:'', notes:'', order:maxOrder};
+      const data = {name:parsed.name, side, rsvp:'pending', plusOnes:parsed.plusOnes, plusOnesTBD:parsed.plusOnesTBD, plusOnesConfirmed:0, plusOneNotes:'', dietary:'', table:'', notes:'', email:'', order:maxOrder};
       if(dbReady) db.collection('guests').add(data);
     });
     textarea.value='';
@@ -287,4 +289,20 @@ document.getElementById('labelMine').addEventListener('change', e=>{
 document.getElementById('labelPartner').addEventListener('change', e=>{
   state.labels.partnerLabel = e.target.value;
   if(dbReady) db.collection('meta').doc('labels').set({mineLabel:state.labels.mineLabel, partnerLabel:e.target.value});
+});
+
+/* ---- export guest emails for pasting into an e-vite service ---- */
+function csvField(v){ v = String(v==null?'':v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+document.getElementById('exportEmailsBtn').addEventListener('click', ()=>{
+  const withEmail = state.guests.filter(g=> (g.email||'').trim());
+  if(!withEmail.length){ alert("No guests have an email on file yet. Open a guest's row and add one, then try again."); return; }
+  const rows = [['Name','Email','Side','RSVP']];
+  withEmail.forEach(g=> rows.push([g.name, g.email.trim(), g.side==='mine'? (state.labels.mineLabel||'Mine') : (state.labels.partnerLabel||"Partner's"), g.rsvp]));
+  const csv = rows.map(r=> r.map(csvField).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'guest-emails.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 });
