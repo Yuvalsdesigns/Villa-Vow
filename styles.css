@@ -523,7 +523,7 @@
     position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
   }
   .venue-hero.image-failed::before{
-    content:'Photo could not load — use the venue source link below';
+    content:'Photo could not load, use the venue source link below';
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     padding:26px;text-align:center;color:var(--ink-soft);font-size:12px;line-height:1.45;
     background:linear-gradient(135deg,var(--wine-soft),var(--surface-2));

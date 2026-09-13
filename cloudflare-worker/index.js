@@ -1,4 +1,4 @@
-/* Villa & Vow planner backend — Cloudflare Worker, zero dependencies.
+/* Villa & Vow planner backend, Cloudflare Worker, zero dependencies.
    Deploy by pasting this whole file into the Cloudflare dashboard's
    Worker editor (Workers & Pages → Create → paste → Deploy). No CLI,
    no login flow, no npm packages needed. */
@@ -54,7 +54,7 @@ async function getGoogleJWKS() {
   return cachedKeys;
 }
 
-/* Verifies a Firebase ID token using only the standard Web Crypto API —
+/* Verifies a Firebase ID token using only the standard Web Crypto API ,
    no external JWT library needed. This is what lets the worker trust
    who's calling it without being a Firebase product itself. */
 async function verifyFirebaseIdToken(token) {
@@ -91,7 +91,7 @@ async function verifyFirebaseIdToken(token) {
 
 /* Pinterest's own embed widget (pinit.js) is a well-known third-party
    tracker and is routinely blocked by ad blockers and browser tracking
-   protection (notably Safari's Intelligent Tracking Prevention on iOS) —
+   protection (notably Safari's Intelligent Tracking Prevention on iOS) ,
    which is why pins could silently fail to show a picture on some
    devices/browsers even when added correctly. Fetching the pin's oEmbed
    data server-side sidesteps that entirely: this Worker (not the user's
@@ -130,8 +130,8 @@ async function handleResolvePin(rawUrl) {
     }
   }
   /* A resolved pin.it link (and some copied share links) lands on the
-     tracked share-link shape — /pin/<id>/sent/?invite_code=...&sender=...
-     — on whichever regional subdomain (fr.pinterest.com, etc.) the visitor
+     tracked share-link shape, /pin/<id>/sent/?invite_code=...&sender=...
+    , on whichever regional subdomain (fr.pinterest.com, etc.) the visitor
      who shared it was on. Pinterest's oEmbed endpoint rejects that shape
      outright ("Url was not found"); it only recognizes the bare canonical
      pin URL, so normalize down to just the numeric pin ID before asking. */
@@ -168,7 +168,7 @@ async function handleResolvePin(rawUrl) {
 }
 
 /* YouTube and TikTok both run a free, public oEmbed endpoint that needs no
-   API key or app registration — unlike Instagram or Google Drive, which
+   API key or app registration, unlike Instagram or Google Drive, which
    require a registered app (and in practice a paid setup) to get a real
    thumbnail, so those aren't supported here. */
 async function handleResolveEmbed(provider, rawUrl) {

@@ -1,7 +1,7 @@
 "use strict";
 /* ---------------- EMAIL TEMPLATES ---------------- */
 const EMAIL_TEMPLATES = [
-  {title:'Venue inquiry (villa / masseria)', to:'The venue coordinator', subject:'Wedding inquiry — [proposed date], approx. [guest count] guests',
+  {title:'Venue inquiry (villa / masseria)', to:'The venue coordinator', subject:'Wedding inquiry: [proposed date], approx. [guest count] guests',
    body:`Hello [Venue name] team,
 
 We're planning a destination wedding on [proposed date] for around [guest count] guests, most traveling from Israel and France, and your property is on our shortlist. A few questions before we go further:
@@ -9,7 +9,7 @@ We're planning a destination wedding on [proposed date] for around [guest count]
 - Is the property available, in full or in part, for [number] nights around that date?
 - How many guests can the on-site rooms sleep, and is a full-property exclusive rental an option?
 - Is there a space suited to an outdoor wedding ceremony under a chuppah (an open canopy structure), plus an indoor backup in case of weather?
-- Are outside caterers permitted? Our catering needs to be fully kosher, supervised by a mashgiach with their own kitchen setup — could you tell us about kitchen access and any restrictions?
+- Are outside caterers permitted? Our catering needs to be fully kosher, supervised by a mashgiach with their own kitchen setup. Could you tell us about kitchen access and any restrictions?
 - Is a pool or outdoor space available for a private group day the day after the wedding?
 - What's included in the venue rate, and what's your deposit and cancellation policy?
 
@@ -17,7 +17,7 @@ We'd love to see photos of the ceremony and reception spaces, and to set up a ca
 
 Warm regards,
 [Your names]`},
-  {title:'Kosher caterer inquiry', to:'The catering company', subject:'Kosher catering inquiry — destination wedding, [region], [proposed date]',
+  {title:'Kosher caterer inquiry', to:'The catering company', subject:'Kosher catering inquiry: destination wedding, [region], [proposed date]',
    body:`Hello [Caterer name],
 
 We're planning a kosher wedding at [venue name] in [region] on [proposed date], for approximately [guest count] guests. Could you let us know:
@@ -26,14 +26,14 @@ We're planning a kosher wedding at [venue name] in [region] on [proposed date], 
 - Your certification and which rabbinical authority supervises it
 - Whether you bring your own mobile kitchen or require specific facilities on-site (we're happy to connect you directly with the venue)
 - Menu style options (plated, buffet, family-style) and approximate pricing per person
-- The lead time you need to confirm a booking — we understand this can be as much as 12–18 months for kosher catering in Europe
+- The lead time you need to confirm a booking. We understand this can be as much as 12–18 months for kosher catering in Europe
 - Whether you're also able to cater a welcome dinner the night before
 
 Happy to jump on a call whenever suits you. Thank you so much!
 
 Best,
 [Your names]`},
-  {title:'Rabbi / officiant inquiry', to:'Your rabbi or officiant', subject:'Officiant inquiry — destination wedding, [region], [proposed date]',
+  {title:'Rabbi / officiant inquiry', to:'Your rabbi or officiant', subject:'Officiant inquiry: destination wedding, [region], [proposed date]',
    body:`Dear Rabbi [name],
 
 We're getting married on [proposed date] at [venue name] in [region], and would be honored if you'd consider officiating. A few questions:
@@ -43,11 +43,11 @@ We're getting married on [proposed date] at [venue name] in [region], and would 
 - Do you have requirements around witnesses, and could you help us think through the ketubah?
 - What are your fees, including travel and accommodation for the wedding weekend?
 
-Thank you so much for considering it — we'd love to talk further.
+Thank you so much for considering it. We'd love to talk further.
 
 Warmly,
 [Your names]`},
-  {title:'Florist inquiry', to:'The florist', subject:'Florist inquiry — wedding on [proposed date], [venue / region]',
+  {title:'Florist inquiry', to:'The florist', subject:'Florist inquiry: wedding on [proposed date], [venue / region]',
    body:`Hello [florist name],
 
 We're getting married at [venue name] on [proposed date] and love your style. Could you share:
@@ -61,12 +61,12 @@ We'd love to set up a call and share our moodboard. Thank you!
 
 Best,
 [Your names]`},
-  {title:'DJ / band inquiry', to:'The DJ or band', subject:'DJ/band inquiry — wedding on [proposed date], [venue / region]',
+  {title:'DJ / band inquiry', to:'The DJ or band', subject:'DJ/band inquiry: wedding on [proposed date], [venue / region]',
    body:`Hello,
 
 We're getting married on [proposed date] at [venue name], with guests joining from Israel, France, and [region]. We're looking for a DJ or band who can:
 
-- Play a mixed set — Israeli and French favorites alongside international dance music
+- Play a mixed set, Israeli and French favorites alongside international dance music
 - Cover the ceremony/cocktail hour and the evening reception, plus (if useful) a lighter set for a pool-day gathering the next day
 - Bring their own sound equipment suited to an outdoor setting
 
@@ -74,7 +74,7 @@ Could you let us know your availability for that date, your rates, and whether y
 
 Best,
 [Your names]`},
-  {title:'Photographer / videographer inquiry', to:'The photographer/videographer', subject:'Photography & video inquiry — wedding on [proposed date], [venue / region]',
+  {title:'Photographer / videographer inquiry', to:'The photographer/videographer', subject:'Photography & video inquiry: wedding on [proposed date], [venue / region]',
    body:`Hello [name],
 
 We love your work and are getting married on [proposed date] at [venue name] in [region]. Could you share:
@@ -88,7 +88,7 @@ We'd love to see a full gallery from a recent wedding. Thank you!
 
 Best,
 [Your names]`},
-  {title:'Hair & makeup artist inquiry', to:'The hair/makeup artist', subject:'Hair & makeup inquiry — wedding on [proposed date], [venue / region]',
+  {title:'Hair & makeup artist inquiry', to:'The hair/makeup artist', subject:'Hair & makeup inquiry: wedding on [proposed date], [venue / region]',
    body:`Hello [name],
 
 We're getting married on [proposed date] at [venue name], and I'd love to book you for hair and makeup. Could you tell me:
@@ -102,7 +102,7 @@ Thank you so much!
 
 Best,
 [Your name]`},
-  {title:'Dájas Douro Valley — feasibility inquiry', to:'Dájas Douro Valley', subject:'Wedding inquiry — private full-property rental, [proposed date], approx. [guest count] guests', highlight:true,
+  {title:'Dájas Douro Valley: feasibility inquiry', to:'Dájas Douro Valley', subject:'Wedding inquiry: private full-property rental, [proposed date], approx. [guest count] guests', highlight:true,
    body:`Hello Dájas Douro Valley team,
 
 My partner and I are planning our wedding for [proposed date], and Dájas caught our eye for its setting on the river. We understand you're not primarily set up as a wedding venue, so we wanted to check a few things before getting our hopes up:
@@ -110,7 +110,7 @@ My partner and I are planning our wedding for [proposed date], and Dájas caught
 1. Do you host weddings at the property, and would a full, exclusive rental of the villas be possible for our date, for around [guest count] guests staying on-site (plus any day guests)?
 2. Is there an outdoor space that could hold a Jewish wedding ceremony under a chuppah (an open canopy structure), and an indoor room we could move into if the weather turns?
 3. Our catering needs to be kosher, prepared by an outside kosher caterer with their own kitchen supervision (a mashgiach). Would you be able to host an external catering team, and could we discuss your kitchen setup with them in advance?
-4. What's the sleeping capacity across the villas, and is a private, full-property buyout possible for two to three nights — arrival, the ceremony day, and a relaxed pool day the day after?
+4. What's the sleeping capacity across the villas, and is a private, full-property buyout possible for two to three nights: arrival, the ceremony day, and a relaxed pool day the day after?
 5. Are there any restrictions on outdoor music or amplified sound in the evening, and is the pool available for a private group day after the wedding?
 6. Could you share pricing for a full-property buyout across [number] nights for approximately [guest count] guests, and your booking and deposit process?
 
@@ -118,21 +118,21 @@ We'd be so grateful for any photos of the spaces, or a call to walk through logi
 
 Warmly,
 [Your names]`},
-  {title:'Guest favor gifting request (local producer/brand)', to:'A local winery, olive oil producer, or small brand', subject:'Wedding favor gifting request — [proposed date], [venue / region]', highlight:true,
+  {title:'Guest favor gifting request (local producer/brand)', to:'A local winery, olive oil producer, or small brand', subject:'Wedding favor gifting request: [proposed date], [venue / region]', highlight:true,
    body:`Hello [producer/brand name],
 
-We're getting married on [proposed date] at [venue name] in [region], with around [guest count] guests joining us from across Europe and Israel for the weekend. We love your [product — e.g. Port wine / olive oil / honey] and think it would be a beautiful way to share a taste of the region with our guests as a wedding favor.
+We're getting married on [proposed date] at [venue name] in [region], with around [guest count] guests joining us from across Europe and Israel for the weekend. We love your [product, e.g. Port wine / olive oil / honey] and think it would be a beautiful way to share a taste of the region with our guests as a wedding favor.
 
 Would you be open to providing [number] mini bottles/jars at a discounted rate, or as a gifted collaboration in exchange for us featuring your name on the favor tags and mentioning you to our guests during the weekend? We're happy to include a small card about your story with each one.
 
-No worries at all if this isn't something you do — just wanted to ask, since your product means a lot to us for this location. Thank you for considering it!
+No worries at all if this isn't something you do, just wanted to ask, since your product means a lot to us for this location. Thank you for considering it!
 
 Warmly,
 [Your names]`},
-  {title:'Bridesmaid gift collaboration request (small brand)', to:'A small beauty, jewelry, or robe/pajama brand', subject:'Bridal party gifting request — small wedding, [proposed date]', highlight:true,
+  {title:'Bridesmaid gift collaboration request (small brand)', to:'A small beauty, jewelry, or robe/pajama brand', subject:'Bridal party gifting request: small wedding, [proposed date]', highlight:true,
    body:`Hi [brand name] team,
 
-I'm getting married on [proposed date] and I'm putting together getting-ready gifts for my [number] bridesmaids — I love your [product, e.g. robes / jewelry / skincare set] and think they'd be perfect.
+I'm getting married on [proposed date] and I'm putting together getting-ready gifts for my [number] bridesmaids. I love your [product, e.g. robes / jewelry / skincare set] and think they'd be perfect.
 
 I know I'm not an influencer with a big following, but I'd love to feature your product on the morning of the wedding (photos with the full bridal party) and tag you afterward, if you'd be willing to gift or discount [number] pieces for the group. Happy to send more details about the day if that's helpful.
 
@@ -143,15 +143,15 @@ Warmly,
 ];
 const GIFT_IDEAS = [
   {group:'Bridesmaid gifts', tint:'blush', ideas:[
-    {title:'Monogrammed robe or pajama set', how:'diy', note:'Buy plain robes/pajamas and personalize with a Cricut iron-on vinyl monogram or name — no sewing machine needed.'},
+    {title:'Monogrammed robe or pajama set', how:'diy', note:'Buy plain robes/pajamas and personalize with a Cricut iron-on vinyl monogram or name, no sewing machine needed.'},
     {title:'Embroidered pouch or handkerchief', how:'diy', note:'A simple hand-embroidered initial on a small makeup pouch or hankie, using your sewing skills.'},
     {title:'Personalized tote bag', how:'diy', note:'Plain canvas tote + Cricut vinyl name or a small floral design in your wedding colors.'},
-    {title:'"Getting ready" kit', how:'diy', note:'Robe + a mini bottle of something local (see the producer gifting template) + a handwritten note, tied together — costs little beyond the robe.'},
+    {title:'"Getting ready" kit', how:'diy', note:'Robe + a mini bottle of something local (see the producer gifting template) + a handwritten note, tied together. Costs little beyond the robe.'},
     {title:'Skincare, jewelry, or robe brand set', how:'brand', note:'Use the bridesmaid gifting template to ask a small brand for a discounted or gifted set for the group.'}
   ]},
   {group:'Guest favors', tint:'coral', ideas:[
-    {title:'Mini local wine or olive oil bottles', how:'brand', note:'Douro is Port wine country and Iseo sits right by Franciacorta — a local producer is a very natural, on-theme favor. Use the producer gifting template.'},
-    {title:'Custom favor tags or labels', how:'diy', note:'Cricut-cut labels or stickers for jars of jam, honey, or the mini bottles above — ties every favor together visually for almost no cost.'},
+    {title:'Mini local wine or olive oil bottles', how:'brand', note:'Douro is Port wine country and Iseo sits right by Franciacorta. A local producer is a very natural, on-theme favor. Use the producer gifting template.'},
+    {title:'Custom favor tags or labels', how:'diy', note:'Cricut-cut labels or stickers for jars of jam, honey, or the mini bottles above. Ties every favor together visually for almost no cost.'},
     {title:'Seed packets or mini candles', how:'budget', note:'Cheap, useful, no expiry pressure, easy to source in bulk.'},
     {title:'Sunscreen or fan favors', how:'budget', note:'Genuinely useful for a hot pool-day weekend, and easy to label with a Cricut sticker.'}
   ]}
@@ -381,7 +381,7 @@ function handleFile(file){
       let url = tryQuality(quality);
       while(url.length > 230000 && quality > 0.3){ quality -= 0.12; url = tryQuality(quality); }
       if(url.length > 230000){
-        warn.textContent = 'This image is still too large after compression — try a smaller or simpler photo.';
+        warn.textContent = 'This image is still too large after compression. Try a smaller or simpler photo.';
         warn.style.display='block';
         pendingDataUrl = null;
         document.getElementById('savePhoto').disabled = true;
@@ -408,7 +408,7 @@ document.getElementById('savePhoto').addEventListener('click', ()=>{
   if(!pendingDataUrl) return;
   const data = {type:'photo', imageDataUrl:pendingDataUrl, title:document.getElementById('photoTitle').value.trim()||'Untitled', tag:document.getElementById('photoTag').value, createdAt:Date.now()};
   if(dbReady) db.collection('pinboard').add(data).catch(()=>{
-    document.getElementById('photoWarn').textContent='Could not save — the image may be too large. Try a smaller photo.';
+    document.getElementById('photoWarn').textContent='Could not save, the image may be too large. Try a smaller photo.';
     document.getElementById('photoWarn').style.display='block';
   });
   else { localAdd(state.pins,data); renderBoard(); renderStart(); }
@@ -430,9 +430,9 @@ document.getElementById('pasteClipboard')?.addEventListener('click', async ()=>{
     }
     if(url) document.getElementById('linkUrl').value = url;
     if(title) document.getElementById('linkTitle').value = title;
-    if(!url && !title){ warn.textContent = "Clipboard didn't look like a saved pin — paste the link below by hand."; warn.style.display='block'; }
+    if(!url && !title){ warn.textContent = "Clipboard didn't look like a saved pin, paste the link below by hand."; warn.style.display='block'; }
   }catch(e){
-    warn.textContent = "Couldn't read the clipboard — your browser may need permission, or there's nothing copied yet. Paste the link below by hand.";
+    warn.textContent = "Couldn't read the clipboard. Your browser may need permission, or there's nothing copied yet. Paste the link below by hand.";
     warn.style.display='block';
   }
 });
@@ -475,7 +475,7 @@ const MOBILE_NAV_ICONS = {
   list:'<path d="M7 4h10l2 3v13H5V7l2-3z"/><path d="M8.5 10.5l1.4 1.4 2.5-2.8M8.5 16l1.4 1.4 2.5-2.8M14 10.5h2M14 16h2"/>',
 };
 const MOBILE_NAV_PRIMARY = [['start','home','Home'],['todo','check','Checklist'],['budget','budget','Budget'],['considerations','list','Things to Get'],['venues','venue','Venues']];
-const MOBILE_NAV_MORE = [['board','Moodboard'],['style','Style Gallery'],['emails','Email Templates'],['guestapp','Guest App']];
+const MOBILE_NAV_MORE = [['board','Moodboard'],['style','Style Gallery'],['emails','Emails and Gifts'],['guestapp','Guest App']];
 
 function buildMobileNav(){
   if(document.getElementById('vvMobileNav')) return;
@@ -515,7 +515,7 @@ buildMobileNav();
 /* ---------------- PLANNER ASSISTANT ---------------- */
 const SYSTEM_PROMPT = "You are the on-call wedding planner inside \"Villa and Vow\", a planning app for a destination wedding in Europe. The couple wants a chuppah, a rabbi, and kosher catering, with guests flying in from Israel and France. They're leaning toward a villa or masseria where guests stay together for about two days, with a pool party the day after the wedding, or a walkable cluster of budget hotels/Airbnbs as backup if one property can't sleep everyone. Four regions are shortlisted in the app: Tuscany, Puglia, Provence and the Algarve. "
   + "Answer warmly and specifically, like an expert in this niche (kosher wedding logistics in Europe, Jewish wedding customs, destination-wedding travel logistics). Use short paragraphs or bullet points, not long essays. If asked to draft something (an email, a timeline, vow ideas, a toast outline) just write it well and completely. "
-  + "You do NOT have live access to real vendor names, current prices, or availability in any specific town — never invent a caterer, rabbi, planner or price. When that's what's being asked, say plainly that you don't have real vendor data and suggest exactly who to ask instead (the venue coordinator, a local kosher caterer, a Jewish destination-wedding planner). Use the live app data given to you to make answers specific to where they actually are in planning.";
+  + "You do NOT have live access to real vendor names, current prices, or availability in any specific town. Never invent a caterer, rabbi, planner or price. When that's what's being asked, say plainly that you don't have real vendor data and suggest exactly who to ask instead (the venue coordinator, a local kosher caterer, a Jewish destination-wedding planner). Use the live app data given to you to make answers specific to where they actually are in planning.";
 
 let sampleFn = null, plannerHistory = [];
 async function initPlanner(){
@@ -587,7 +587,7 @@ async function sendToPlanner(){
   try{
     const turns = [
       {role:'user', content: SYSTEM_PROMPT + "\n\n" + contextSummary()},
-      {role:'assistant', content: "Understood — I have the full picture of where things stand. What would you like help with?"},
+      {role:'assistant', content: "Understood, I have the full picture of where things stand. What would you like help with?"},
     ].concat(plannerHistory);
     const result = await sampleFn(turns, {
       modelTier: 'default',
@@ -599,9 +599,9 @@ async function sendToPlanner(){
   }catch(e){
     thinking.remove();
     const code = e && e.code;
-    let msg = "Something went wrong reaching your planner — try again in a moment.";
-    if(code === 'not_granted'){ msg = "This view hasn't granted the planner assistant — reopen the board from your own copy of the link."; }
-    if(code === 'rate_limited'){ msg = "Your planner is fielding a lot of questions right now — try again shortly."; }
+    let msg = "Something went wrong reaching your planner. Try again in a moment.";
+    if(code === 'not_granted'){ msg = "This view hasn't granted the planner assistant. Reopen the board from your own copy of the link."; }
+    if(code === 'rate_limited'){ msg = "Your planner is fielding a lot of questions right now. Try again shortly."; }
     addMsg('assistant', msg, 'error');
     if(e && e.text) plannerHistory.push({role:'assistant', content:e.text});
   }

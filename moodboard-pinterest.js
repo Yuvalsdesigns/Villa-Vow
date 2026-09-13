@@ -25,7 +25,7 @@
   }
 
   /* YouTube and TikTok both run a free, public oEmbed endpoint that needs
-     no API key or account — unlike Instagram/Google Drive, which require
+     no API key or account, unlike Instagram/Google Drive, which require
      a registered app and, in practice, a paid-tier setup to get a real
      thumbnail. Scoped to just these two for that reason. */
   function classifyVideoUrl(raw){
@@ -76,7 +76,7 @@
      Safari's tracking prevention on some devices, which is why a pin could
      look "added" but never show a picture. Individual pins are previewed
      via our own Worker instead, which fetches Pinterest's oEmbed thumbnail
-     server-side and hands back a plain image URL — no third-party script
+     server-side and hands back a plain image URL, no third-party script
      involved, and it works for pin.it short links too. */
   const pinPreviewCache=new Map();
   const pinPreviewInFlight=new Set();
@@ -107,7 +107,7 @@
       if(!resp.ok||!data.thumbnailUrl){
         let reason='HTTP '+resp.status+': '+(data&&(data.error||'no thumbnail returned')||'no thumbnail returned');
         if(data&&data.status) reason+=' (Pinterest responded '+data.status+')';
-        if(data&&data.bodySnippet) reason+=' — '+String(data.bodySnippet).slice(0,160);
+        if(data&&data.bodySnippet) reason+=': '+String(data.bodySnippet).slice(0,160);
         console.error('[Pinterest preview]',reason,{status:resp.status,data,url:cleanUrl});
         pinPreviewCache.set(cleanUrl,{failed:true,reason}); window.renderBoard(); return;
       }
@@ -265,7 +265,7 @@
         inner='<div class="pin-icon-wrap tint-'+({dress:'wine',suit:'lilac',flowers:'cypress',venue:'coral',music:'butter',hair:'brass',makeup:'brass',stationery:'lilac'}[p.tag]||'cypress')+'">'+svg(ICON[p.icon])+'</div>';
       }else if(p.type==='pinterest'||p.type==='link'){
         /* Classify from the URL itself on every render, rather than trusting
-           the stored type/pinterestKind fields — those depend on a one-time
+           the stored type/pinterestKind fields, since those depend on a one-time
            migration or on which code path originally saved the pin, and a
            pin added (or re-added) after that migration already ran once
            would otherwise be stuck showing the generic icon forever. */

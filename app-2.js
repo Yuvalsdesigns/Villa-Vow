@@ -37,11 +37,11 @@ const VENUES_PART_1 = [
       "#F2DFC0",
       "#C99A4E"
     ],
-    "desc": "Whitewashed masserias (fortified farmhouses) that sleep 30–40+ guests on-site with a pool built in — the closest fit to a private \"everyone under one roof\" villa weekend, at a gentler price than Tuscany.",
+    "desc": "Whitewashed masserias (fortified farmhouses) that sleep 30–40+ guests on-site with a pool built in: the closest fit to a private \"everyone under one roof\" villa weekend, at a gentler price than Tuscany.",
     "facts": [
       "Masserias sleeping 30–40 guests",
       "Built-in pools for the day-after party",
-      "Fewer direct flights — often via Rome/Milan"
+      "Fewer direct flights: often via Rome/Milan"
     ],
     "sources": [
       [
@@ -113,17 +113,17 @@ const VENUES_PART_1 = [
     "id": "dajas",
     "name": "Dájas Douro Valley",
     "region": "São Lourenço do Douro, Portugal",
-    "price": "TBD — inquire",
+    "price": "TBD: inquire",
     "badge": "Your find",
     "grad": [
       "#C9DFC3",
       "#C99A4E"
     ],
-    "desc": "The one you fell for. A small exclusive-villa property on the Douro river, not branded as a wedding venue but has hosted private weddings before — worth an email before you fall any harder. Sleeps a smaller group than the other four, so it suits a more intimate guest list.",
+    "desc": "The one you fell for. A small exclusive-villa property on the Douro river, not branded as a wedding venue but has hosted private weddings before: worth an email before you fall any harder. Sleeps a smaller group than the other four, so it suits a more intimate guest list.",
     "facts": [
       "On-site: 11 rooms now, growing to 17 in 2025",
       "Hosts weddings & private events, per past guests",
-      "Kosher catering: unconfirmed — needs outreach",
+      "Kosher catering: unconfirmed: needs outreach",
       "Direct EL AL flight TLV↔Porto weekly; frequent Paris↔Porto flights"
     ],
     "sources": [
@@ -149,7 +149,7 @@ const VENUES_PART_2 = [
   {
     "id": "kotor",
     "name": "Bay of Kotor",
-    "region": "Montenegro — Dobrota, Perast, Luštica & Kamenari",
+    "region": "Montenegro: Dobrota, Perast, Luštica & Kamenari",
     "price": "€€–€€€",
     "badge": "Hidden gem",
     "grad": [
@@ -822,25 +822,25 @@ const STYLE_PHOTOS = {
 
 const STYLE_SECTIONS = [
   {title:'Dress silhouettes', tint:'blush', items:[
-    ['dressA','A-line','Fitted through the bodice, flares gently from the waist — flattering on the widest range of body types.'],
-    ['dressMermaid','Mermaid / trumpet','Fitted to the knee then flares out — dramatic, best on a smooth indoor floor or a dance-floor moment.'],
-    ['dressBall','Ballgown','Full, voluminous skirt — grand on a wide staircase or in a formal villa garden.'],
-    ['dressSheath','Sheath / column','Straight and slim — modern, minimal, easiest for travel and a second "party" change.'],
-    ['dressBoho','Bohemian / flowy','Light, flowing fabrics, often with movement in the skirt — suits an outdoor terrace or a barefoot pool day.'],
-    ['dressTwopc','Two-piece separates','Crop top and skirt worn separately — practical for heat, easy to change into a shorter piece later.'],
+    ['dressA','A-line','Fitted through the bodice, flares gently from the waist: flattering on the widest range of body types.'],
+    ['dressMermaid','Mermaid / trumpet','Fitted to the knee then flares out: dramatic, best on a smooth indoor floor or a dance-floor moment.'],
+    ['dressBall','Ballgown','Full, voluminous skirt: grand on a wide staircase or in a formal villa garden.'],
+    ['dressSheath','Sheath / column','Straight and slim: modern, minimal, easiest for travel and a second "party" change.'],
+    ['dressBoho','Bohemian / flowy','Light, flowing fabrics, often with movement in the skirt: suits an outdoor terrace or a barefoot pool day.'],
+    ['dressTwopc','Two-piece separates','Crop top and skirt worn separately: practical for heat, easy to change into a shorter piece later.'],
   ]},
   {title:"Partner's attire", tint:'wine', items:[
-    ['suitTux','Classic tuxedo','Formal and timeless — best for an indoor ceremony or a marble-floored reception room.'],
-    ['suitLinen','Linen suit','Breathable and relaxed — the natural choice for a hot Mediterranean afternoon.'],
-    ['suitJacket','Odd jacket & trousers','A jacket in one tone, trousers in another — a little less formal, easy to lighten for the party later.'],
-    ['suitGuayabera','Open-collar guayabera','No jacket needed — worn untucked, built for heat, still sharp for a garden ceremony.'],
+    ['suitTux','Classic tuxedo','Formal and timeless: best for an indoor ceremony or a marble-floored reception room.'],
+    ['suitLinen','Linen suit','Breathable and relaxed: the natural choice for a hot Mediterranean afternoon.'],
+    ['suitJacket','Odd jacket & trousers','A jacket in one tone, trousers in another: a little less formal, easy to lighten for the party later.'],
+    ['suitGuayabera','Open-collar guayabera','No jacket needed: worn untucked, built for heat, still sharp for a garden ceremony.'],
   ]},
   {title:'Flowers & bouquet styles', tint:'cypress', items:[
-    ['flowerCascade','Cascading','Trails downward from the hand — formal and romantic, classic for a ballgown.'],
-    ['flowerRound','Round classic','Tight, symmetric dome of blooms — timeless, photographs cleanly.'],
-    ['flowerWild','Wildflower / loose','Loosely gathered, uneven — matches a Provence or Puglia countryside setting.'],
-    ['flowerTropical','Tropical / greenery-led','Big leaves, architectural stems — modern, low on fragile petals in the heat.'],
-    ['flowerDried','Dried / boho','Pampas, dried grasses, muted tones — travels well without wilting in transit.'],
+    ['flowerCascade','Cascading','Trails downward from the hand: formal and romantic, classic for a ballgown.'],
+    ['flowerRound','Round classic','Tight, symmetric dome of blooms: timeless, photographs cleanly.'],
+    ['flowerWild','Wildflower / loose','Loosely gathered, uneven: matches a Provence or Puglia countryside setting.'],
+    ['flowerTropical','Tropical / greenery-led','Big leaves, architectural stems: modern, low on fragile petals in the heat.'],
+    ['flowerDried','Dried / boho','Pampas, dried grasses, muted tones: travels well without wilting in transit.'],
   ]},
   {title:'Venue mood', tint:'coral', items:[
     ['venueTuscany','Tuscan rustic-elegant','Terracotta, cypress trees, stone archways, long shared tables under string lights.'],
@@ -849,34 +849,34 @@ const STYLE_SECTIONS = [
     ['venueAlgarve','Algarve modern-boho','Clean modern villas, azulejo tile accents, ocean-blue palette, relaxed and bright.'],
   ]},
   {title:'Music & entertainment mood', tint:'butter', items:[
-    ['musicDJ','DJ set, uplit', 'A DJ booth with colored uplighting — reliable, flexible, easiest to keep the dance floor full all night.'],
-    ['musicBand','Live band', 'A full band for the reception — bigger sound and energy, best on a stage or open terrace with room to move.'],
+    ['musicDJ','DJ set, uplit', 'A DJ booth with colored uplighting: reliable, flexible, easiest to keep the dance floor full all night.'],
+    ['musicBand','Live band', 'A full band for the reception: bigger sound and energy, best on a stage or open terrace with room to move.'],
     ['musicAcoustic','Strings by day, DJ by night', 'A string duo or guitarist for the ceremony and cocktail hour, switching to a DJ once the dancing starts.'],
-    ['musicSilent','Silent disco / bonfire after-party', 'Headphones after midnight, or an acoustic bonfire wind-down — good for a villa with noise curfews or light sleepers next door.'],
+    ['musicSilent','Silent disco / bonfire after-party', 'Headphones after midnight, or an acoustic bonfire wind-down: good for a villa with noise curfews or light sleepers next door.'],
   ]},
   {title:'Hair styles', tint:'brass', items:[
-    ['hairBun','Sleek low bun','Polished and cool in the heat — pairs well with statement earrings.'],
-    ['hairWaves','Soft waves, down','Romantic and relaxed — the easiest to touch up yourself after the ceremony.'],
+    ['hairBun','Sleek low bun','Polished and cool in the heat: pairs well with statement earrings.'],
+    ['hairWaves','Soft waves, down','Romantic and relaxed: the easiest to touch up yourself after the ceremony.'],
     ['hairBraid','Braided updo','Textured and secure for a long dancing night, holds up well outdoors.'],
     ['hairHalf','Half-up with flowers','Down enough to feel undone, up enough to keep hair off your face in a breeze.'],
   ]},
   {title:'Makeup looks', tint:'lilac', items:[
     ['makeupGlam','Classic bridal glam','Full coverage, defined eye, built to photograph under any light, indoor or out.'],
-    ['makeupNatural','Soft "no-makeup" makeup','Skin-forward, minimal color — reads effortless in bright outdoor sun.'],
+    ['makeupNatural','Soft "no-makeup" makeup','Skin-forward, minimal color: reads effortless in bright outdoor sun.'],
     ['makeupBronze','Bronzed, sun-kissed','Warm, glowing finish that matches a tan and an outdoor Mediterranean setting.'],
     ['makeupBold','Bold eye or lip statement','One dramatic feature, kept simple everywhere else.'],
   ]},
   {title:'Shoes', tint:'cypress', items:[
-    ['shoeBlock','Block heel','Stable on grass, gravel or cobblestone — the safest choice for a villa lawn or old-town streets.'],
+    ['shoeBlock','Block heel','Stable on grass, gravel or cobblestone: the safest choice for a villa lawn or old-town streets.'],
     ['shoePump','Classic pump','Elegant for an indoor ceremony or a marble-floored reception room.'],
     ['shoeSandal','Flat sandal','For a barefoot-adjacent, outdoor terrace ceremony or the beach.'],
     ['shoeSneaker','Comfortable party pair','A second pair for the dance floor and, the next day, the pool party.'],
   ]},
   {title:'Invitation styles', tint:'blush', items:[
-    ['inviteLetterpress','Classic letterpress','Pressed type on thick cotton paper — formal, timeless, holds up well as a keepsake.'],
-    ['inviteMinimal','Minimalist modern','Clean type, lots of white space — easy to read at a glance across three languages.'],
+    ['inviteLetterpress','Classic letterpress','Pressed type on thick cotton paper: formal, timeless, holds up well as a keepsake.'],
+    ['inviteMinimal','Minimalist modern','Clean type, lots of white space: easy to read at a glance across three languages.'],
     ['inviteWatercolor','Watercolor floral','A painted floral motif tying back to your bouquet and venue colors.'],
-    ['inviteBilingual','Bilingual / trilingual card','Hebrew, French and the local language side by side — worth planning the layout early with your designer or printer.'],
+    ['inviteBilingual','Bilingual / trilingual card','Hebrew, French and the local language side by side: worth planning the layout early with your designer or printer.'],
   ]},
   {title:'Second Look / Reception Outfit', tint:'coral', items:[
     ['secondMini','Short bridal mini','Still unmistakably bridal in white or ivory, but lighter, shorter and much easier to dance in.'],
@@ -930,7 +930,7 @@ function renderStyleSections(){
     sec.items.forEach(([key,label,desc,itemImg])=>{
       const card = document.createElement('div'); card.className='style-card';
       const photo = itemImg || STYLE_PHOTOS[key];
-      const visual = photo?'<img class="style-img" src="'+esc(photo)+'" alt="'+esc(label)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.textContent=\'Image unavailable — use Pinterest search\'"><div class="style-photo-source">Matching visual · '+esc(label)+'</div>':'<div class="style-icon tint-'+sec.tint+'">'+svg(ICON[key])+'</div>';
+      const visual = photo?'<img class="style-img" src="'+esc(photo)+'" alt="'+esc(label)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.textContent=\'Image unavailable: use Pinterest search\'"><div class="style-photo-source">Matching visual · '+esc(label)+'</div>':'<div class="style-icon tint-'+sec.tint+'">'+svg(ICON[key])+'</div>';
       card.innerHTML = visual+'<h5>'+label+'</h5><p>'+desc+'</p><div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;"><button class="btn small pin-style">Pin this</button><button class="btn small ghost pinterest-style">Pinterest ↗</button></div>';
       card.querySelector('.pin-style').addEventListener('click', ()=> pinStyle(key,label,sec.title));
       card.querySelector('.pinterest-style').addEventListener('click', ()=> window.open('https://www.pinterest.com/search/pins/?q='+encodeURIComponent(label+' wedding inspiration'),'_blank','noopener'));
@@ -947,11 +947,11 @@ function renderStyleSections(){
   beauty.innerHTML = '<div class="style-head"><h3>Beauty countdown</h3></div>';
   const tl = document.createElement('div'); tl.className='beauty-timeline';
   [
-    ['2–3 months out','Trial run','Book a hair and makeup trial — ideally at the venue, or somewhere with matching outdoor light. Also start any teeth whitening or skin treatments that need repeat sessions.'],
-    ['4–6 weeks out','Facials begin','Start a monthly facial if your skin is new to them — never try a first facial in the final week.'],
-    ['2 weeks out','Last facial','Final facial and any last teeth whitening — enough buffer for skin to settle before photos.'],
+    ['2–3 months out','Trial run','Book a hair and makeup trial: ideally at the venue, or somewhere with matching outdoor light. Also start any teeth whitening or skin treatments that need repeat sessions.'],
+    ['4–6 weeks out','Facials begin','Start a monthly facial if your skin is new to them: never try a first facial in the final week.'],
+    ['2 weeks out','Last facial','Final facial and any last teeth whitening: enough buffer for skin to settle before photos.'],
     ['1 week out','Tan test / gradual tan begins','If spray tanning, do a test session first. Gradual, build-it-yourself tan is safer than one dark session right before.'],
-    ['2–3 days out','Nails, brows, final tan top-up','Gel manicure and brow shaping — fresh, but settled in by the day.'],
+    ['2–3 days out','Nails, brows, final tan top-up','Gel manicure and brow shaping: fresh, but settled in by the day.'],
     ['Morning of','Hair, makeup, dressing','Build in real time for a destination attendant to steam the dress after travel and help with bustling.'],
   ].forEach(([when,h,p])=>{
     const row = document.createElement('div'); row.className='beauty-row';
@@ -962,7 +962,7 @@ function renderStyleSections(){
   wrap.appendChild(beauty);
 
   const note = document.createElement('div'); note.className='note-box';
-  note.innerHTML = '<b>Stylist / dresser:</b> for a destination wedding, hire a local hair & makeup artist who has worked outdoors in the region before (ask venues or other real weddings there for names) — they’ll know how their products hold up in that heat and humidity. Separately, consider a bridal attendant or dresser just for the day: dresses travel badly and almost always need steaming on arrival, and someone dedicated to bustling, buttons and touch-ups matters more at a villa than at a hotel with on-call staff.';
+  note.innerHTML = '<b>Stylist / dresser:</b> for a destination wedding, hire a local hair & makeup artist who has worked outdoors in the region before (ask venues or other real weddings there for names): they’ll know how their products hold up in that heat and humidity. Separately, consider a bridal attendant or dresser just for the day: dresses travel badly and almost always need steaming on arrival, and someone dedicated to bustling, buttons and touch-ups matters more at a villa than at a hotel with on-call staff.';
   wrap.appendChild(note);
 }
 function pinStyle(key,label,section){
@@ -1084,7 +1084,7 @@ function saveCustomStyle(){
   const warn = m.querySelector('#styleWarn');
   if(!pendingStyleImage){ warn.textContent='Add an image first.'; warn.style.display='block'; return; }
   if(!name){ warn.textContent='Give the style a name.'; warn.style.display='block'; return; }
-  if(!dbReady || !db){ warn.textContent='Shared sync is not connected yet — sign in to add a style.'; warn.style.display='block'; return; }
+  if(!dbReady || !db){ warn.textContent='Shared sync is not connected yet: sign in to add a style.'; warn.style.display='block'; return; }
   m.querySelector('#styleSave').disabled = true;
   db.collection('customStyles').add({name, description:desc, category:activeStyleCategory, image:pendingStyleImage, createdAt:Date.now()})
     .then(()=> m.classList.remove('open'))

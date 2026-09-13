@@ -76,7 +76,7 @@ const TABS = [
   {id:'venues', label:'Venues & Destinations', icon:ICON.map},
   {id:'board', label:'Moodboard', icon:ICON.board},
   {id:'style', label:'Style Gallery', icon:ICON.style},
-  {id:'emails', label:'Email Templates', icon:ICON.mail},
+  {id:'emails', label:'Emails and Gifts', icon:ICON.mail},
   {id:'guestapp', label:'Guest App', icon:ICON.guests},
 ];
 const DESKTOP_NAV_MORE = ['board','style','emails','guestapp'];
@@ -230,7 +230,7 @@ const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, cust
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
-   are rough planning-guide figures, not real vendor quotes — replace
+   are rough planning-guide figures, not real vendor quotes, replace
    each one as you get actual quotes. Kosher catering runs well above
    standard European wedding catering because of the mashgiach and
    imported/kosher-certified ingredients. */
@@ -262,7 +262,7 @@ const TODO_SEED_PART_1 = [
   ['12+ months out', 'Shortlist destination regions and specific venues'],
   ['12+ months out', 'Confirm a kosher caterer can work at your venue before signing anything'],
   ['12+ months out', 'Confirm your rabbi or officiant is available and can travel'],
-  ['12+ months out', 'Confirm the venue has a real rain plan — indoor space that fits your full guest count, plus a clear Plan B and how last-minute the call can be — before signing anything'],
+  ['12+ months out', 'Confirm the venue has a real rain plan (indoor space that fits your full guest count, plus a clear Plan B and how last-minute the call can be) before signing anything'],
   ['12+ months out', 'Check how much on-site parking the venue has, and the backup plan for guests and vendors if it’s limited'],
   ['12+ months out', 'Put a deposit down on the venue'],
   ['12+ months out', 'Decide on your overall color palette and wedding theme'],
@@ -290,7 +290,7 @@ const TODO_SEED_PART_1 = [
   ['3–6 months out', 'Put together welcome bags for arriving guests'],
   ['3–6 months out', 'Look into legal paperwork and any apostille needed for the marriage certificate'],
   ['3–6 months out', 'Buy the rings, ketubah, and kiddush cup'],
-  ['3–6 months out', 'Finalize your flower order — bouquets, centerpieces, and chuppah florals'],
+  ['3–6 months out', 'Finalize your flower order: bouquets, centerpieces, and chuppah florals'],
   ['3–6 months out', 'Mail formal invitations with the full weekend itinerary']
 ];
 
@@ -320,7 +320,7 @@ const TODO_SEED_PART_2 = [
   ['Wedding weekend', 'Pool party the next day'],
   ['After the wedding', 'Send thank-you cards'],
   ['After the wedding', 'Back up and share photos with guests'],
-  ['After the wedding', 'Return any rentals — chuppah, décor, suits'],
+  ['After the wedding', 'Return any rentals: chuppah, décor, suits'],
   ['After the wedding', 'Handle any name-change or marriage-certificate paperwork back home'],
   ['12+ months out', 'Set the guest-count range and a realistic total wedding budget'],
   ['12+ months out', 'Choose the top 3 destination regions to investigate'],
@@ -396,8 +396,8 @@ const TODO_SEED_PART_4 = [
   ['Wedding weekend', 'Set up a hydration, sunscreen and shade station for the pool party'],
   ['6–9 months out', 'Choose your veil and any ceremony hair accessories'],
   ['6–9 months out', 'Plan a second look / reception outfit that is comfortable for dancing'],
-  ['3–6 months out', 'Choose wedding décor and rentals — tablescape, candles, linens, signage, lighting and lounge furniture'],
-  ['3–6 months out', 'Choose ceremony décor — aisle, chuppah styling and welcome area'],
+  ['3–6 months out', 'Choose wedding décor and rentals: tablescape, candles, linens, signage, lighting and lounge furniture'],
+  ['3–6 months out', 'Choose ceremony décor: aisle, chuppah styling and welcome area'],
   ['1–3 months out', 'Confirm décor rental quantities, delivery, setup and breakdown responsibilities'],
   ['1–3 months out', 'Choose comfortable second-look shoes or dancing shoes'],
   ['Final weeks', 'Pack veil, second look, jewellery, hair accessories, lingerie/shapewear and dancing shoes'],
@@ -432,7 +432,7 @@ const CONSID_SEED_PART_1 = [
   ['Beauty countdown', 'Tan plan'],
   ['Beauty countdown', 'Book a stylist/dresser for wedding-day steaming and bustling'],
   ['Weather & backup plan', 'Indoor backup for the ceremony'],
-  ['Weather & backup plan', "Get the venue's rain plan in writing — which indoor space, its capacity, and how last-minute the call can be"],
+  ['Weather & backup plan', "Get the venue's rain plan in writing: which indoor space, its capacity, and how last-minute the call can be"],
   ['Weather & backup plan', 'Shade and water for an outdoor ceremony'],
   ['Weather & backup plan', 'Backup plan for the pool party'],
   ['Language & culture', 'Bilingual/trilingual MC'],
@@ -560,7 +560,7 @@ async function initDb(){
   try{
     if(!window.claude || !window.claude.use){ setSync(false,'no live sync in this view'); renderAll(); return; }
     db = await window.claude.use('db');
-    if(!db){ setSync(false,'no live sync in this view — changes stay on this device only'); renderAll(); return; }
+    if(!db){ setSync(false,'no live sync in this view, changes stay on this device only'); renderAll(); return; }
     dbReady = true;
     setSync(true,'synced');
     unsub.push(db.collection('todos').orderBy('order','asc').onSnapshot(snap=>{
@@ -612,7 +612,7 @@ async function initDb(){
       state.customStyles = snap.docs.map(d=>({id:d.id, ...d.data()}));
       if(typeof renderStyleSections==='function') renderStyleSections();
     }, err=>setSync(false,'sync error')));
-  }catch(e){ setSync(false,'no live sync — changes stay on this device only'); renderAll(); }
+  }catch(e){ setSync(false,'no live sync, changes stay on this device only'); renderAll(); }
 }
 function renderAll(){ renderTodos(); renderBudget(); renderBoard(); renderConsiderations(); renderVenues(); renderGuestApp(); renderStart(); }
 
@@ -749,7 +749,7 @@ function renderBudget(){
     pill.addEventListener('click', ()=> updateBudget(b,{paid:!b.paid}));
     paidCell.appendChild(pill);
     const notesCell = tr.children[5];
-    const ni = document.createElement('input'); ni.type='text'; ni.value=b.notes||''; ni.placeholder='—';
+    const ni = document.createElement('input'); ni.type='text'; ni.value=b.notes||''; ni.placeholder='-';
     ni.addEventListener('change', ()=> updateBudget(b,{notes:ni.value}));
     notesCell.appendChild(ni);
     const delCell = tr.children[6];

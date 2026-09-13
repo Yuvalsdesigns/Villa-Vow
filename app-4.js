@@ -38,7 +38,7 @@ function headcountBreakdown(list){
 }
 function toVerifyCount(list){ return list.filter(g=> g.plusOnesTBD && g.rsvp!=='declined').length; }
 /* Every row counted once, plus its plus-ones (if a real number, not "+X"),
-   regardless of RSVP status — a separate number from the by-status counts. */
+   regardless of RSVP status, a separate number from the by-status counts. */
 function totalPeopleAllStatuses(list){
   let base=0, plus=0;
   list.forEach(g=>{
@@ -121,7 +121,7 @@ function buildGuestRow(g, side){
   row.appendChild(main);
 
   const detail = document.createElement('div'); detail.className='row-detail'+(expandedGuestId===g.id?' open':'');
-  detail.innerHTML = '<label class="plusone-field" style="flex:1 1 160px;"><span style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;"><input type="checkbox" style="width:auto;" class="tbd-ck" '+(g.plusOnesTBD?'checked':'')+'> Plus-ones unverified (+X — count not confirmed yet)</span></label>'
+  detail.innerHTML = '<label class="plusone-field" style="flex:1 1 160px;"><span style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;"><input type="checkbox" style="width:auto;" class="tbd-ck" '+(g.plusOnesTBD?'checked':'')+'> Plus-ones unverified (+X, count not confirmed yet)</span></label>'
     + '<label class="notes-field" style="flex:1 1 160px;">Plus-one names (if known)<input type="text" placeholder="e.g. Ben & Noa" value="'+esc(g.plusOneNotes||'')+'"></label>'
     + '<label class="dietary-field">Dietary / kosher<input type="text" value="'+esc(g.dietary||'')+'" placeholder="e.g. Kosher, gluten-free"></label>'
     + '<label class="table-field">Table / group<input type="text" value="'+esc(g.table||'')+'" placeholder="e.g. Family table"></label>'
