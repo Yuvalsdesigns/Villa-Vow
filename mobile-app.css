@@ -19,9 +19,9 @@
   .sides{grid-template-columns:1fr !important;}
   .grip{display:none;}
   .row-name{order:0;flex:1 1 100%;font-size:14.5px;}
-  .row-main select.rsvp:not(.small){order:1;}
-  .row-main .stepper{order:2;}
-  .row-main .stepper.plus-confirmed{order:3;}
+  .row-main select.likelihood{order:1;}
+  .row-main select.rsvp:not(.small){order:2;}
+  .row-main .stepper{order:3;}
   .row-main .tag-chip{order:4;}
   .row-main .expand-btn{order:5;}
   .row-main .del-btn{order:6;}

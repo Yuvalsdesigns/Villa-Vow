@@ -659,8 +659,6 @@
   .stepper button:disabled{opacity:.35;cursor:not-allowed;}
   .stepper .val{font-family:'IBM Plex Mono',monospace;font-size:11.5px;min-width:16px;text-align:center;color:var(--ink-soft);}
   .stepper .val.tbd{color:var(--wine);font-weight:700;}
-  .stepper.plus-confirmed{background:var(--cypress-soft);border-color:var(--cypress-soft);}
-  .stepper.plus-confirmed .val{min-width:auto;padding:0 4px;white-space:nowrap;color:var(--cypress-ink);font-weight:600;}
   select.rsvp.small{font-size:10px;padding:3px 6px;}
   .grip{cursor:grab;color:var(--ink-faint);flex:none;touch-action:none;}
   .grip svg{width:16px;height:16px;}
@@ -669,8 +667,12 @@
   select.rsvp{font-size:11.5px;padding:4px 7px;border-radius:20px;font-weight:600;flex:none;}
   select.rsvp.pending{background:var(--surface-2);color:var(--ink-soft);border-color:var(--line);}
   select.rsvp.confirmed{background:var(--cypress-soft);color:var(--cypress-ink);border-color:var(--cypress-soft);}
-  select.rsvp.unlikely{background:var(--brass-soft);color:var(--brass);border-color:var(--brass-soft);}
   select.rsvp.declined{background:var(--danger-soft);color:var(--danger);border-color:var(--danger-soft);}
+  select.likelihood{font-size:11.5px;padding:4px 7px;border-radius:20px;font-weight:600;flex:none;}
+  select.likelihood.likely{background:var(--wine-soft);color:var(--wine-ink);border-color:var(--wine-soft);}
+  select.likelihood.unlikely{background:var(--brass-soft);color:var(--brass);border-color:var(--brass-soft);}
+  .row-detail .plus-status-field{flex:1 1 160px;}
+  .row-detail .plus-status-field select{width:auto;}
   .tag-chip.tbd{background:var(--wine-soft);color:var(--wine);}
   .tag-chip{font-size:10.5px;padding:2px 7px;border-radius:20px;background:var(--brass-soft);color:var(--brass);flex:none;white-space:nowrap;}
   .icon-btn{background:none;border:none;cursor:pointer;color:var(--ink-faint);padding:3px;flex:none;display:flex;}

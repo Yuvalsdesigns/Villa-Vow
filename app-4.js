@@ -32,7 +32,17 @@ function headcountBreakdown(list){
   let base=0, plus=0;
   list.forEach(g=>{
     if(g.rsvp==='confirmed') base += 1;
-    if(!g.plusOnesTBD) plus += Math.min(g.plusOnesConfirmed||0, g.plusOnes||0);
+    if(!g.plusOnesTBD && (g.plusOnes||0)>0 && g.plusRsvp==='confirmed') plus += g.plusOnes;
+  });
+  return {base, plus, total: base+plus};
+}
+/* Likelihood is your own early guess of who'll attend, separate from the
+   real RSVP tracked once invites go out. Used for early headcount planning. */
+function likelyHeadcount(list){
+  let base=0, plus=0;
+  list.forEach(g=>{
+    if((g.likelihood||'likely')==='likely') base += 1;
+    if(!g.plusOnesTBD && (g.plusOnes||0)>0 && (g.plusLikelihood||'likely')==='likely') plus += g.plusOnes;
   });
   return {base, plus, total: base+plus};
 }
@@ -53,8 +63,8 @@ function renderGuestStats(){
   const invited = all.length;
   const hc = headcountBreakdown(all);
   const totalAll = totalPeopleAllStatuses(all);
+  const likely = likelyHeadcount(all);
   const pending = all.filter(g=>g.rsvp==='pending').length;
-  const unlikely = all.filter(g=>g.rsvp==='unlikely').length;
   const declined = all.filter(g=>g.rsvp==='declined').length;
   const toVerify = toVerifyCount(all);
   const el = document.getElementById('guestStatRow');
@@ -62,9 +72,9 @@ function renderGuestStats(){
   el.innerHTML = [
     tile(String(invited), 'Invites sent (rows on the list)', true),
     tile(String(totalAll.total), 'Total people, any status<br><span class="tile-breakdown">'+totalAll.base+' rows + '+totalAll.plus+' plus-ones</span>'),
-    tile(String(hc.total), 'Confirmed headcount<br><span class="tile-breakdown">'+hc.base+' guests + '+hc.plus+' plus-ones</span>'),
+    tile(String(likely.total), 'Likely to attend (your estimate)<br><span class="tile-breakdown">'+likely.base+' guests + '+likely.plus+' plus-ones</span>'),
+    tile(String(hc.total), 'Confirmed headcount (real RSVPs)<br><span class="tile-breakdown">'+hc.base+' guests + '+hc.plus+' plus-ones</span>'),
     tile(String(pending), 'Awaiting RSVP'),
-    tile(String(unlikely), 'Unlikely'),
     tile(String(declined), "Can't make it"),
     tile(String(toVerify), 'Plus-ones to verify (+X)'),
   ].join('');
@@ -77,13 +87,16 @@ function renderGuestSide(side){
   const countEl = document.getElementById(side==='mine'?'countMine':'countPartner');
   const miniEl = document.getElementById(side==='mine'?'miniMine':'miniPartner');
   if(!listEl) return;
-  countEl.textContent = list.length;
+  const sideTotals = totalPeopleAllStatuses(list);
+  countEl.textContent = sideTotals.base + (sideTotals.plus ? '+'+sideTotals.plus : '');
   const conf = list.filter(g=>g.rsvp==='confirmed').length;
   const pend = list.filter(g=>g.rsvp==='pending').length;
-  const unlik = list.filter(g=>g.rsvp==='unlikely').length;
   const decl = list.filter(g=>g.rsvp==='declined').length;
+  const likelyCount = list.filter(g=>(g.likelihood||'likely')==='likely').length;
+  const unlikelyCount = list.filter(g=>(g.likelihood||'likely')==='unlikely').length;
   const toVerify = toVerifyCount(list);
-  miniEl.innerHTML = '<span><b>'+conf+'</b> confirmed</span><span><b>'+pend+'</b> pending</span><span><b>'+unlik+'</b> unlikely</span><span><b>'+decl+'</b> declined</span>'+(toVerify? '<span><b>'+toVerify+'</b> to verify</span>':'');
+  miniEl.innerHTML = '<span><b>'+conf+'</b> confirmed</span><span><b>'+pend+'</b> pending</span><span><b>'+decl+'</b> declined</span>'+(toVerify? '<span><b>'+toVerify+'</b> to verify</span>':'')
+    + '<span style="margin-left:8px;"><b>'+likelyCount+'</b> likely</span><span><b>'+unlikelyCount+'</b> unlikely</span>';
   emptyEl.style.display = list.length? 'none':'block';
   listEl.innerHTML='';
   list.forEach(g=> listEl.appendChild(buildGuestRow(g, side)));
@@ -95,14 +108,19 @@ function buildGuestRow(g, side){
   row.draggable = true;
 
   const main = document.createElement('div'); main.className='row-main';
-  const hasPlus = !g.plusOnesTBD && (g.plusOnes||0) > 0;
-  const plusConfirmed = Math.min(g.plusOnesConfirmed||0, g.plusOnes||0);
+  const likelihood = g.likelihood||'likely';
+  const hasAnyPlus = g.plusOnesTBD || (g.plusOnes||0) > 0;
+  const plusLikelihood = g.plusLikelihood||'likely';
+  const plusRsvp = g.plusRsvp||'pending';
   main.innerHTML = '<span class="grip">'+svg(ICON.grip)+'</span>'
     + '<input class="row-name" value="'+esc(g.name)+'">'
-    + '<select class="rsvp '+g.rsvp+'">'
+    + '<select class="likelihood '+likelihood+'" title="Your own guess: will they come?">'
+      + '<option value="likely"'+(likelihood==='likely'?' selected':'')+'>Likely</option>'
+      + '<option value="unlikely"'+(likelihood==='unlikely'?' selected':'')+'>Unlikely</option>'
+    + '</select>'
+    + '<select class="rsvp '+g.rsvp+'" title="Their actual RSVP">'
       + '<option value="pending"'+(g.rsvp==='pending'?' selected':'')+'>Pending</option>'
       + '<option value="confirmed"'+(g.rsvp==='confirmed'?' selected':'')+'>Confirmed</option>'
-      + '<option value="unlikely"'+(g.rsvp==='unlikely'?' selected':'')+'>Unlikely</option>'
       + '<option value="declined"'+(g.rsvp==='declined'?' selected':'')+'>Declined</option>'
     + '</select>'
     + '<span class="stepper" title="Plus-ones invited">'
@@ -110,11 +128,6 @@ function buildGuestRow(g, side){
       + '<span class="val'+(g.plusOnesTBD?' tbd':'')+'">'+(g.plusOnesTBD? 'X' : '+'+(g.plusOnes||0))+'</span>'
       + '<button class="step-plus">+</button>'
     + '</span>'
-    + (hasPlus? '<span class="stepper plus-confirmed" title="Of those plus-ones, how many are actually confirmed">'
-        + '<button class="plusconf-minus" '+(plusConfirmed<=0?'disabled':'')+'>−</button>'
-        + '<span class="val">'+plusConfirmed+' of '+g.plusOnes+' confirmed</span>'
-        + '<button class="plusconf-plus" '+(plusConfirmed>=g.plusOnes?'disabled':'')+'>+</button>'
-      + '</span>' : '')
     + (g.dietary? '<span class="tag-chip">'+esc(g.dietary)+'</span>' : '')
     + '<button class="icon-btn expand-btn">'+svg(ICON.chevron)+'</button>'
     + '<button class="icon-btn del-btn">'+svg(ICON.trash)+'</button>';
@@ -123,6 +136,15 @@ function buildGuestRow(g, side){
   const detail = document.createElement('div'); detail.className='row-detail'+(expandedGuestId===g.id?' open':'');
   detail.innerHTML = '<label class="plusone-field" style="flex:1 1 160px;"><span style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;"><input type="checkbox" style="width:auto;" class="tbd-ck" '+(g.plusOnesTBD?'checked':'')+'> Plus-ones unverified (+X, count not confirmed yet)</span></label>'
     + '<label class="notes-field" style="flex:1 1 160px;">Plus-one names (if known)<input type="text" placeholder="e.g. Ben & Noa" value="'+esc(g.plusOneNotes||'')+'"></label>'
+    + (hasAnyPlus? '<label class="plus-status-field">Plus-ones likelihood<select class="likelihood plus-likelihood '+plusLikelihood+'">'
+        + '<option value="likely"'+(plusLikelihood==='likely'?' selected':'')+'>Likely</option>'
+        + '<option value="unlikely"'+(plusLikelihood==='unlikely'?' selected':'')+'>Unlikely</option>'
+      + '</select></label>'
+      + '<label class="plus-status-field">Plus-ones RSVP<select class="rsvp plus-rsvp '+plusRsvp+'">'
+        + '<option value="pending"'+(plusRsvp==='pending'?' selected':'')+'>Pending</option>'
+        + '<option value="confirmed"'+(plusRsvp==='confirmed'?' selected':'')+'>Confirmed</option>'
+        + '<option value="declined"'+(plusRsvp==='declined'?' selected':'')+'>Declined</option>'
+      + '</select></label>' : '')
     + '<label class="email-field">Email (for e-vites)<input type="email" value="'+esc(g.email||'')+'" placeholder="name@email.com"></label>'
     + '<label class="dietary-field">Dietary / kosher<input type="text" value="'+esc(g.dietary||'')+'" placeholder="e.g. Kosher, gluten-free"></label>'
     + '<label class="table-field">Table / group<input type="text" value="'+esc(g.table||'')+'" placeholder="e.g. Family table"></label>'
@@ -130,22 +152,24 @@ function buildGuestRow(g, side){
   row.appendChild(detail);
 
   main.querySelector('.row-name').addEventListener('change', e=> updateGuest(g, {name: e.target.value.trim() || g.name}));
+  main.querySelector('.likelihood').addEventListener('change', e=>{ e.target.className='likelihood '+e.target.value; updateGuest(g, {likelihood: e.target.value}); });
   main.querySelector('.rsvp').addEventListener('change', e=>{ e.target.className='rsvp '+e.target.value; updateGuest(g, {rsvp: e.target.value}); });
   main.querySelector('.step-minus').addEventListener('click', ()=>{
     const newPlusOnes = Math.max(0, (g.plusOnes||0)-1);
-    updateGuest(g, {plusOnes: newPlusOnes, plusOnesTBD:false, plusOnesConfirmed: Math.min(g.plusOnesConfirmed||0, newPlusOnes)});
+    updateGuest(g, {plusOnes: newPlusOnes, plusOnesTBD:false});
   });
   main.querySelector('.step-plus').addEventListener('click', ()=> updateGuest(g, {plusOnes: (g.plusOnesTBD?0:(g.plusOnes||0))+1, plusOnesTBD:false}));
-  main.querySelector('.plusconf-minus')?.addEventListener('click', ()=> updateGuest(g, {plusOnesConfirmed: Math.max(0, plusConfirmed-1)}));
-  main.querySelector('.plusconf-plus')?.addEventListener('click', ()=> updateGuest(g, {plusOnesConfirmed: Math.min(g.plusOnes||0, plusConfirmed+1)}));
   main.querySelector('.expand-btn').addEventListener('click', ()=>{ expandedGuestId = expandedGuestId===g.id? null : g.id; renderGuestApp(); });
   main.querySelector('.del-btn').addEventListener('click', ()=>{
     confirmAction('Are you sure you want to delete '+(g.name||'this guest')+'?', ()=>{ if(dbReady) db.collection('guests').doc(g.id).delete(); });
   });
 
+  detail.querySelector('.plus-likelihood')?.addEventListener('change', e=>{ e.target.className='likelihood plus-likelihood '+e.target.value; updateGuest(g, {plusLikelihood: e.target.value}); });
+  detail.querySelector('.plus-rsvp')?.addEventListener('change', e=>{ e.target.className='rsvp plus-rsvp '+e.target.value; updateGuest(g, {plusRsvp: e.target.value}); });
+
   const plusTbdCk = detail.querySelector('.tbd-ck');
   const plusNotes = detail.querySelector('.notes-field input[type=text]');
-  plusTbdCk.addEventListener('change', ()=> updateGuest(g, {plusOnesTBD: plusTbdCk.checked, plusOnes: plusTbdCk.checked? 0 : (g.plusOnes||0), plusOnesConfirmed: plusTbdCk.checked? 0 : (g.plusOnesConfirmed||0)}));
+  plusTbdCk.addEventListener('change', ()=> updateGuest(g, {plusOnesTBD: plusTbdCk.checked, plusOnes: plusTbdCk.checked? 0 : (g.plusOnes||0)}));
   plusNotes.addEventListener('change', ()=> updateGuest(g, {plusOneNotes: plusNotes.value.trim()}));
   detail.querySelector('.email-field input').addEventListener('change', e=> updateGuest(g, {email: e.target.value.trim()}));
   detail.querySelector('.dietary-field input').addEventListener('change', e=> updateGuest(g, {dietary: e.target.value.trim()}));
@@ -207,7 +231,7 @@ function addGuest(side){
   if(!name) return;
   const existing = guestsFor(side);
   const maxOrder = existing.reduce((m,g)=>Math.max(m,g.order||0),0);
-  const data = {name, side, rsvp:'pending', plusOnes:0, plusOnesTBD:false, plusOnesConfirmed:0, plusOneNotes:'', dietary:'', table:'', notes:'', email:'', order:maxOrder+1};
+  const data = {name, side, likelihood:'likely', rsvp:'pending', plusOnes:0, plusOnesTBD:false, plusLikelihood:'likely', plusRsvp:'pending', plusOneNotes:'', dietary:'', table:'', notes:'', email:'', order:maxOrder+1};
   if(dbReady) db.collection('guests').add(data);
   input.value='';
 }
@@ -274,7 +298,7 @@ document.querySelectorAll('[data-paste-import]').forEach(btn=>{
     let maxOrder = guestsFor(side).reduce((m,g)=>Math.max(m,g.order||0),0);
     entries.forEach(parsed=>{
       maxOrder += 1;
-      const data = {name:parsed.name, side, rsvp:'pending', plusOnes:parsed.plusOnes, plusOnesTBD:parsed.plusOnesTBD, plusOnesConfirmed:0, plusOneNotes:'', dietary:'', table:'', notes:'', email:'', order:maxOrder};
+      const data = {name:parsed.name, side, likelihood:'likely', rsvp:'pending', plusOnes:parsed.plusOnes, plusOnesTBD:parsed.plusOnesTBD, plusLikelihood:'likely', plusRsvp:'pending', plusOneNotes:'', dietary:'', table:'', notes:'', email:'', order:maxOrder};
       if(dbReady) db.collection('guests').add(data);
     });
     textarea.value='';
