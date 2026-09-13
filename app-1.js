@@ -14,6 +14,7 @@ const ICON = {
   list:'<path d="M7 4h10l2 3v13H5V7l2-3z"/><path d="M8.5 10.5l1.4 1.4 2.5-2.8M8.5 16l1.4 1.4 2.5-2.8M14 10.5h2M14 16h2"/>',
   heart:'<path d="M12 20s-7-4.4-9.5-8.8C.8 8 2 4.6 5.2 3.7 7.6 3 10 4 12 6.5 14 4 16.4 3 18.8 3.7 22 4.6 23.2 8 21.5 11.2 19 15.6 12 20 12 20z"/>',
   x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  pencil:'<path d="M4 20l1-4L16 5l3 3L8 19l-4 1z"/><path d="M14 7l3 3"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   trash:'<path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/>',
   grip:'<circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/>',
@@ -135,13 +136,27 @@ function loveNoteTimeAgo(ts){
   if(days<7) return days+'d ago';
   return new Date(ts).toLocaleDateString();
 }
+let editingLoveNoteId = null;
+function updateLoveNote(id, text){
+  if(dbReady) db.collection('loveNotes').doc(id).update({text});
+  else { const n = state.loveNotes.find(n=>n.id===id); if(n) n.text = text; }
+}
 function renderLoveNotes(){
   const list = document.getElementById('loveNotesList');
   if(!list) return;
-  list.innerHTML = state.loveNotes.map(n=>
-    '<div class="love-note"><p>'+esc(n.text)+'</p><div class="meta">'+esc(loveNoteAuthorName(n.authorEmail))+' · '+loveNoteTimeAgo(n.createdAt||0)+'</div>'
-    +'<button class="del-note" type="button" data-id="'+esc(n.id)+'" aria-label="Delete note">'+svg(ICON.x)+'</button></div>'
-  ).join('');
+  list.innerHTML = state.loveNotes.map(n=>{
+    const editing = n.id === editingLoveNoteId;
+    const body = editing
+      ? '<textarea class="note-edit-input" rows="2">'+esc(n.text)+'</textarea>'
+      : '<p>'+esc(n.text)+'</p>';
+    const actions = editing
+      ? '<button class="save-note" type="button" data-id="'+esc(n.id)+'" aria-label="Save note">'+svg(ICON.check2)+'</button>'
+      : '<button class="edit-note" type="button" data-id="'+esc(n.id)+'" aria-label="Edit note">'+svg(ICON.pencil)+'</button>'
+        +'<button class="del-note" type="button" data-id="'+esc(n.id)+'" aria-label="Delete note">'+svg(ICON.x)+'</button>';
+    return '<div class="love-note'+(editing?' editing':'')+'">'+body
+      +'<div class="meta">'+esc(loveNoteAuthorName(n.authorEmail))+' · '+loveNoteTimeAgo(n.createdAt||0)+'</div>'
+      +'<div class="love-note-actions">'+actions+'</div></div>';
+  }).join('');
   list.querySelectorAll('.del-note').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const id = btn.dataset.id;
@@ -149,6 +164,30 @@ function renderLoveNotes(){
         if(dbReady) db.collection('loveNotes').doc(id).delete();
         else { state.loveNotes = state.loveNotes.filter(n=>n.id!==id); renderLoveNotes(); }
       });
+    });
+  });
+  list.querySelectorAll('.edit-note').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      editingLoveNoteId = btn.dataset.id;
+      renderLoveNotes();
+      const ta = list.querySelector('.note-edit-input');
+      if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    });
+  });
+  list.querySelectorAll('.save-note').forEach(btn=>{
+    const commit = ()=>{
+      const ta = btn.closest('.love-note').querySelector('.note-edit-input');
+      const val = ta.value.trim();
+      if(val) updateLoveNote(btn.dataset.id, val);
+      editingLoveNoteId = null;
+      renderLoveNotes();
+    };
+    btn.addEventListener('click', commit);
+  });
+  list.querySelectorAll('.note-edit-input').forEach(ta=>{
+    ta.addEventListener('keydown', e=>{
+      if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); ta.closest('.love-note').querySelector('.save-note').click(); }
+      if(e.key==='Escape'){ editingLoveNoteId = null; renderLoveNotes(); }
     });
   });
 }
