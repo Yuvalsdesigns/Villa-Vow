@@ -107,6 +107,7 @@ function showTab(id){
   navMoreToggle.className = 'nav-more-toggle' + (inMore ? ' active tabtint-'+TAB_TINTS[id] : '');
   window.scrollTo(0,0);
   if(typeof syncMobileNav==='function') syncMobileNav(id);
+  if(id==='budget' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}
 }
 document.querySelectorAll('[data-jump]').forEach(el=>el.addEventListener('click', ()=>showTab(el.dataset.jump)));
@@ -723,6 +724,13 @@ function renderConsiderations(){
 
 
 /* ---------------- BUDGET ---------------- */
+/* scrollHeight reads as 0/tiny while the Budget tab (or an ancestor) is
+   display:none, so sizing notes textareas only at creation time leaves
+   them too short whenever renderBudget() runs off-screen (e.g. a live
+   Firestore update while another tab is open). resizeAllBudgetNotes()
+   re-measures every note once the tab is actually visible. */
+function autoGrowTextarea(el){ el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+function resizeAllBudgetNotes(){ document.querySelectorAll('#view-budget .notes-input').forEach(autoGrowTextarea); }
 function renderBudget(){
   if(!dbReady && state.budget.length===0){
     state.budget = SEED_BUDGET.map((b,i)=>({id:'local-budget-'+i, ...b}));
@@ -759,7 +767,8 @@ function renderBudget(){
     pill.addEventListener('click', ()=> updateBudget(b,{paid:!b.paid}));
     paidCell.appendChild(pill);
     const notesCell = tr.children[5];
-    const ni = document.createElement('input'); ni.type='text'; ni.value=b.notes||''; ni.placeholder='-';
+    const ni = document.createElement('textarea'); ni.className='notes-input'; ni.rows=1; ni.value=b.notes||''; ni.placeholder='-';
+    ni.addEventListener('input', ()=> autoGrowTextarea(ni));
     ni.addEventListener('change', ()=> updateBudget(b,{notes:ni.value}));
     notesCell.appendChild(ni);
     const delCell = tr.children[6];
@@ -773,6 +782,7 @@ function renderBudget(){
     tr.querySelector('.num-cell input[data-k="act"]')?.addEventListener('change', e=> updateBudget(b,{actCost:Number(e.target.value)||0}));
   });
   function numInput(k,b){ const val = k==='est'?(b.estCost??''):(b.actCost??''); return '<input type="number" data-k="'+k+'" value="'+val+'">'; }
+  resizeAllBudgetNotes();
 }
 function updateBudget(b, data){
   Object.assign(b,data);

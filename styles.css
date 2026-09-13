@@ -295,6 +295,11 @@
   .budget-table input{border:1px solid transparent;background:transparent;padding:4px 6px;}
   .budget-table input:hover{border-color:var(--line);}
   .budget-table .num-cell input{text-align:right;font-family:'IBM Plex Mono',monospace;}
+  .budget-table .notes-input{
+    display:block;width:100%;box-sizing:border-box;border:1px solid transparent;background:transparent;
+    padding:4px 6px;font:inherit;color:inherit;resize:vertical;overflow:hidden;line-height:1.4;min-height:26px;
+  }
+  .budget-table .notes-input:hover,.budget-table .notes-input:focus{border-color:var(--line);outline:none;}
   .paid-pill{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--cypress-soft);color:var(--cypress-ink);font-weight:600;}
   .paid-pill.no{background:var(--line-soft);color:var(--ink-faint);}
   .table-scroll{overflow-x:auto;}
