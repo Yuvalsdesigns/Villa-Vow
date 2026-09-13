@@ -47,6 +47,25 @@ function likelyHeadcount(list){
   return {base, plus, total: base+plus};
 }
 function toVerifyCount(list){ return list.filter(g=> g.plusOnesTBD && g.rsvp!=='declined').length; }
+/* Same base+plus split as headcountBreakdown/likelyHeadcount, but for any
+   rsvp/likelihood value, since a guest's plus-ones can be tracked as a
+   different status from the named guest themselves. */
+function statusHeadcount(list, status){
+  let base=0, plus=0;
+  list.forEach(g=>{
+    if(g.rsvp===status) base += 1;
+    if(!g.plusOnesTBD && (g.plusOnes||0)>0 && g.plusRsvp===status) plus += g.plusOnes;
+  });
+  return {base, plus, total: base+plus};
+}
+function likelihoodHeadcount(list, value){
+  let base=0, plus=0;
+  list.forEach(g=>{
+    if((g.likelihood||'likely')===value) base += 1;
+    if(!g.plusOnesTBD && (g.plusOnes||0)>0 && (g.plusLikelihood||'likely')===value) plus += g.plusOnes;
+  });
+  return {base, plus, total: base+plus};
+}
 /* Every row counted once, plus its plus-ones (if a real number, not "+X"),
    regardless of RSVP status, a separate number from the by-status counts. */
 function totalPeopleAllStatuses(list){
@@ -89,14 +108,15 @@ function renderGuestSide(side){
   if(!listEl) return;
   const sideTotals = totalPeopleAllStatuses(list);
   countEl.textContent = sideTotals.base + (sideTotals.plus ? '+'+sideTotals.plus : '');
-  const conf = list.filter(g=>g.rsvp==='confirmed').length;
-  const pend = list.filter(g=>g.rsvp==='pending').length;
-  const decl = list.filter(g=>g.rsvp==='declined').length;
-  const likelyCount = list.filter(g=>(g.likelihood||'likely')==='likely').length;
-  const unlikelyCount = list.filter(g=>(g.likelihood||'likely')==='unlikely').length;
+  const conf = statusHeadcount(list, 'confirmed');
+  const pend = statusHeadcount(list, 'pending');
+  const decl = statusHeadcount(list, 'declined');
+  const likelyHc = likelihoodHeadcount(list, 'likely');
+  const unlikelyHc = likelihoodHeadcount(list, 'unlikely');
   const toVerify = toVerifyCount(list);
-  miniEl.innerHTML = '<span><b>'+conf+'</b> confirmed</span><span><b>'+pend+'</b> pending</span><span><b>'+decl+'</b> declined</span>'+(toVerify? '<span><b>'+toVerify+'</b> to verify</span>':'')
-    + '<span style="margin-left:8px;"><b>'+likelyCount+'</b> likely</span><span><b>'+unlikelyCount+'</b> unlikely</span>';
+  const withPlus = (hc)=> hc.total + (hc.plus? ' <small>('+hc.base+'+'+hc.plus+')</small>' : '');
+  miniEl.innerHTML = '<span><b>'+withPlus(conf)+'</b> confirmed</span><span><b>'+withPlus(pend)+'</b> pending</span><span><b>'+withPlus(decl)+'</b> declined</span>'+(toVerify? '<span><b>'+toVerify+'</b> to verify</span>':'')
+    + '<span style="margin-left:8px;"><b>'+withPlus(likelyHc)+'</b> likely</span><span><b>'+withPlus(unlikelyHc)+'</b> unlikely</span>';
   emptyEl.style.display = list.length? 'none':'block';
   listEl.innerHTML='';
   list.forEach(g=> listEl.appendChild(buildGuestRow(g, side)));
