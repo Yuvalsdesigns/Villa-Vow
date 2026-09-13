@@ -107,7 +107,7 @@
     flex:none;
   }
   .brand-text h1{font-family:'Armelie','Fraunces',Georgia,serif;font-size:22px;line-height:1.1;font-style:normal;font-weight:400;color:var(--ink);white-space:nowrap;}
-  .brand-text h1 .brand-vow{margin-left:-0.8em;}
+  .brand-text h1 .brand-vow{margin-left:-0.65em;}
   .brand-text > span{display:block;margin-top:2px;font-size:10px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;letter-spacing:.03em;white-space:nowrap;text-align:center;}
 
   nav.tabs{display:flex;flex-direction:row;align-items:center;gap:2px;flex:1;overflow:visible;}
