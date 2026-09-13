@@ -92,9 +92,15 @@ function showTab(id){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
   window.scrollTo(0,0);
   if(typeof syncMobileNav==='function') syncMobileNav(id);
+  try{ localStorage.setItem('vv_active_tab', id); }catch(e){}
 }
 document.querySelectorAll('[data-jump]').forEach(el=>el.addEventListener('click', ()=>showTab(el.dataset.jump)));
-showTab('start');
+let initialTab = 'start';
+try{
+  const saved = localStorage.getItem('vv_active_tab');
+  if(saved && TABS.some(t=>t.id===saved)) initialTab = saved;
+}catch(e){}
+showTab(initialTab);
 
 
 /* ---------------- START DASHBOARD ---------------- */
