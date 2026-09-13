@@ -262,7 +262,7 @@
       if(p.type==='photo'){
         inner='<img src="'+p.imageDataUrl+'" alt="">';
       }else if(p.type==='style'){
-        inner='<div class="pin-icon-wrap tint-'+({dress:'wine',suit:'cypress',flowers:'cypress',venue:'brass',music:'cypress',hair:'wine',makeup:'brass',stationery:'brass'}[p.tag]||'cypress')+'">'+svg(ICON[p.icon])+'</div>';
+        inner='<div class="pin-icon-wrap tint-'+({dress:'wine',suit:'lilac',flowers:'cypress',venue:'coral',music:'butter',hair:'brass',makeup:'brass',stationery:'lilac'}[p.tag]||'cypress')+'">'+svg(ICON[p.icon])+'</div>';
       }else if(p.type==='pinterest'||p.type==='link'){
         /* Classify from the URL itself on every render, rather than trusting
            the stored type/pinterestKind fields — those depend on a one-time

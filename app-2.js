@@ -821,7 +821,7 @@ const STYLE_PHOTOS = {
 
 
 const STYLE_SECTIONS = [
-  {title:'Dress silhouettes', tint:'wine', items:[
+  {title:'Dress silhouettes', tint:'blush', items:[
     ['dressA','A-line','Fitted through the bodice, flares gently from the waist — flattering on the widest range of body types.'],
     ['dressMermaid','Mermaid / trumpet','Fitted to the knee then flares out — dramatic, best on a smooth indoor floor or a dance-floor moment.'],
     ['dressBall','Ballgown','Full, voluminous skirt — grand on a wide staircase or in a formal villa garden.'],
@@ -829,7 +829,7 @@ const STYLE_SECTIONS = [
     ['dressBoho','Bohemian / flowy','Light, flowing fabrics, often with movement in the skirt — suits an outdoor terrace or a barefoot pool day.'],
     ['dressTwopc','Two-piece separates','Crop top and skirt worn separately — practical for heat, easy to change into a shorter piece later.'],
   ]},
-  {title:"Partner's attire", tint:'cypress', items:[
+  {title:"Partner's attire", tint:'wine', items:[
     ['suitTux','Classic tuxedo','Formal and timeless — best for an indoor ceremony or a marble-floored reception room.'],
     ['suitLinen','Linen suit','Breathable and relaxed — the natural choice for a hot Mediterranean afternoon.'],
     ['suitJacket','Odd jacket & trousers','A jacket in one tone, trousers in another — a little less formal, easy to lighten for the party later.'],
@@ -842,25 +842,25 @@ const STYLE_SECTIONS = [
     ['flowerTropical','Tropical / greenery-led','Big leaves, architectural stems — modern, low on fragile petals in the heat.'],
     ['flowerDried','Dried / boho','Pampas, dried grasses, muted tones — travels well without wilting in transit.'],
   ]},
-  {title:'Venue mood', tint:'brass', items:[
+  {title:'Venue mood', tint:'coral', items:[
     ['venueTuscany','Tuscan rustic-elegant','Terracotta, cypress trees, stone archways, long shared tables under string lights.'],
     ['venueProvence','Provençal lavender-chic','Pale stone bastides, lavender fields, blue-grey shutters, soft and painterly.'],
     ['venuePuglia','Puglia coastal white','Whitewashed masseria walls, domed trulli roofs, sun-bleached and breezy.'],
     ['venueAlgarve','Algarve modern-boho','Clean modern villas, azulejo tile accents, ocean-blue palette, relaxed and bright.'],
   ]},
-  {title:'Music & entertainment mood', tint:'cypress', items:[
+  {title:'Music & entertainment mood', tint:'butter', items:[
     ['musicDJ','DJ set, uplit', 'A DJ booth with colored uplighting — reliable, flexible, easiest to keep the dance floor full all night.'],
     ['musicBand','Live band', 'A full band for the reception — bigger sound and energy, best on a stage or open terrace with room to move.'],
     ['musicAcoustic','Strings by day, DJ by night', 'A string duo or guitarist for the ceremony and cocktail hour, switching to a DJ once the dancing starts.'],
     ['musicSilent','Silent disco / bonfire after-party', 'Headphones after midnight, or an acoustic bonfire wind-down — good for a villa with noise curfews or light sleepers next door.'],
   ]},
-  {title:'Hair styles', tint:'wine', items:[
+  {title:'Hair styles', tint:'brass', items:[
     ['hairBun','Sleek low bun','Polished and cool in the heat — pairs well with statement earrings.'],
     ['hairWaves','Soft waves, down','Romantic and relaxed — the easiest to touch up yourself after the ceremony.'],
     ['hairBraid','Braided updo','Textured and secure for a long dancing night, holds up well outdoors.'],
     ['hairHalf','Half-up with flowers','Down enough to feel undone, up enough to keep hair off your face in a breeze.'],
   ]},
-  {title:'Makeup looks', tint:'brass', items:[
+  {title:'Makeup looks', tint:'lilac', items:[
     ['makeupGlam','Classic bridal glam','Full coverage, defined eye, built to photograph under any light, indoor or out.'],
     ['makeupNatural','Soft "no-makeup" makeup','Skin-forward, minimal color — reads effortless in bright outdoor sun.'],
     ['makeupBronze','Bronzed, sun-kissed','Warm, glowing finish that matches a tan and an outdoor Mediterranean setting.'],
@@ -872,13 +872,13 @@ const STYLE_SECTIONS = [
     ['shoeSandal','Flat sandal','For a barefoot-adjacent, outdoor terrace ceremony or the beach.'],
     ['shoeSneaker','Comfortable party pair','A second pair for the dance floor and, the next day, the pool party.'],
   ]},
-  {title:'Invitation styles', tint:'brass', items:[
+  {title:'Invitation styles', tint:'blush', items:[
     ['inviteLetterpress','Classic letterpress','Pressed type on thick cotton paper — formal, timeless, holds up well as a keepsake.'],
     ['inviteMinimal','Minimalist modern','Clean type, lots of white space — easy to read at a glance across three languages.'],
     ['inviteWatercolor','Watercolor floral','A painted floral motif tying back to your bouquet and venue colors.'],
     ['inviteBilingual','Bilingual / trilingual card','Hebrew, French and the local language side by side — worth planning the layout early with your designer or printer.'],
   ]},
-  {title:'Second Look / Reception Outfit', tint:'blush', items:[
+  {title:'Second Look / Reception Outfit', tint:'coral', items:[
     ['secondMini','Short bridal mini','Still unmistakably bridal in white or ivory, but lighter, shorter and much easier to dance in.'],
     ['secondSlip','Fluid satin slip','A soft white or ivory slip dress that keeps the wedding feeling while removing weight and structure.'],
     ['secondJumpsuit','White bridal jumpsuit / two-piece','A clean ivory tailoring option with room to move, especially good if you want trousers for the late-night party.'],
