@@ -213,7 +213,15 @@ async function fetchLinkPreviewThumbnail(url, onSuccess, onError){
       body: JSON.stringify({action:'resolveLinkPreview', url})
     });
     let data; try{ data = await resp.json(); }catch(e){ data = null; }
-    if(!resp.ok || !data || !data.thumbnailUrl){ onError((data && data.error) || 'Could not find a preview image on that page.'); return; }
+    if(!resp.ok || !data || !data.thumbnailUrl){
+      const serverMsg = data && data.error;
+      if(serverMsg === 'messages array is required'){
+        onError("The Cloudflare Worker is still running the old code, it doesn't know about thumbnail fetching yet. Paste the latest cloudflare-worker/index.js into the Cloudflare dashboard and redeploy it, then try this button again.");
+        return;
+      }
+      onError(serverMsg || 'Could not find a preview image on that page.');
+      return;
+    }
     onSuccess(data.thumbnailUrl, data.title||'');
   }catch(e){ onError('Request failed: '+(e&&e.message||e)); }
 }
