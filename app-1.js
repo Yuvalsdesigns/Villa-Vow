@@ -79,17 +79,28 @@ const TABS = [
   {id:'emails', label:'Email Templates', icon:ICON.mail},
   {id:'guestapp', label:'Guest App', icon:ICON.guests},
 ];
+const DESKTOP_NAV_MORE = ['board','style','emails','guestapp'];
 const tabNav = document.getElementById('tabNav');
+const navMoreWrap = document.createElement('div'); navMoreWrap.className = 'nav-more-wrap';
+const navMoreToggle = document.createElement('button'); navMoreToggle.type = 'button'; navMoreToggle.className = 'nav-more-toggle';
+navMoreToggle.innerHTML = '<span>More</span>' + svg(ICON.chevron);
+const navMoreMenu = document.createElement('div'); navMoreMenu.className = 'nav-more-menu';
+navMoreWrap.appendChild(navMoreToggle); navMoreWrap.appendChild(navMoreMenu);
+navMoreToggle.addEventListener('click', e=>{ e.stopPropagation(); navMoreWrap.classList.toggle('open'); });
+document.addEventListener('click', ()=> navMoreWrap.classList.remove('open'));
 TABS.forEach(t=>{
   const b = document.createElement('button');
   b.className='tab-btn'; b.dataset.tab=t.id;
   b.innerHTML = svg(t.icon) + '<span>'+t.label+'</span><span class="count" data-count="'+t.id+'"></span>';
-  b.addEventListener('click', ()=>showTab(t.id));
-  tabNav.appendChild(b);
+  b.addEventListener('click', ()=>{ showTab(t.id); navMoreWrap.classList.remove('open'); });
+  if(DESKTOP_NAV_MORE.includes(t.id)) navMoreMenu.appendChild(b);
+  else tabNav.appendChild(b);
 });
+tabNav.appendChild(navMoreWrap);
 function showTab(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+id));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
+  navMoreToggle.classList.toggle('active', DESKTOP_NAV_MORE.includes(id));
   window.scrollTo(0,0);
   if(typeof syncMobileNav==='function') syncMobileNav(id);
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}
