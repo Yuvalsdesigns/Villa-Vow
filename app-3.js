@@ -254,7 +254,7 @@ function renderDiyIdeas(){
       + '<div class="diy-meta"><a href="'+esc(idea.url)+'" target="_blank" rel="noopener">'+esc(host)+' ↗</a></div>'
       + '<div class="diy-actions">'
       + (editing ? '<button class="btn small save-diy">Save</button>' : '<button class="btn small ghost edit-diy">Edit</button>')
-      + '<button class="btn small ghost del-diy">Delete</button>'
+      + '<button class="btn small danger-outline del-diy">Delete</button>'
       + '</div></div>';
     card.querySelector('.edit-diy')?.addEventListener('click', ()=>{ editingDiyId = idea.id; renderDiyIdeas(); });
     card.querySelector('.save-diy')?.addEventListener('click', ()=>{

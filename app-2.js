@@ -1116,9 +1116,10 @@ function ensureVenueContactModal(){
     + '<div id="vcPreviewWrap" style="display:none;"><img id="vcPreview" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;"></div>'
     + VENUE_CONTACT_FIELDS.map(([key,label,placeholder])=> '<label class="field">'+esc(label)+'<input type="text" id="vc_'+key+'" placeholder="'+esc(placeholder)+'"></label>').join('')
     + '<label class="field">Their full reply (paste it here for reference)<textarea id="vcRawReply" rows="5" placeholder="Paste their email reply…"></textarea></label>'
+    + '<button class="btn small ghost" id="vcAutoFill" type="button" style="align-self:flex-start;">Try auto-fill from this text</button>'
     + '<label class="field">Your notes<textarea id="vcNotes" rows="2" placeholder="Your own thoughts on this one"></textarea></label>'
     + '<p class="warn" id="vcWarn" style="display:none;"></p>'
-    + '<div class="modal-foot"><button class="btn" id="vcCancel">Cancel</button><button class="btn primary" id="vcSave">Save</button></div>'
+    + '<div class="modal-foot"><button class="btn danger-outline" id="vcDelete" style="display:none;margin-right:auto;">Delete</button><button class="btn" id="vcCancel">Cancel</button><button class="btn primary" id="vcSave">Save</button></div>'
     + '</div>';
   document.body.appendChild(m);
   const close = ()=> m.classList.remove('open');
@@ -1136,6 +1137,16 @@ function ensureVenueContactModal(){
     });
   });
   m.querySelector('#vcSave').addEventListener('click', saveVenueContact);
+  m.querySelector('#vcAutoFill').addEventListener('click', autoFillVenueContact);
+  m.querySelector('#vcDelete').addEventListener('click', ()=>{
+    if(!editingVenueContactId) return;
+    const id = editingVenueContactId;
+    confirmAction('Delete this venue reply?', ()=>{
+      if(dbReady) db.collection('venueContacts').doc(id).delete().catch(err=> console.error(err));
+      else { state.venueContacts = state.venueContacts.filter(x=>x.id!==id); renderVenueContacts(); }
+      close();
+    });
+  });
   return m;
 }
 function openVenueContactModal(existing){
@@ -1152,7 +1163,36 @@ function openVenueContactModal(existing){
   else previewWrap.style.display='none';
   m.querySelector('#vcFileInput').value='';
   m.querySelector('#vcWarn').style.display='none';
+  m.querySelector('#vcDelete').style.display = existing ? 'inline-flex' : 'none';
   m.classList.add('open');
+}
+/* Best-effort keyword/regex guesses from the pasted reply, only fills fields
+   that are still empty, always needs a human double-check. */
+function autoFillVenueContact(){
+  const m = document.getElementById('venueContactModal');
+  const text = m.querySelector('#vcRawReply').value;
+  if(!text.trim()){ alert('Paste their reply into the box above first, then try auto-fill.'); return; }
+  const setIfEmpty = (key, val)=>{ if(!val) return; const el = m.querySelector('#vc_'+key); if(el && !el.value.trim()) el.value = val.trim(); };
+
+  const guestsMatch = text.match(/(\d{1,4}\+?\s*(?:guests|people|pax|persons))/i);
+  setIfEmpty('maxGuests', guestsMatch && guestsMatch[0]);
+
+  const priceMatch = text.match(/[€$£]\s?[\d][\d,.]*\s*(?:\/|per)?\s*(?:night)?/i);
+  setIfEmpty('pricePerNight', priceMatch && priceMatch[0]);
+
+  if(/not available|fully booked|no longer available|already booked/i.test(text)) setIfEmpty('availability', 'Sounds not available, check their reply');
+  else if(/available/i.test(text)) setIfEmpty('availability', 'Mentioned as available, check their reply for the exact wording');
+
+  const kosherSentence = text.match(/[^.?!\n]*kosher[^.?!\n]*[.?!]/i);
+  setIfEmpty('kosherCatering', kosherSentence && kosherSentence[0]);
+
+  const ceremonySentence = text.match(/[^.?!\n]*(?:ceremony|chuppah|rain|indoor backup)[^.?!\n]*[.?!]/i);
+  setIfEmpty('ceremonySpace', ceremonySentence && ceremonySentence[0]);
+
+  const depositSentence = text.match(/[^.?!\n]*(?:deposit|cancellation)[^.?!\n]*[.?!]/i);
+  setIfEmpty('depositPolicy', depositSentence && depositSentence[0]);
+
+  alert("Filled in what it could find by scanning for keywords, this is just a rough guess so please check every field against their actual reply.");
 }
 function readVenueContactThumb(file){
   const m = document.getElementById('venueContactModal');
@@ -1209,7 +1249,7 @@ function renderVenueContacts(){
       + (v.rawReply ? '<details class="venue-contact-raw"><summary>Show their full reply</summary><p>'+esc(v.rawReply)+'</p></details>' : '')
       + '<div class="diy-actions">'
       + '<button class="btn small ghost edit-vc">Edit</button>'
-      + '<button class="btn small ghost del-vc">Delete</button>'
+      + '<button class="btn small danger-outline del-vc">Delete</button>'
       + '</div></div>';
     card.querySelector('.edit-vc').addEventListener('click', ()=> openVenueContactModal(v));
     card.querySelector('.del-vc').addEventListener('click', ()=>{
