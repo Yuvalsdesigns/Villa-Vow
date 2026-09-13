@@ -216,8 +216,12 @@
     shelf.querySelectorAll('.board-remove').forEach(function(btn){
       btn.addEventListener('click',function(){
         const id=btn.dataset.id;
-        if(dbReady&&id) db.collection('pinterestBoards').doc(id).delete();
-        else { localPinterestBoards=localPinterestBoards.filter(function(x){return x.id!==id;}); window.renderPinterestBoards(); }
+        const board=boards.find(function(x){return x.id===id;});
+        const label=board&&board.title?'"'+board.title+'"':'this board';
+        confirmAction('Are you sure you want to delete '+label+'?',function(){
+          if(dbReady&&id) db.collection('pinterestBoards').doc(id).delete();
+          else { localPinterestBoards=localPinterestBoards.filter(function(x){return x.id!==id;}); window.renderPinterestBoards(); }
+        });
       });
     });
     shelf.querySelectorAll('.board-move').forEach(function(btn){
@@ -300,8 +304,11 @@
       }
       el.innerHTML=inner+'<div class="pin-body"><div class="pin-tag">'+(p.tag||'other')+'</div><h5>'+esc(p.title||'')+'</h5>'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:\'IBM Plex Mono\',monospace;">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
       el.querySelector('.del-pin').addEventListener('click',function(){
-        if(dbReady) db.collection('pinboard').doc(p.id).delete();
-        else {state.pins=state.pins.filter(function(x){return x.id!==p.id;});renderBoard();renderStart();}
+        const label=p.title?'"'+p.title+'"':'this item';
+        confirmAction('Are you sure you want to delete '+label+'?',function(){
+          if(dbReady) db.collection('pinboard').doc(p.id).delete();
+          else {state.pins=state.pins.filter(function(x){return x.id!==p.id;});renderBoard();renderStart();}
+        });
       });
       grid.appendChild(el);
     });
