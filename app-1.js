@@ -138,7 +138,7 @@ function loveNoteTimeAgo(ts){
 }
 let editingLoveNoteId = null;
 function updateLoveNote(id, text){
-  if(dbReady) db.collection('loveNotes').doc(id).update({text});
+  if(dbReady) db.collection('loveNotes').doc(id).update({text}).catch(err=>{ console.error('[Love notes] update failed', err); alert('Could not save the note: '+err.message); });
   else { const n = state.loveNotes.find(n=>n.id===id); if(n) n.text = text; }
 }
 function renderLoveNotes(){
@@ -161,7 +161,7 @@ function renderLoveNotes(){
     btn.addEventListener('click', ()=>{
       const id = btn.dataset.id;
       confirmAction('Are you sure you want to delete this note?', ()=>{
-        if(dbReady) db.collection('loveNotes').doc(id).delete();
+        if(dbReady) db.collection('loveNotes').doc(id).delete().catch(err=>{ console.error('[Love notes] delete failed', err); alert('Could not delete the note: '+err.message); });
         else { state.loveNotes = state.loveNotes.filter(n=>n.id!==id); renderLoveNotes(); }
       });
     });
@@ -197,7 +197,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
   if(!text) return;
   const authorEmail = (window.firebase && firebase.auth && firebase.auth().currentUser && firebase.auth().currentUser.email) || '';
   const data = {text, authorEmail, createdAt: Date.now()};
-  if(dbReady) db.collection('loveNotes').add(data);
+  if(dbReady) db.collection('loveNotes').add(data).catch(err=>{ console.error('[Love notes] add failed', err); alert('Could not send the note: '+err.message); });
   else { data.id = 'local-'+Math.random().toString(36).slice(2); state.loveNotes.unshift(data); renderLoveNotes(); }
   input.value='';
 });
