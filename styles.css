@@ -174,15 +174,17 @@
   main{padding:34px 44px 80px;min-width:0;max-width:1280px;margin:0 auto;}
   .view{display:none;max-width:1080px;}
   .view.active{display:block;}
-  /* The moodboard's masonry grid (.board-columns) already spreads into more
-     230px columns as its container widens, or fewer/taller ones as it
-     narrows, that's what column-width does natively, it just never had
-     room to show it since every view is capped at the same 1080px. Widen
-     the container only while the moodboard is the active view, so a full
-     screen actually shows more columns side by side and a narrower one
-     falls back to fewer, taller columns like every other page. */
-  #view-board.active{max-width:1680px;}
-  main:has(#view-board.active){max-width:1720px;}
+  /* The moodboard's masonry grid (.board-columns, column-width) and the
+     venues grids (.venue-grid/.venue-contacts-grid, grid-template-columns
+     auto-fit/auto-fill+minmax) already spread into more columns as their
+     container widens, or fewer/taller ones as it narrows, that's native
+     behavior, it just never had room to show it since every view is
+     capped at the same 1080px. Widen the container only while one of
+     these card-grid views is active, so a full screen actually shows more
+     columns side by side and a narrower one falls back to fewer, taller
+     columns like every other page. */
+  #view-board.active, #view-venues.active{max-width:1680px;}
+  main:has(#view-board.active), main:has(#view-venues.active){max-width:1720px;}
   .view-head{margin-bottom:26px;}
   .view-head h2{font-family:'Armelie','Fraunces',Georgia,serif;font-size:40px;margin-bottom:8px;font-style:normal;font-weight:400;}
   .view-head p{color:var(--ink-soft);font-size:14.5px;max-width:640px;line-height:1.55;}
