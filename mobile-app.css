@@ -33,6 +33,13 @@
   #vvAuthBox input{font-size:16px !important;width:100% !important;}
   #vvMobileNav{position:fixed;left:0;right:0;bottom:0;z-index:80;height:calc(70px + env(safe-area-inset-bottom));padding:7px 8px env(safe-area-inset-bottom);display:grid;grid-template-columns:repeat(6,1fr);gap:2px;background:rgba(255,250,246,.96);border-top:1px solid var(--line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 -7px 24px rgba(65,46,40,.08);}
   #vvMobileNav button{border:0;background:transparent;color:var(--ink-faint);font:600 10px 'Karla',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:10px;padding:3px 1px;min-width:0;}#vvMobileNav button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}#vvMobileNav button.active{color:var(--wine-ink);background:var(--wine-soft);}
+  #vvMobileNav button.active.tabtint-blush{color:var(--blush);background:var(--blush-soft);}
+  #vvMobileNav button.active.tabtint-coral{color:var(--coral);background:var(--coral-soft);}
+  #vvMobileNav button.active.tabtint-butter{color:var(--butter);background:var(--butter-soft);}
+  #vvMobileNav button.active.tabtint-lilac{color:var(--lilac);background:var(--lilac-soft);}
+  #vvMobileNav button.active.tabtint-wine{color:var(--wine-ink);background:var(--wine-soft);}
+  #vvMobileNav button.active.tabtint-cypress{color:var(--cypress-ink);background:var(--cypress-soft);}
+  #vvMobileNav button.active.tabtint-brass{color:var(--brass);background:var(--brass-soft);}
   #vvMobileMore{position:fixed;inset:0;z-index:79;background:rgba(40,30,28,.35);display:none;align-items:flex-end;}#vvMobileMore.open{display:flex;}
   #vvMobileMore .sheet{width:100%;max-height:min(72dvh,560px);overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--surface);border-radius:20px 20px 0 0;padding:10px 14px calc(82px + env(safe-area-inset-bottom));box-shadow:0 -12px 30px rgba(30,20,20,.16);}
   #vvMobileMore .handle{position:sticky;top:0;width:38px;height:4px;border-radius:3px;background:var(--line);margin:1px auto 12px;}#vvMobileMore button{width:100%;border:0;border-bottom:1px solid var(--line-soft);background:transparent;padding:15px 8px;text-align:left;font:600 15px 'Karla',sans-serif;color:var(--ink);min-height:50px;}

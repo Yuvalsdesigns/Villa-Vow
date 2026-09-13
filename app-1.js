@@ -80,6 +80,7 @@ const TABS = [
   {id:'guestapp', label:'Guest App', icon:ICON.guests},
 ];
 const DESKTOP_NAV_MORE = ['board','style','emails','guestapp'];
+const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral'};
 const tabNav = document.getElementById('tabNav');
 const navMoreWrap = document.createElement('div'); navMoreWrap.className = 'nav-more-wrap';
 const navMoreToggle = document.createElement('button'); navMoreToggle.type = 'button'; navMoreToggle.className = 'nav-more-toggle';
@@ -90,7 +91,7 @@ navMoreToggle.addEventListener('click', e=>{ e.stopPropagation(); navMoreWrap.cl
 document.addEventListener('click', ()=> navMoreWrap.classList.remove('open'));
 TABS.forEach(t=>{
   const b = document.createElement('button');
-  b.className='tab-btn'; b.dataset.tab=t.id;
+  b.className='tab-btn tabtint-'+TAB_TINTS[t.id]; b.dataset.tab=t.id;
   b.innerHTML = svg(t.icon) + '<span>'+t.label+'</span><span class="count" data-count="'+t.id+'"></span>';
   b.addEventListener('click', ()=>{ showTab(t.id); navMoreWrap.classList.remove('open'); });
   if(DESKTOP_NAV_MORE.includes(t.id)) navMoreMenu.appendChild(b);
@@ -100,7 +101,8 @@ tabNav.appendChild(navMoreWrap);
 function showTab(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+id));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
-  navMoreToggle.classList.toggle('active', DESKTOP_NAV_MORE.includes(id));
+  const inMore = DESKTOP_NAV_MORE.includes(id);
+  navMoreToggle.className = 'nav-more-toggle' + (inMore ? ' active tabtint-'+TAB_TINTS[id] : '');
   window.scrollTo(0,0);
   if(typeof syncMobileNav==='function') syncMobileNav(id);
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}

@@ -423,7 +423,7 @@ function buildMobileNav(){
   if(document.getElementById('vvMobileNav')) return;
   const nav = document.createElement('nav'); nav.id='vvMobileNav'; nav.setAttribute('aria-label','Wedding planner navigation');
   MOBILE_NAV_PRIMARY.forEach(([id,icon,label])=>{
-    const b = document.createElement('button'); b.type='button'; b.dataset.tab=id;
+    const b = document.createElement('button'); b.type='button'; b.className='tabtint-'+TAB_TINTS[id]; b.dataset.tab=id;
     b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+MOBILE_NAV_ICONS[icon]+'</svg><span>'+label+'</span>';
     b.addEventListener('click', ()=> showTab(id));
     nav.appendChild(b);
@@ -448,7 +448,8 @@ function buildMobileNav(){
 function syncMobileNav(activeId){
   document.querySelectorAll('#vvMobileNav button[data-tab]').forEach(b=> b.classList.toggle('active', b.dataset.tab===activeId));
   const more = document.getElementById('vvMoreButton');
-  if(more) more.classList.toggle('active', MOBILE_NAV_MORE.some(([id])=>id===activeId));
+  const inMore = MOBILE_NAV_MORE.some(([id])=>id===activeId);
+  if(more) more.className = (inMore ? 'active tabtint-'+TAB_TINTS[activeId] : '');
 }
 buildMobileNav();
 
