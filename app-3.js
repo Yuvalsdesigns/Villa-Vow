@@ -118,7 +118,64 @@ We'd be so grateful for any photos of the spaces, or a call to walk through logi
 
 Warmly,
 [Your names]`},
+  {title:'Guest favor gifting request (local producer/brand)', to:'A local winery, olive oil producer, or small brand', subject:'Wedding favor gifting request — [proposed date], [venue / region]', highlight:true,
+   body:`Hello [producer/brand name],
+
+We're getting married on [proposed date] at [venue name] in [region], with around [guest count] guests joining us from across Europe and Israel for the weekend. We love your [product — e.g. Port wine / olive oil / honey] and think it would be a beautiful way to share a taste of the region with our guests as a wedding favor.
+
+Would you be open to providing [number] mini bottles/jars at a discounted rate, or as a gifted collaboration in exchange for us featuring your name on the favor tags and mentioning you to our guests during the weekend? We're happy to include a small card about your story with each one.
+
+No worries at all if this isn't something you do — just wanted to ask, since your product means a lot to us for this location. Thank you for considering it!
+
+Warmly,
+[Your names]`},
+  {title:'Bridesmaid gift collaboration request (small brand)', to:'A small beauty, jewelry, or robe/pajama brand', subject:'Bridal party gifting request — small wedding, [proposed date]', highlight:true,
+   body:`Hi [brand name] team,
+
+I'm getting married on [proposed date] and I'm putting together getting-ready gifts for my [number] bridesmaids — I love your [product, e.g. robes / jewelry / skincare set] and think they'd be perfect.
+
+I know I'm not an influencer with a big following, but I'd love to feature your product on the morning of the wedding (photos with the full bridal party) and tag you afterward, if you'd be willing to gift or discount [number] pieces for the group. Happy to send more details about the day if that's helpful.
+
+Thank you so much for considering it, and congratulations on your gorgeous products either way!
+
+Warmly,
+[Your name]`},
 ];
+const GIFT_IDEAS = [
+  {group:'Bridesmaid gifts', tint:'blush', ideas:[
+    {title:'Monogrammed robe or pajama set', how:'diy', note:'Buy plain robes/pajamas and personalize with a Cricut iron-on vinyl monogram or name — no sewing machine needed.'},
+    {title:'Embroidered pouch or handkerchief', how:'diy', note:'A simple hand-embroidered initial on a small makeup pouch or hankie, using your sewing skills.'},
+    {title:'Personalized tote bag', how:'diy', note:'Plain canvas tote + Cricut vinyl name or a small floral design in your wedding colors.'},
+    {title:'"Getting ready" kit', how:'diy', note:'Robe + a mini bottle of something local (see the producer gifting template) + a handwritten note, tied together — costs little beyond the robe.'},
+    {title:'Skincare, jewelry, or robe brand set', how:'brand', note:'Use the bridesmaid gifting template to ask a small brand for a discounted or gifted set for the group.'}
+  ]},
+  {group:'Guest favors', tint:'coral', ideas:[
+    {title:'Mini local wine or olive oil bottles', how:'brand', note:'Douro is Port wine country and Iseo sits right by Franciacorta — a local producer is a very natural, on-theme favor. Use the producer gifting template.'},
+    {title:'Custom favor tags or labels', how:'diy', note:'Cricut-cut labels or stickers for jars of jam, honey, or the mini bottles above — ties every favor together visually for almost no cost.'},
+    {title:'Seed packets or mini candles', how:'budget', note:'Cheap, useful, no expiry pressure, easy to source in bulk.'},
+    {title:'Sunscreen or fan favors', how:'budget', note:'Genuinely useful for a hot pool-day weekend, and easy to label with a Cricut sticker.'}
+  ]}
+];
+function renderGiftIdeas(){
+  const wrap = document.getElementById('giftIdeas'); if(!wrap) return;
+  wrap.innerHTML='';
+  const howLabel = {diy:'DIY', brand:'Ask a brand', budget:'Budget buy'};
+  GIFT_IDEAS.forEach(g=>{
+    const section = document.createElement('div'); section.className='style-section';
+    const head = document.createElement('div'); head.className='style-head';
+    head.innerHTML = '<h3 class="tint-text-'+g.tint+'">'+g.group+'</h3>';
+    section.appendChild(head);
+    const grid = document.createElement('div'); grid.className='style-grid';
+    g.ideas.forEach(idea=>{
+      const card = document.createElement('div'); card.className='style-card';
+      card.innerHTML = '<span class="tint-'+g.tint+'" style="display:inline-block;font-size:10.5px;font-family:\'IBM Plex Mono\',monospace;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:20px;margin-bottom:6px;">'+howLabel[idea.how]+'</span>'
+        + '<h5>'+esc(idea.title)+'</h5><p>'+esc(idea.note)+'</p>';
+      grid.appendChild(card);
+    });
+    section.appendChild(grid);
+    wrap.appendChild(section);
+  });
+}
 function renderEmails(){
   const wrap = document.getElementById('emailCards'); if(!wrap) return;
   wrap.innerHTML='';
@@ -138,6 +195,7 @@ function renderEmails(){
   });
 }
 renderEmails();
+renderGiftIdeas();
 
 
 
