@@ -146,6 +146,13 @@
 
   .sidebar-foot{display:none;}
 
+  /* The sign-in status box floats fixed at top-right; the old sidebar layout
+     never used that corner, but the new full-width header does, so drop it
+     below the header on desktop instead of letting it sit on top of the nav. */
+  @media (min-width:821px){
+    #vvAuthBox{position:fixed !important;top:74px !important;right:24px !important;z-index:55 !important;}
+  }
+
   /* Refined icon language */
   .brand-mark{box-shadow:0 4px 12px rgba(76,107,73,.16);}
   .tab-btn svg{width:18px;height:18px;stroke-width:1.75;stroke-linejoin:round;}
