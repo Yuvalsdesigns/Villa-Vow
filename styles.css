@@ -110,9 +110,27 @@
   .brand-text h1 .brand-vow{margin-left:-0.65em;}
   .brand-text > span{display:block;margin-top:2px;font-size:10px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;letter-spacing:.03em;white-space:nowrap;text-align:center;}
 
-  nav.tabs{display:flex;flex-direction:row;align-items:center;gap:2px;flex:1;overflow:visible;}
+  /* The strip scrolls horizontally (trackpad/shift-scroll work natively)
+     instead of hiding overflow tabs behind a "More" dropdown, so the header
+     can never force the whole page wider than the viewport. min-width:0 is
+     required on a flex child for overflow-x to actually kick in, without it
+     the flex item just grows to fit its content and pushes the page itself
+     into horizontal scroll, which is what caused the header's background to
+     stop short of the page's full scrolled width. */
+  .tabs-scroll-wrap{position:relative;flex:1;min-width:0;display:flex;align-items:center;}
+  nav.tabs{display:flex;flex-direction:row;align-items:center;gap:2px;flex:1;min-width:0;overflow-x:auto;scroll-behavior:smooth;scrollbar-width:none;-ms-overflow-style:none;}
+  nav.tabs::-webkit-scrollbar{display:none;}
+  .tabs-scroll-arrow{
+    position:absolute;right:0;top:0;bottom:0;width:44px;flex:none;
+    display:flex;align-items:center;justify-content:flex-end;padding-right:4px;
+    border:none;background:linear-gradient(to right, transparent, var(--surface) 55%);
+    color:var(--ink-soft);font-size:20px;cursor:pointer;
+    opacity:0;pointer-events:none;transition:opacity .15s;
+  }
+  .tabs-scroll-arrow.visible{opacity:1;pointer-events:auto;}
+  .tabs-scroll-arrow:hover{color:var(--ink);}
   .tab-btn{
-    display:flex;align-items:center;gap:8px;
+    display:flex;align-items:center;gap:8px;flex:none;
     padding:9px 14px;border-radius:20px;
     border:none;background:transparent;color:var(--ink-soft);
     font-size:13.5px;font-weight:500;text-align:left;cursor:pointer;white-space:nowrap;
@@ -134,38 +152,15 @@
   }
   .tab-btn.active .count{background:rgba(255,255,255,.22);}
 
-  .nav-more-wrap{position:relative;flex:none;}
-  .nav-more-toggle{
-    display:flex;align-items:center;gap:6px;padding:9px 12px;border-radius:20px;
-    border:none;background:transparent;color:var(--ink-soft);font-size:13.5px;font-weight:500;cursor:pointer;
-    transition:background .15s,color .15s;
-  }
-  .nav-more-toggle:hover{background:var(--line-soft);color:var(--ink);}
-  .nav-more-toggle.active{background:var(--wine-soft);color:var(--wine-ink);}
-  .nav-more-toggle.active.tabtint-blush{background:var(--blush-soft);color:var(--blush);}
-  .nav-more-toggle.active.tabtint-coral{background:var(--coral-soft);color:var(--coral);}
-  .nav-more-toggle.active.tabtint-butter{background:var(--butter-soft);color:var(--butter);}
-  .nav-more-toggle.active.tabtint-lilac{background:var(--lilac-soft);color:var(--lilac);}
-  .nav-more-toggle.active.tabtint-wine{background:var(--wine-soft);color:var(--wine-ink);}
-  .nav-more-toggle.active.tabtint-cypress{background:var(--cypress-soft);color:var(--cypress-ink);}
-  .nav-more-toggle.active.tabtint-brass{background:var(--brass-soft);color:var(--brass);}
-  .nav-more-toggle svg{width:13px;height:13px;stroke:currentColor;transition:transform .15s;}
-  .nav-more-wrap.open .nav-more-toggle svg{transform:rotate(180deg);}
-  .nav-more-menu{
-    position:absolute;top:calc(100% + 10px);right:0;min-width:210px;
-    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
-    box-shadow:var(--shadow-md);padding:6px;display:none;flex-direction:column;gap:2px;z-index:61;
-  }
-  .nav-more-wrap.open .nav-more-menu{display:flex;}
-  .nav-more-menu .tab-btn{width:100%;}
-
   .sidebar-foot{display:none;}
 
-  /* The sign-in status box floats fixed at top-right; the old sidebar layout
-     never used that corner, but the new full-width header does, so drop it
-     below the header on desktop instead of letting it sit on top of the nav. */
+  /* The sign-in box now lives inside .sidebar as a normal flex child (see
+     firebase-sync.js installAuthUi), appended after .tabs-scroll-wrap so it
+     always sits at the end of the header row instead of floating fixed on
+     top of it. Its inline style still sets position:fixed as a mobile-safe
+     default; override that back to a normal flow item on desktop only. */
   @media (min-width:821px){
-    #vvAuthBox{position:fixed !important;top:74px !important;right:24px !important;z-index:55 !important;}
+    #vvAuthBox{position:static !important;flex:none;margin-left:12px;max-width:none !important;}
   }
 
   /* Refined icon language */

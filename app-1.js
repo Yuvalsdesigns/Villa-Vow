@@ -81,34 +81,39 @@ const TABS = [
   {id:'guestapp', label:'Guest App', icon:ICON.guests},
   {id:'diy', label:'Wedding d.i.y', icon:ICON.scissors},
 ];
-const DESKTOP_NAV_MORE = ['board','style','emails','guestapp','diy'];
 const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac'};
 const tabNav = document.getElementById('tabNav');
-const navMoreWrap = document.createElement('div'); navMoreWrap.className = 'nav-more-wrap';
-const navMoreToggle = document.createElement('button'); navMoreToggle.type = 'button'; navMoreToggle.className = 'nav-more-toggle';
-navMoreToggle.innerHTML = '<span>More</span>' + svg(ICON.chevron);
-const navMoreMenu = document.createElement('div'); navMoreMenu.className = 'nav-more-menu';
-navMoreWrap.appendChild(navMoreToggle); navMoreWrap.appendChild(navMoreMenu);
-navMoreToggle.addEventListener('click', e=>{ e.stopPropagation(); navMoreWrap.classList.toggle('open'); });
-document.addEventListener('click', ()=> navMoreWrap.classList.remove('open'));
+const tabsScrollArrow = document.getElementById('tabsScrollArrow');
 TABS.forEach(t=>{
   const b = document.createElement('button');
   b.className='tab-btn tabtint-'+TAB_TINTS[t.id]; b.dataset.tab=t.id;
   b.innerHTML = svg(t.icon) + '<span>'+t.label+'</span><span class="count" data-count="'+t.id+'"></span>';
-  b.addEventListener('click', ()=>{ showTab(t.id); navMoreWrap.classList.remove('open'); });
-  if(DESKTOP_NAV_MORE.includes(t.id)) navMoreMenu.appendChild(b);
-  else tabNav.appendChild(b);
+  b.addEventListener('click', ()=> showTab(t.id));
+  tabNav.appendChild(b);
 });
-tabNav.appendChild(navMoreWrap);
+/* The tab strip scrolls horizontally instead of hiding tabs behind a "More"
+   dropdown, so trackpad/shift-scroll works for free; the arrow is just a
+   discoverable hint that there's more, shown only while there's actually
+   somewhere left to scroll. */
+function updateTabsScrollArrow(){
+  if(!tabsScrollArrow) return;
+  const hasMoreToRight = tabNav.scrollWidth - tabNav.clientWidth - tabNav.scrollLeft > 4;
+  tabsScrollArrow.classList.toggle('visible', hasMoreToRight);
+}
+tabsScrollArrow?.addEventListener('click', ()=> tabNav.scrollBy({left:220, behavior:'smooth'}));
+tabNav.addEventListener('scroll', updateTabsScrollArrow);
+window.addEventListener('resize', updateTabsScrollArrow);
+setTimeout(updateTabsScrollArrow, 0);
 function showTab(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+id));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
-  const inMore = DESKTOP_NAV_MORE.includes(id);
-  navMoreToggle.className = 'nav-more-toggle' + (inMore ? ' active tabtint-'+TAB_TINTS[id] : '');
+  const activeBtn = tabNav.querySelector('.tab-btn[data-tab="'+id+'"]');
+  if(activeBtn) activeBtn.scrollIntoView({inline:'nearest', block:'nearest', behavior:'smooth'});
   window.scrollTo(0,0);
   if(typeof syncMobileNav==='function') syncMobileNav(id);
   if(id==='budget' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}
+  setTimeout(updateTabsScrollArrow, 260);
 }
 document.querySelectorAll('[data-jump]').forEach(el=>el.addEventListener('click', ()=>showTab(el.dataset.jump)));
 let initialTab = 'start';
