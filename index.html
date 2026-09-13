@@ -114,21 +114,6 @@
         <p>Pin your own photos, save a Pinterest link as a reference card, or send looks over from the Style Gallery. Everything here is shared and saved to this board — reopen the link on any device and it's still there.</p>
       </div>
 
-      <div class="note-box">
-        <b>Adding images from Pinterest, Google, or anywhere else:</b> this board can't stay live-connected to any site or hotlink images from one — that's a security boundary of this kind of app, not something I can switch off. Three ways in that actually work: <b>(1) drag</b> an image straight from a Pinterest board, Google Images, or any webpage onto this page (drop it anywhere below) — most browsers hand over the real picture, not just a link. <b>(2) copy the image itself</b> (right-click → Copy Image, not Copy Link) on the source site, then press <b>Ctrl/Cmd+V</b> anywhere on this tab. <b>(3) save it to your device first</b> and upload it like any other photo. Only pasting or typing a plain link gets you a clickable reference card rather than the picture itself — still useful, just different.
-      </div>
-
-      <div class="card" style="padding:16px 18px;margin-bottom:20px;">
-        <h4 style="font-size:14.5px;margin-bottom:6px;">One-click Pinterest saver</h4>
-        <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.55;margin-bottom:10px;">Drag this button to your browser's bookmarks bar once. From then on: open any Pin on Pinterest, click it, come back here, open <b>+ Add Pinterest / link</b> and hit <b>Paste from clipboard</b> — the link and title are already copied for you.</p>
-        <a class="btn primary" id="bookmarkletLink" href='javascript:(function()%7Bconst%20m%3Ddocument.querySelector(%60meta%5Bproperty%3D%22og%3Atitle%22%5D%60)%3Bconst%20t%3D(m%26%26m.content)%7C%7Cdocument.title%7C%7C%22%22%3Bconst%20u%3Dlocation.href%3Bconst%20payload%3Dt.trim()%2B%22%20%3A%3A%20%22%2Bu%3Bconst%20fail%3D()%3D%3Ewindow.prompt(%22Clipboard%20blocked%20-%20copy%20this%20line%20manually%3A%22%2Cpayload)%3Bif(navigator.clipboard%26%26navigator.clipboard.writeText)%7Bnavigator.clipboard.writeText(payload).then(()%3D%3Ealert(%22Copied.%20Switch%20to%20Villa%20and%20Vow%2C%20open%20Add%20Pinterest%20link%2C%20and%20click%20Paste%20from%20clipboard.%22)%2Cfail)%3B%7Delse%7Bfail()%3B%7D%7D)()%3B' onclick="return false;">Pin to Villa &amp; Vow</a>
-        <p style="font-size:11.5px;color:var(--ink-faint);margin-top:10px;">Dragging blocked by your browser? Make a bookmark by hand — right-click your bookmarks bar → New Bookmark → name it "Pin to Villa &amp; Vow" → paste this as the URL:</p>
-        <div style="display:flex;gap:8px;margin-top:6px;">
-          <textarea id="bookmarkletCode" readonly rows="2" style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;flex:1;" onclick="this.select()"></textarea>
-          <button class="btn small" id="copyBookmarklet">Copy code</button>
-        </div>
-      </div>
-
       <div class="card pinterest-discovery">
         <div class="eyebrow">Pinterest discovery</div>
         <h4 style="font-size:16px;margin-top:4px;">Search Pinterest from your wedding board</h4>
@@ -421,5 +406,5 @@
 <script src="app-1.js?v=20260913-21"></script>
 <script src="app-4.js?v=20260912-20"></script>
 <script src="app-2.js?v=20260912-20"></script>
-<script src="app-3.js?v=20260912-21"></script>
+<script src="app-3.js?v=20260913-22"></script>
 <script src="moodboard-pinterest.js?v=12"></script>

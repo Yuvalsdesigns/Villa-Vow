@@ -356,17 +356,6 @@ document.getElementById('savePhoto').addEventListener('click', ()=>{
   else { localAdd(state.pins,data); renderBoard(); renderStart(); }
   closeModal();
 });
-/* ---- Pinterest bookmarklet ---- */
-const BOOKMARKLET_JS = "javascript:(function(){const m=document.querySelector(`meta[property=\"og:title\"]`);const t=(m&&m.content)||document.title||\"\";const u=location.href;const payload=t.trim()+\" :: \"+u;const fail=()=>window.prompt(\"Clipboard blocked - copy this line manually:\",payload);if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(payload).then(()=>alert(\"Copied. Switch to Villa and Vow, open Add Pinterest link, and click Paste from clipboard.\"),fail);}else{fail();}})();";
-const bmCodeBox = document.getElementById('bookmarkletCode');
-if(bmCodeBox) bmCodeBox.value = BOOKMARKLET_JS;
-document.getElementById('copyBookmarklet')?.addEventListener('click', async ()=>{
-  const btn = document.getElementById('copyBookmarklet');
-  try{ await navigator.clipboard.writeText(BOOKMARKLET_JS); btn.textContent='Copied'; }
-  catch(e){ bmCodeBox.select(); btn.textContent='Select & copy manually'; }
-  setTimeout(()=> btn.textContent='Copy code', 1800);
-});
-
 document.getElementById('pasteClipboard')?.addEventListener('click', async ()=>{
   const warn = document.getElementById('pasteWarn'); warn.style.display='none';
   try{
