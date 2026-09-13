@@ -1179,20 +1179,33 @@ function autoFillVenueContact(){
   const guestsMatch = text.match(/(\d{1,4}\+?\s*(?:guests|people|pax|persons))/i);
   setIfEmpty('maxGuests', guestsMatch && guestsMatch[0]);
 
-  const priceMatch = text.match(/[€$£]\s?[\d][\d,.]*\s*(?:\/|per)?\s*(?:night)?/i);
+  /* Currency amounts show up as a symbol ("€3,500") or, just as often in
+     real replies, spelled out ("3.500 eur"), so match either. Prefer an
+     amount tagged "day"/"night" (an accommodation rate) over a bare
+     amount, since a per-person catering price is usually mentioned
+     separately and isn't what this field is asking for. */
+  const CURRENCY_AMOUNT = '(?:[€$£]\\s?\\d[\\d,.]*|\\d[\\d,.]*\\s?(?:€|eur\\.?|euros?|usd|gbp)\\b)';
+  const priceDayNightMatch = text.match(new RegExp(CURRENCY_AMOUNT+'\\s*\\/?\\s*(?:per\\s*)?(?:day|night)\\b', 'i'));
+  const priceAnyMatch = text.match(new RegExp(CURRENCY_AMOUNT, 'i'));
+  const priceMatch = priceDayNightMatch || priceAnyMatch;
   setIfEmpty('pricePerNight', priceMatch && priceMatch[0]);
 
-  if(/not available|fully booked|no longer available|already booked/i.test(text)) setIfEmpty('availability', 'Sounds not available, check their reply');
-  else if(/available/i.test(text)) setIfEmpty('availability', 'Mentioned as available, check their reply for the exact wording');
+  /* [^.?!\n]*KEYWORD[^.?!\n]*[.?!]? grabs the clause around a keyword.
+     The trailing punctuation is optional (not required) since bulleted
+     lines in a pasted email often end at a newline with no period. */
+  const negativeAvail = /not available|fully booked|no longer available|already booked/i.test(text);
+  const availSentence = text.match(/[^.?!\n]*availab[^.?!\n]*[.?!]?/i);
+  if(negativeAvail) setIfEmpty('availability', (availSentence && availSentence[0].trim()) || 'Sounds not available, check their reply');
+  else if(availSentence) setIfEmpty('availability', availSentence[0].trim());
 
-  const kosherSentence = text.match(/[^.?!\n]*kosher[^.?!\n]*[.?!]/i);
-  setIfEmpty('kosherCatering', kosherSentence && kosherSentence[0]);
+  const kosherSentence = text.match(/[^.?!\n]*kosher[^.?!\n]*[.?!]?/i);
+  setIfEmpty('kosherCatering', kosherSentence && kosherSentence[0].trim());
 
-  const ceremonySentence = text.match(/[^.?!\n]*(?:ceremony|chuppah|rain|indoor backup)[^.?!\n]*[.?!]/i);
-  setIfEmpty('ceremonySpace', ceremonySentence && ceremonySentence[0]);
+  const ceremonySentence = text.match(/[^.?!\n]*(?:ceremony|chuppah|rain|indoor backup)[^.?!\n]*[.?!]?/i);
+  setIfEmpty('ceremonySpace', ceremonySentence && ceremonySentence[0].trim());
 
-  const depositSentence = text.match(/[^.?!\n]*(?:deposit|cancellation)[^.?!\n]*[.?!]/i);
-  setIfEmpty('depositPolicy', depositSentence && depositSentence[0]);
+  const depositSentence = text.match(/[^.?!\n]*(?:deposit|cancellation)[^.?!\n]*[.?!]?/i);
+  setIfEmpty('depositPolicy', depositSentence && depositSentence[0].trim());
 
   alert("Filled in what it could find by scanning for keywords, this is just a rough guess so please check every field against their actual reply.");
 }
