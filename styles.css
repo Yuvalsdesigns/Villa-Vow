@@ -634,8 +634,7 @@
     content:'€';
     position:absolute;
     left:9px;
-    top:50%;
-    transform:translateY(-50%);
+    top:17px;
     line-height:1;
     font-size:12px;
     color:var(--ink-soft);
