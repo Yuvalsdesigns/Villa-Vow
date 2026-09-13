@@ -123,12 +123,52 @@ function goalTile(goal, diff){
   return '<div class="stat-tile goal-tile"><div class="n mono">€<input type="number" id="budgetGoalInput" value="'+goal+'" min="0" step="500"></div><div class="l">Goal budget<br>'+status+'</div></div>';
 }
 
+const LOVE_NOTE_NAMES = {'yuvalsh99@gmail.com':'Yuval', 'yohan-levy@hotmail.fr':'Yohan'};
+function loveNoteAuthorName(email){ return LOVE_NOTE_NAMES[email] || (email ? email.split('@')[0] : 'Someone'); }
+function loveNoteTimeAgo(ts){
+  const mins = Math.max(0, Math.round((Date.now()-ts)/60000));
+  if(mins<1) return 'just now';
+  if(mins<60) return mins+'m ago';
+  const hrs = Math.round(mins/60);
+  if(hrs<24) return hrs+'h ago';
+  const days = Math.round(hrs/24);
+  if(days<7) return days+'d ago';
+  return new Date(ts).toLocaleDateString();
+}
+function renderLoveNotes(){
+  const list = document.getElementById('loveNotesList');
+  if(!list) return;
+  list.innerHTML = state.loveNotes.map(n=>
+    '<div class="love-note"><p>'+esc(n.text)+'</p><div class="meta">'+esc(loveNoteAuthorName(n.authorEmail))+' · '+loveNoteTimeAgo(n.createdAt||0)+'</div>'
+    +'<button class="del-note" type="button" data-id="'+esc(n.id)+'" aria-label="Delete note">'+svg(ICON.x)+'</button></div>'
+  ).join('');
+  list.querySelectorAll('.del-note').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.id;
+      confirmAction('Are you sure you want to delete this note?', ()=>{
+        if(dbReady) db.collection('loveNotes').doc(id).delete();
+        else { state.loveNotes = state.loveNotes.filter(n=>n.id!==id); renderLoveNotes(); }
+      });
+    });
+  });
+}
+document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
+  const input = document.getElementById('loveNoteInput');
+  const text = input.value.trim();
+  if(!text) return;
+  const authorEmail = (window.firebase && firebase.auth && firebase.auth().currentUser && firebase.auth().currentUser.email) || '';
+  const data = {text, authorEmail, createdAt: Date.now()};
+  if(dbReady) db.collection('loveNotes').add(data);
+  else { data.id = 'local-'+Math.random().toString(36).slice(2); state.loveNotes.unshift(data); renderLoveNotes(); }
+  input.value='';
+});
+
 
 
 "use strict";
 
 let db = null, dbReady=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[] };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], loveNotes:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -484,6 +524,10 @@ async function initDb(){
     unsub.push(db.collection('pinterestBoards').orderBy('addedAt','asc').onSnapshot(snap=>{
       state.pinterestBoards = snap.docs.map(d=>({id:d.id, ...d.data()}));
       if(typeof renderPinterestBoards==='function') renderPinterestBoards();
+    }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('loveNotes').orderBy('createdAt','desc').limit(30).onSnapshot(snap=>{
+      state.loveNotes = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      renderLoveNotes();
     }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('considerations').orderBy('order','asc').onSnapshot(snap=>{
       state.considerations = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_CONSIDERATIONS.map(([category,text],i)=>({id:'seed-consid-'+i, category, text, done:false, order:i}));
