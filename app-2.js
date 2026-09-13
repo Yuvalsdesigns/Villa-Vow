@@ -904,9 +904,10 @@ function renderStyleSections(){
     ['Destination / Douro','River + vineyards + long table','https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1000&q=85','venue'],
     ['Destination / Procida','Tiny island, sea-view ceremony','https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=1000&q=85','venue']
   ];
+  const tagTint={dress:'wine',suit:'lilac',flowers:'cypress',venue:'coral',music:'butter',hair:'brass',makeup:'brass',stationery:'lilac'};
   visuals.forEach(([title,desc,img,tag])=>{
     const c=document.createElement('div'); c.className='style-visual-card';
-    c.innerHTML='<img src="'+esc(img)+'" alt=""><div class="body"><div class="eyebrow">'+esc(title)+'</div><h4>'+esc(desc)+'</h4><button class="btn small">Pin this</button></div>';
+    c.innerHTML='<img src="'+esc(img)+'" alt=""><div class="body"><div class="eyebrow tint-text-'+(tagTint[tag]||'cypress')+'">'+esc(title)+'</div><h4>'+esc(desc)+'</h4><button class="btn small">Pin this</button></div>';
     c.querySelector('button').addEventListener('click',()=>{
       const data={type:'photo',imageDataUrl:img,title:desc,tag,createdAt:Date.now()};
       if(dbReady) db.collection('pinboard').add(data); else {localAdd(state.pins,data);renderBoard();renderStart();}
@@ -918,7 +919,7 @@ function renderStyleSections(){
   STYLE_SECTIONS.forEach(sec=>{
     const box = document.createElement('div'); box.className='style-section';
     const head = document.createElement('div'); head.className='style-head';
-    head.innerHTML = '<h3>'+sec.title+'</h3>';
+    head.innerHTML = '<h3 class="tint-text-'+sec.tint+'">'+sec.title+'</h3>';
     const addBtn = document.createElement('button');
     addBtn.type='button'; addBtn.className='btn small add-style-category';
     addBtn.textContent='+ Add style';

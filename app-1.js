@@ -621,6 +621,7 @@ function localAdd(arr, data){ data.id = 'local-'+Math.random().toString(36).slic
 "use strict";
 
 /* ---------------- CHECKLIST ---------------- */
+const GROUP_TINTS = ['blush','coral','butter','lilac','wine','cypress','brass'];
 const TODO_GROUPS = ['12+ months out','9–12 months out','6–9 months out','3–6 months out','1–3 months out','Final weeks','Wedding weekend','After the wedding'];
 function renderTodos(){
   const wrap = document.getElementById('todoGroups');
@@ -630,10 +631,11 @@ function renderTodos(){
     tile(String(state.todos.filter(t=>!t.done).length),'Still open'),
   ].join('');
   wrap.innerHTML = '';
-  TODO_GROUPS.forEach(g=>{
+  TODO_GROUPS.forEach((g,gi)=>{
     const items = state.todos.filter(t=>t.category===g);
+    const tint = GROUP_TINTS[gi % GROUP_TINTS.length];
     const box = document.createElement('div'); box.className='group';
-    box.innerHTML = '<div class="group-head"><h3>'+g+'</h3><span class="sub">'+items.filter(i=>i.done).length+'/'+items.length+'</span></div>';
+    box.innerHTML = '<div class="group-head"><h3 class="tint-text-'+tint+'">'+g+'</h3><span class="sub tint-'+tint+'">'+items.filter(i=>i.done).length+'/'+items.length+'</span></div>';
     const list = document.createElement('div'); list.className='item-list';
     if(items.length===0){ list.innerHTML = '<div class="item-row"><span class="item-text" style="color:var(--ink-faint)">Nothing here yet.</span></div>'; }
     items.forEach(it=> list.appendChild(itemRow(it,'todos')) );
@@ -686,10 +688,11 @@ function renderConsiderations(){
     tile(String(state.considerations.filter(t=>!t.done).length),'Still to sort'),
   ].join('');
   wrap.innerHTML = '';
-  CONSID_GROUPS.forEach(g=>{
+  CONSID_GROUPS.forEach((g,gi)=>{
     const items = state.considerations.filter(t=>t.category===g);
+    const tint = GROUP_TINTS[gi % GROUP_TINTS.length];
     const box = document.createElement('div'); box.className='group';
-    box.innerHTML = '<div class="group-head"><h3>'+g+'</h3><span class="sub">'+items.filter(i=>i.done).length+'/'+items.length+'</span></div>';
+    box.innerHTML = '<div class="group-head"><h3 class="tint-text-'+tint+'">'+g+'</h3><span class="sub tint-'+tint+'">'+items.filter(i=>i.done).length+'/'+items.length+'</span></div>';
     const list = document.createElement('div'); list.className='item-list';
     items.forEach(it=> list.appendChild(itemRow(it,'considerations')) );
     box.appendChild(list);
