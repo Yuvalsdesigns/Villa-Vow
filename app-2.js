@@ -281,7 +281,8 @@ const VENUES_PART_2 = [
       "10+ hectares",
       "Lake + olive groves + vineyards",
       "Hall 150+ / gazebo 100+",
-      "Exclusive-use event day"
+      "Exclusive-use event day",
+      "35-40 min from Milan Bergamo (budget-airline hub)"
     ],
     "sources": [
       [
@@ -311,12 +312,13 @@ const VENUES_PART_3 = [
       "#DDE8EC",
       "#6A8798"
     ],
-    "desc": "This one is particularly aligned with your weekend idea. The estate explicitly welcomes multi-day celebrations and lets clients bring their own caterer, which is worth investigating for kosher catering.",
+    "desc": "This one is particularly aligned with your weekend idea. The estate explicitly welcomes multi-day celebrations and lets clients bring their own caterer, which is worth investigating for kosher catering. Like the rest of Lake Iseo, it's priced well below Lake Como or Garda for a comparable venue.",
     "facts": [
       "80 seated / 90 standing",
       "1–4 day events",
       "Bring-your-own catering allowed",
-      "Exclusive estate"
+      "Exclusive estate",
+      "35-40 min from Milan Bergamo (budget-airline hub)"
     ],
     "sources": [
       [
