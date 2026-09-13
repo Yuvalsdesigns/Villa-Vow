@@ -231,6 +231,67 @@ async function handleResolveEmbed(provider, rawUrl) {
   }
 }
 
+/* Generic Open Graph image lookup for the Wedding d.i.y tab. Most sites set
+   og:image (or twitter:image) for social-share previews, so fetching the
+   page HTML server-side and reading that tag gives a real thumbnail for
+   almost any link, no per-site API needed. Only reads up to ~60KB and
+   stops at </head> since those tags are always near the top, so this
+   can't be used to pull down a whole arbitrary page. */
+async function handleResolveLinkPreview(rawUrl) {
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return json({ error: 'Invalid URL' }, 400);
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return json({ error: 'Only http(s) links are supported' }, 400);
+  }
+  const browserHeaders = {
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  };
+  let html;
+  try {
+    const resp = await fetch(url.toString(), { redirect: 'follow', method: 'GET', headers: browserHeaders });
+    if (!resp.ok) {
+      return json({ error: 'Could not fetch that page', status: resp.status }, 502);
+    }
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    while (text.length < 60000) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+      if (/<\/head>/i.test(text)) break;
+    }
+    try { reader.cancel(); } catch {}
+    html = text;
+  } catch (err) {
+    return json({ error: 'Could not fetch that page', debug: String(err && err.message || err) }, 502);
+  }
+  function metaContent(prop) {
+    const escaped = prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let m = html.match(new RegExp('<meta[^>]+(?:property|name)=["\']' + escaped + '["\'][^>]+content=["\']([^"\']+)["\']', 'i'));
+    if (!m) m = html.match(new RegExp('<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\']' + escaped + '["\']', 'i'));
+    return m ? m[1] : null;
+  }
+  const image = metaContent('og:image') || metaContent('twitter:image');
+  const titleTag = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  const title = metaContent('og:title') || (titleTag ? titleTag[1] : null);
+  if (!image) {
+    return json({ error: 'No preview image found on that page' }, 404);
+  }
+  let absoluteImage;
+  try {
+    absoluteImage = new URL(image, url).toString();
+  } catch {
+    absoluteImage = image;
+  }
+  return json({ url: url.toString(), title: title ? title.trim() : '', thumbnailUrl: absoluteImage });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') {
@@ -268,6 +329,9 @@ export default {
     }
     if (body && body.action === 'resolveEmbed') {
       return handleResolveEmbed(body.provider, body.url);
+    }
+    if (body && body.action === 'resolveLinkPreview') {
+      return handleResolveLinkPreview(body.url);
     }
 
     const messages = body && body.messages;

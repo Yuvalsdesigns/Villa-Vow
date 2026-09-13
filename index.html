@@ -321,7 +321,8 @@
           <input type="url" id="diyUrl" placeholder="Paste a link to a tutorial, product, or idea">
           <textarea id="diyDesc" rows="2" placeholder="What is this, and why did you save it?"></textarea>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <label class="btn small" style="cursor:pointer;">Add thumbnail (optional)<input type="file" id="diyThumbInput" accept="image/*" style="display:none;"></label>
+            <button class="btn small ghost" type="button" id="diyFetchThumbBtn">Fetch thumbnail from link</button>
+            <label class="btn small" style="cursor:pointer;">Or upload one<input type="file" id="diyThumbInput" accept="image/*" style="display:none;"></label>
             <img id="diyThumbPreview" style="display:none;width:44px;height:44px;object-fit:cover;border-radius:8px;">
             <button class="btn primary small" id="diySaveBtn">Save idea</button>
           </div>
@@ -439,5 +440,5 @@
 <script src="app-1.js?v=20260913-31"></script>
 <script src="app-4.js?v=20260913-22"></script>
 <script src="app-2.js?v=20260913-25"></script>
-<script src="app-3.js?v=20260913-31"></script>
+<script src="app-3.js?v=20260913-32"></script>
 <script src="moodboard-pinterest.js?v=14"></script>

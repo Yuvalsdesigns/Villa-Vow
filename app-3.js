@@ -198,6 +198,25 @@ renderEmails();
 renderGiftIdeas();
 
 /* ---------------- WEDDING DIY ---------------- */
+/* Same server-side-fetch trick used for Pinterest pins: ask the Worker to
+   fetch the page and read its og:image/twitter:image meta tag, since most
+   sites set one for social-share previews. Works for a wide range of
+   links, not just Pinterest, but still needs a real image tag on the page. */
+async function fetchLinkPreviewThumbnail(url, onSuccess, onError){
+  try{
+    const user = window.firebase && firebase.auth && firebase.auth().currentUser;
+    if(!user || !window.VV_WORKER_URL){ onError('Sign in first, then try again.'); return; }
+    const idToken = await user.getIdToken();
+    const resp = await fetch(window.VV_WORKER_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
+      body: JSON.stringify({action:'resolveLinkPreview', url})
+    });
+    let data; try{ data = await resp.json(); }catch(e){ data = null; }
+    if(!resp.ok || !data || !data.thumbnailUrl){ onError((data && data.error) || 'Could not find a preview image on that page.'); return; }
+    onSuccess(data.thumbnailUrl, data.title||'');
+  }catch(e){ onError('Request failed: '+(e&&e.message||e)); }
+}
 let pendingDiyThumb = '';
 function readDiyThumb(file){
   if(!file || !/^image\//.test(file.type)) return;
@@ -219,6 +238,26 @@ function readDiyThumb(file){
   reader.readAsDataURL(file);
 }
 document.getElementById('diyThumbInput').addEventListener('change', e=>{ if(e.target.files[0]) readDiyThumb(e.target.files[0]); });
+document.getElementById('diyFetchThumbBtn')?.addEventListener('click', ()=>{
+  const urlInput = document.getElementById('diyUrl');
+  let url = urlInput.value.trim();
+  if(!url){ alert('Paste a link above first, then try fetching a thumbnail.'); return; }
+  if(!/^https?:\/\//i.test(url)) url = 'https://'+url;
+  const btn = document.getElementById('diyFetchThumbBtn');
+  btn.disabled = true; btn.textContent = 'Fetching…';
+  fetchLinkPreviewThumbnail(url,
+    (thumbnailUrl)=>{
+      pendingDiyThumb = thumbnailUrl;
+      const preview = document.getElementById('diyThumbPreview');
+      preview.src = thumbnailUrl; preview.style.display='inline-block';
+      btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
+    },
+    (reason)=>{
+      alert("Couldn't fetch a thumbnail: "+reason+" You can still upload one instead.");
+      btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
+    }
+  );
+});
 
 document.getElementById('diySaveBtn').addEventListener('click', ()=>{
   const urlInput = document.getElementById('diyUrl');
@@ -269,8 +308,9 @@ function renderDiyIdeas(){
       + '<div class="diy-body">'
       + (editing
           ? '<textarea class="diy-desc-edit" rows="3">'+esc(idea.description)+'</textarea>'
-            + '<div style="display:flex;align-items:center;gap:8px;">'
-            + '<label class="btn small ghost" style="cursor:pointer;">'+(idea.thumbnail?'Change thumbnail':'Add thumbnail')+'<input type="file" id="diyEditThumbInput" accept="image/*" style="display:none;"></label>'
+            + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+            + '<button class="btn small ghost" type="button" id="diyEditFetchThumbBtn">Fetch thumbnail from link</button>'
+            + '<label class="btn small ghost" style="cursor:pointer;">'+(idea.thumbnail?'Or change it':'Or upload one')+'<input type="file" id="diyEditThumbInput" accept="image/*" style="display:none;"></label>'
             + '<img id="diyEditThumbPreview" src="'+esc(editingDiyThumb||'')+'" style="'+(editingDiyThumb?'':'display:none;')+'width:32px;height:32px;object-fit:cover;border-radius:6px;">'
             + '</div>'
           : '<p class="diy-desc">'+esc(idea.description)+'</p>')
@@ -281,6 +321,22 @@ function renderDiyIdeas(){
       + '</div></div>';
     card.querySelector('.edit-diy')?.addEventListener('click', ()=>{ editingDiyId = idea.id; editingDiyThumb = idea.thumbnail||''; renderDiyIdeas(); });
     card.querySelector('#diyEditThumbInput')?.addEventListener('change', e=>{ if(e.target.files[0]) readDiyEditThumb(e.target.files[0]); });
+    card.querySelector('#diyEditFetchThumbBtn')?.addEventListener('click', ()=>{
+      const btn = card.querySelector('#diyEditFetchThumbBtn');
+      btn.disabled = true; btn.textContent = 'Fetching…';
+      fetchLinkPreviewThumbnail(idea.url,
+        (thumbnailUrl)=>{
+          editingDiyThumb = thumbnailUrl;
+          const preview = card.querySelector('#diyEditThumbPreview');
+          preview.src = thumbnailUrl; preview.style.display='inline-block';
+          btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
+        },
+        (reason)=>{
+          alert("Couldn't fetch a thumbnail: "+reason+" You can still upload one instead.");
+          btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
+        }
+      );
+    });
     card.querySelector('.save-diy')?.addEventListener('click', ()=>{
       const text = card.querySelector('.diy-desc-edit').value.trim();
       if(!text) return;
