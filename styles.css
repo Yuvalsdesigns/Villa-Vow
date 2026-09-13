@@ -323,14 +323,15 @@
   .love-note-actions{position:absolute;top:8px;right:8px;display:flex;gap:2px;}
   .love-note.editing .love-note-actions{position:static;justify-content:flex-end;margin-top:6px;}
   .love-note-actions button{
-    width:20px;height:20px;border-radius:50%;border:none;
-    background:transparent;color:var(--ink-faint);display:flex;align-items:center;justify-content:center;cursor:pointer;
+    width:22px;height:22px;border-radius:50%;border:none;
+    background:var(--surface-2);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;cursor:pointer;
   }
-  .love-note-actions .edit-note:hover{background:var(--line-soft);color:var(--wine);}
-  .love-note-actions .del-note:hover{background:var(--line-soft);color:var(--danger);}
-  .love-note-actions .save-note{color:var(--wine);}
-  .love-note-actions .save-note:hover{background:var(--wine-soft);}
-  .love-note-actions button svg{width:11px;height:11px;stroke:currentColor;}
+  .love-note-actions .edit-note:hover{background:var(--wine-soft);color:var(--wine);}
+  .love-note-actions .del-note{color:var(--danger);}
+  .love-note-actions .del-note:hover{background:var(--danger-soft);}
+  .love-note-actions .save-note{background:var(--wine);color:#fff;}
+  .love-note-actions .save-note:hover{background:var(--wine-ink);}
+  .love-note-actions button svg{width:12px;height:12px;stroke:currentColor;stroke-width:2.2;}
   .love-notes-add{display:flex;gap:8px;align-items:flex-end;}
   .love-notes-add textarea{flex:1;font-size:13px;min-height:0;resize:none;}
   .love-notes-add .btn{flex:none;}
