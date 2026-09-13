@@ -237,6 +237,77 @@ async function handleResolveEmbed(provider, rawUrl) {
    almost any link, no per-site API needed. Only reads up to ~60KB and
    stops at </head> since those tags are always near the top, so this
    can't be used to pull down a whole arbitrary page. */
+/* Some sites block generic scraping but still special-case the crawler
+   user-agents used by Facebook/Twitter/Slack link previews, since they
+   want their links to look good when shared. Try a normal browser first,
+   then fall back to those, since they succeed on a lot of shops/blogs
+   that a plain fetch gets blocked or served a stub page on. */
+const LINK_PREVIEW_USER_AGENTS = [
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+  'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+  'Twitterbot/1.0',
+];
+
+async function fetchHtml(url, userAgent) {
+  const resp = await fetch(url.toString(), {
+    redirect: 'follow',
+    method: 'GET',
+    headers: {
+      'User-Agent': userAgent,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    },
+  });
+  if (!resp.ok) return { ok: false, status: resp.status };
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+  while (text.length < 250000) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    text += decoder.decode(value, { stream: true });
+  }
+  try { reader.cancel(); } catch {}
+  return { ok: true, html: text };
+}
+
+function extractPreview(html, baseUrl) {
+  function metaContent(prop) {
+    const escaped = prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let m = html.match(new RegExp('<meta[^>]+(?:property|name|itemprop)=["\']' + escaped + '["\'][^>]+content=["\']([^"\']+)["\']', 'i'));
+    if (!m) m = html.match(new RegExp('<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name|itemprop)=["\']' + escaped + '["\']', 'i'));
+    return m ? m[1] : null;
+  }
+  let image = metaContent('og:image') || metaContent('og:image:secure_url') || metaContent('twitter:image') || metaContent('twitter:image:src') || metaContent('image');
+  if (!image) {
+    const linkImg = html.match(/<link[^>]+rel=["\']image_src["\'][^>]+href=["\']([^"\']+)["\']/i);
+    if (linkImg) image = linkImg[1];
+  }
+  if (!image) {
+    /* Last resort: first reasonably-sized <img> in the page, skipping
+       obvious tracking pixels, icons and inline data URIs. */
+    const imgTags = html.match(/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/gi) || [];
+    for (const tag of imgTags) {
+      const srcMatch = tag.match(/src=["\']([^"\']+)["\']/i);
+      if (!srcMatch) continue;
+      const src = srcMatch[1];
+      if (!src || src.startsWith('data:')) continue;
+      if (/\b(1x1|pixel|spacer|blank|tracking|icon|logo|sprite)\b/i.test(src)) continue;
+      image = src;
+      break;
+    }
+  }
+  const titleTag = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  const title = metaContent('og:title') || (titleTag ? titleTag[1] : null);
+  if (!image) return null;
+  let absoluteImage;
+  try {
+    absoluteImage = new URL(image, baseUrl).toString();
+  } catch {
+    absoluteImage = image;
+  }
+  return { title: title ? title.trim() : '', thumbnailUrl: absoluteImage };
+}
+
 async function handleResolveLinkPreview(rawUrl) {
   let url;
   try {
@@ -247,49 +318,25 @@ async function handleResolveLinkPreview(rawUrl) {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     return json({ error: 'Only http(s) links are supported' }, 400);
   }
-  const browserHeaders = {
-    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  };
-  let html;
-  try {
-    const resp = await fetch(url.toString(), { redirect: 'follow', method: 'GET', headers: browserHeaders });
-    if (!resp.ok) {
-      return json({ error: 'Could not fetch that page', status: resp.status }, 502);
+  let lastStatus = null;
+  for (const userAgent of LINK_PREVIEW_USER_AGENTS) {
+    let result;
+    try {
+      result = await fetchHtml(url, userAgent);
+    } catch (err) {
+      return json({ error: 'Could not fetch that page', debug: String(err && err.message || err) }, 502);
     }
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let text = '';
-    while (text.length < 60000) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      text += decoder.decode(value, { stream: true });
-      if (/<\/head>/i.test(text)) break;
+    if (!result.ok) {
+      lastStatus = result.status;
+      continue;
     }
-    try { reader.cancel(); } catch {}
-    html = text;
-  } catch (err) {
-    return json({ error: 'Could not fetch that page', debug: String(err && err.message || err) }, 502);
+    const preview = extractPreview(result.html, url);
+    if (preview) {
+      return json({ url: url.toString(), title: preview.title, thumbnailUrl: preview.thumbnailUrl });
+    }
   }
-  function metaContent(prop) {
-    const escaped = prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    let m = html.match(new RegExp('<meta[^>]+(?:property|name)=["\']' + escaped + '["\'][^>]+content=["\']([^"\']+)["\']', 'i'));
-    if (!m) m = html.match(new RegExp('<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\']' + escaped + '["\']', 'i'));
-    return m ? m[1] : null;
-  }
-  const image = metaContent('og:image') || metaContent('twitter:image');
-  const titleTag = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-  const title = metaContent('og:title') || (titleTag ? titleTag[1] : null);
-  if (!image) {
-    return json({ error: 'No preview image found on that page' }, 404);
-  }
-  let absoluteImage;
-  try {
-    absoluteImage = new URL(image, url).toString();
-  } catch {
-    absoluteImage = image;
-  }
-  return json({ url: url.toString(), title: title ? title.trim() : '', thumbnailUrl: absoluteImage });
+  if (lastStatus) return json({ error: 'Could not fetch that page', status: lastStatus }, 502);
+  return json({ error: 'No preview image found on that page' }, 404);
 }
 
 export default {
