@@ -125,28 +125,69 @@
     }
   }
 
-  window.renderPinterestBoard=function(rawUrl){
-    const shelf=document.getElementById('pinterestBoardShelf');
-    if(!shelf) return;
+  let localPinterestBoards=[];
+  function boardList(){ return (dbReady?state.pinterestBoards:localPinterestBoards)||[]; }
+
+  function boardWarn(msg){
+    const warnEl=document.getElementById('pinterestBoardWarn');
+    if(warnEl){ warnEl.innerHTML=msg; warnEl.style.display='block'; }
+  }
+
+  /* A legacy install only ever remembered one board, locally, in
+     localStorage. Carry it over into the shared list once, then forget
+     the local copy so this never re-adds it on a later visit. Only runs
+     on whichever specific device actually had that value saved. */
+  function migrateLegacyBoardUrl(){
+    const saved=localStorage.getItem('vv_pinterest_board_url');
+    if(!saved||!dbReady) return;
+    localStorage.removeItem('vv_pinterest_board_url');
+    addPinterestBoard(saved);
+  }
+
+  function addPinterestBoard(rawUrl){
     const parsed=classifyPinterestUrl(rawUrl);
     if(!parsed){
-      shelf.innerHTML='<div class="warn">That does not look like a Pinterest board URL.</div>';
+      boardWarn('That does not look like a Pinterest board URL.');
       return;
     }
     if(parsed.kind==='short'){
-      shelf.innerHTML='<div class="warn">Pinterest short links need the full board address first. <a target="_blank" rel="noopener" href="'+esc(parsed.url)+'">Open Pinterest ↗</a>, then copy the full board URL from the address bar and paste it here.</div>';
+      boardWarn('Pinterest short links need the full board address first. <a target="_blank" rel="noopener" href="'+esc(parsed.url)+'">Open Pinterest ↗</a>, then copy the full board URL from the address bar and paste it here.');
       return;
     }
     if(parsed.kind!=='board'){
-      shelf.innerHTML='<div class="warn">That is an individual Pinterest Pin, not a board. Use “+ Pinterest” below for individual Pins.</div>';
+      boardWarn('That is an individual Pinterest Pin, not a board. Use “+ Pinterest” below for individual Pins.');
       return;
     }
+    const titleInput=document.getElementById('pinterestBoardTitle');
+    const title=(titleInput&&titleInput.value.trim())||'';
+    const data={url:parsed.url,title:title,addedAt:Date.now()};
+    if(dbReady) db.collection('pinterestBoards').add(data);
+    else { data.id='local-'+Math.random().toString(36).slice(2); localPinterestBoards.push(data); window.renderPinterestBoards(); }
     const input=document.getElementById('pinterestBoardUrl');
-    if(input) input.value=parsed.url;
-    localStorage.setItem('vv_pinterest_board_url',parsed.url);
-    shelf.innerHTML='<a data-pin-do="embedBoard" data-pin-board-width="900" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(parsed.url)+'"></a>';
-    ensurePinterestScript();
-    requestPinterestBuild();
+    if(input) input.value='';
+    if(titleInput) titleInput.value='';
+  }
+
+  window.renderPinterestBoards=function(){
+    const shelf=document.getElementById('pinterestBoardShelf');
+    if(!shelf) return;
+    migrateLegacyBoardUrl();
+    const boards=boardList();
+    shelf.innerHTML=boards.map(function(b){
+      return '<div class="pinterest-board-item">'
+        +(b.title?'<h5 class="pinterest-board-title">'+esc(b.title)+'</h5>':'')
+        +'<button class="board-remove" type="button" data-id="'+esc(b.id||'')+'" aria-label="Remove board">'+svg(ICON.x)+'</button>'
+        +'<a data-pin-do="embedBoard" data-pin-board-width="900" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(b.url)+'"></a>'
+        +'</div>';
+    }).join('');
+    shelf.querySelectorAll('.board-remove').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        const id=btn.dataset.id;
+        if(dbReady&&id) db.collection('pinterestBoards').doc(id).delete();
+        else { localPinterestBoards=localPinterestBoards.filter(function(x){return x.id!==id;}); window.renderPinterestBoards(); }
+      });
+    });
+    if(boards.length){ ensurePinterestScript(); requestPinterestBuild(); }
   };
 
   window.renderBoard=function(){
@@ -260,10 +301,24 @@
   if(boardButton){
     const clean=boardButton.cloneNode(true);
     boardButton.replaceWith(clean);
-    clean.addEventListener('click',function(){window.renderPinterestBoard(document.getElementById('pinterestBoardUrl')?.value);});
+    clean.addEventListener('click',function(){
+      const warnEl=document.getElementById('pinterestBoardWarn');
+      if(warnEl) warnEl.style.display='none';
+      addPinterestBoard(document.getElementById('pinterestBoardUrl')?.value);
+    });
+  }
+  const boardUrlInput=document.getElementById('pinterestBoardUrl');
+  if(boardUrlInput){
+    boardUrlInput.addEventListener('keydown',function(e){
+      if(e.key==='Enter'){
+        e.preventDefault();
+        const warnEl=document.getElementById('pinterestBoardWarn');
+        if(warnEl) warnEl.style.display='none';
+        addPinterestBoard(boardUrlInput.value);
+      }
+    });
   }
 
-  const saved=localStorage.getItem('vv_pinterest_board_url');
-  if(saved) setTimeout(function(){window.renderPinterestBoard(saved);},50);
+  setTimeout(function(){window.renderPinterestBoards();},50);
   setTimeout(function(){window.renderBoard();},80);
 })();

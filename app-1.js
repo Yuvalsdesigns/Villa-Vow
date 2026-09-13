@@ -128,7 +128,7 @@ function goalTile(goal, diff){
 "use strict";
 
 let db = null, dbReady=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"} };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -480,6 +480,10 @@ async function initDb(){
     unsub.push(db.collection('pinboard').orderBy('createdAt','desc').onSnapshot(snap=>{
       state.pins = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderBoard(); renderStart();
+    }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('pinterestBoards').orderBy('addedAt','asc').onSnapshot(snap=>{
+      state.pinterestBoards = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(typeof renderPinterestBoards==='function') renderPinterestBoards();
     }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('considerations').orderBy('order','asc').onSnapshot(snap=>{
       state.considerations = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_CONSIDERATIONS.map(([category,text],i)=>({id:'seed-consid-'+i, category, text, done:false, order:i}));

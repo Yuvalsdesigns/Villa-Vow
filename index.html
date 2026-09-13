@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260912-21">
+<link rel="stylesheet" href="styles.css?v=20260913-22">
 <link rel="stylesheet" href="mobile-app.css?v=20260912-21">
 
 <div class="bg-watermark no-print" style="background-image:url('watermark.jpg');"></div>
@@ -150,14 +150,16 @@
           <button data-q="Mediterranean wedding tablescape candles linen">Tables + candles</button>
         </div>
         <div style="border-top:1px solid var(--line-soft);margin:14px 0 0;padding-top:12px;">
-          <h4 style="font-size:14px;">Show a Pinterest board here</h4>
-          <p style="font-size:12px;color:var(--ink-soft);line-height:1.5;margin-top:3px;">Paste the URL of a public Pinterest board. It will appear below as a live visual board, and Pinterest can show up to 50 Pins in its board widget.</p>
+          <h4 style="font-size:14px;">Show Pinterest boards here</h4>
+          <p style="font-size:12px;color:var(--ink-soft);line-height:1.5;margin-top:3px;">Paste the URL of a public Pinterest board and add as many as you like. Each will appear below as its own live visual board, showing up to 50 Pins.</p>
+          <input type="text" id="pinterestBoardTitle" placeholder="Category, e.g. Flowers (optional)" style="margin-top:10px;">
           <div class="pinterest-board-tools">
             <input type="url" id="pinterestBoardUrl" placeholder="https://www.pinterest.com/username/board-name/">
-            <button class="btn" id="embedPinterestBoard">Show board</button>
+            <button class="btn" id="embedPinterestBoard">Add board</button>
           </div>
+          <p class="warn" id="pinterestBoardWarn" style="display:none;"></p>
           <div class="pinterest-board-shelf" id="pinterestBoardShelf"></div>
-          <div class="pinterest-limit-note">Tip: use this for your main wedding inspiration board, then add individual favorite Pins to the Villa &amp; Vow moodboard so you can tag them as dress, venue, flowers, hair, makeup and more.</div>
+          <div class="pinterest-limit-note">Tip: use this for your main wedding inspiration boards, then add individual favorite Pins to the Villa &amp; Vow moodboard so you can tag them as dress, venue, flowers, hair, makeup and more.</div>
         </div>
       </div>
 
@@ -416,8 +418,8 @@
 </div>
 
 <script src="firebase-sync.js?v=20260912-22"></script>
-<script src="app-1.js?v=20260912-20"></script>
+<script src="app-1.js?v=20260913-21"></script>
 <script src="app-4.js?v=20260912-20"></script>
 <script src="app-2.js?v=20260912-20"></script>
 <script src="app-3.js?v=20260912-21"></script>
-<script src="moodboard-pinterest.js?v=9"></script>
+<script src="moodboard-pinterest.js?v=10"></script>
