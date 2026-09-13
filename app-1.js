@@ -79,7 +79,7 @@ const TABS = [
   {id:'style', label:'Style Gallery', icon:ICON.style},
   {id:'emails', label:'Emails and Gifts', icon:ICON.mail},
   {id:'guestapp', label:'Guest App', icon:ICON.guests},
-  {id:'diy', label:'Wedding DIY', icon:ICON.scissors},
+  {id:'diy', label:'Wedding d.i.y', icon:ICON.scissors},
 ];
 const DESKTOP_NAV_MORE = ['board','style','emails','guestapp','diy'];
 const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac'};
@@ -228,7 +228,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 "use strict";
 
 let db = null, dbReady=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], loveNotes:[], diyIdeas:[] };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -592,6 +592,10 @@ async function initDb(){
     unsub.push(db.collection('diyIdeas').orderBy('createdAt','desc').onSnapshot(snap=>{
       state.diyIdeas = snap.docs.map(d=>({id:d.id, ...d.data()}));
       if(typeof renderDiyIdeas==='function') renderDiyIdeas();
+    }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('venueContacts').orderBy('createdAt','desc').onSnapshot(snap=>{
+      state.venueContacts = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(typeof renderVenueContacts==='function') renderVenueContacts();
     }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('considerations').orderBy('order','asc').onSnapshot(snap=>{
       state.considerations = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_CONSIDERATIONS.map(([category,text],i)=>({id:'seed-consid-'+i, category, text, done:false, order:i}));

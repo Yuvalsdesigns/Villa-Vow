@@ -371,6 +371,19 @@
   .diy-meta a{font-size:11.5px;color:var(--wine);text-decoration:none;}
   .diy-meta a:hover{text-decoration:underline;}
   .diy-actions{display:flex;gap:6px;}
+
+  .venue-contacts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+  .venue-contact-card{overflow:hidden;display:flex;flex-direction:column;}
+  .venue-contact-thumb{width:100%;height:130px;object-fit:cover;display:block;}
+  .venue-contact-body{padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
+  .venue-contact-body h4{font-size:15px;}
+  .venue-contact-bullets{margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:var(--ink-soft);}
+  .venue-contact-bullets b{color:var(--ink);}
+  .venue-contact-notes{font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
+  .venue-contact-notes b{color:var(--ink);}
+  .venue-contact-raw{font-size:12px;color:var(--ink-soft);}
+  .venue-contact-raw summary{cursor:pointer;color:var(--wine);font-weight:600;}
+  .venue-contact-raw p{margin-top:8px;white-space:pre-wrap;line-height:1.5;}
   .love-notes{
     background:var(--blush-soft);border:1px dashed var(--blush);border-radius:var(--radius);
     padding:14px 16px 16px;margin-bottom:20px;

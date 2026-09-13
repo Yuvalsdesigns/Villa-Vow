@@ -1092,3 +1092,133 @@ function saveCustomStyle(){
 }
 
 renderStyleSections();
+
+/* ---------------- VENUES YOU'VE CONTACTED ---------------- */
+const VENUE_CONTACT_FIELDS = [
+  ['maxGuests', 'Max guests / sleeping capacity', 'e.g. 45 guests, 20 sleep on-site'],
+  ['pricePerNight', 'Price (per night or full quote)', 'e.g. €3,500/night or €18,000 for 3 nights'],
+  ['availability', 'Availability for your date', 'e.g. Confirmed available, needs 50% deposit to hold'],
+  ['ceremonySpace', 'Ceremony space + rain backup', 'e.g. Terrace ceremony, indoor barn as backup'],
+  ['kosherCatering', 'Outside kosher catering allowed?', 'e.g. Yes, kitchen access confirmed'],
+  ['depositPolicy', 'Deposit / cancellation policy', 'e.g. 30% deposit, refundable until 60 days out'],
+];
+let pendingVenueContactThumb = '', editingVenueContactId = null;
+function ensureVenueContactModal(){
+  let m = document.getElementById('venueContactModal');
+  if(m) return m;
+  m = document.createElement('div'); m.id='venueContactModal'; m.className='modal-backdrop';
+  m.innerHTML = '<div class="modal">'
+    + '<button class="close-x" id="vcModalClose">'+svg(ICON.x)+'</button>'
+    + '<h3 id="vcModalTitle">Add a venue reply</h3>'
+    + '<label class="field">Venue name<input type="text" id="vcName" placeholder="e.g. Dájas Douro Valley"></label>'
+    + '<div class="drop-zone" id="vcDropZone">Click to choose a photo, or drag one here</div>'
+    + '<input type="file" id="vcFileInput" accept="image/*" style="display:none;">'
+    + '<div id="vcPreviewWrap" style="display:none;"><img id="vcPreview" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;"></div>'
+    + VENUE_CONTACT_FIELDS.map(([key,label,placeholder])=> '<label class="field">'+esc(label)+'<input type="text" id="vc_'+key+'" placeholder="'+esc(placeholder)+'"></label>').join('')
+    + '<label class="field">Their full reply (paste it here for reference)<textarea id="vcRawReply" rows="5" placeholder="Paste their email reply…"></textarea></label>'
+    + '<label class="field">Your notes<textarea id="vcNotes" rows="2" placeholder="Your own thoughts on this one"></textarea></label>'
+    + '<p class="warn" id="vcWarn" style="display:none;"></p>'
+    + '<div class="modal-foot"><button class="btn" id="vcCancel">Cancel</button><button class="btn primary" id="vcSave">Save</button></div>'
+    + '</div>';
+  document.body.appendChild(m);
+  const close = ()=> m.classList.remove('open');
+  m.querySelector('#vcModalClose').addEventListener('click', close);
+  m.addEventListener('click', e=>{ if(e.target===m) close(); });
+  m.querySelector('#vcCancel').addEventListener('click', close);
+  const drop = m.querySelector('#vcDropZone'), file = m.querySelector('#vcFileInput');
+  drop.addEventListener('click', ()=> file.click());
+  file.addEventListener('change', ()=>{ if(file.files[0]) readVenueContactThumb(file.files[0]); });
+  ['dragover','dragleave','drop'].forEach(evt=>{
+    drop.addEventListener(evt, e=>{
+      e.preventDefault();
+      drop.classList.toggle('drag', evt==='dragover');
+      if(evt==='drop' && e.dataTransfer.files[0]) readVenueContactThumb(e.dataTransfer.files[0]);
+    });
+  });
+  m.querySelector('#vcSave').addEventListener('click', saveVenueContact);
+  return m;
+}
+function openVenueContactModal(existing){
+  editingVenueContactId = existing ? existing.id : null;
+  pendingVenueContactThumb = existing ? (existing.thumbnail||'') : '';
+  const m = ensureVenueContactModal();
+  m.querySelector('#vcModalTitle').textContent = existing ? 'Edit venue reply' : 'Add a venue reply';
+  m.querySelector('#vcName').value = existing ? (existing.name||'') : '';
+  VENUE_CONTACT_FIELDS.forEach(([key])=>{ m.querySelector('#vc_'+key).value = existing ? (existing[key]||'') : ''; });
+  m.querySelector('#vcRawReply').value = existing ? (existing.rawReply||'') : '';
+  m.querySelector('#vcNotes').value = existing ? (existing.notes||'') : '';
+  const previewWrap = m.querySelector('#vcPreviewWrap');
+  if(pendingVenueContactThumb){ m.querySelector('#vcPreview').src = pendingVenueContactThumb; previewWrap.style.display='block'; }
+  else previewWrap.style.display='none';
+  m.querySelector('#vcFileInput').value='';
+  m.querySelector('#vcWarn').style.display='none';
+  m.classList.add('open');
+}
+function readVenueContactThumb(file){
+  const m = document.getElementById('venueContactModal');
+  const warn = m.querySelector('#vcWarn'); warn.style.display='none';
+  if(!file || !/^image\//.test(file.type)){ warn.textContent='Please choose an image.'; warn.style.display='block'; return; }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const max = 900, scale = Math.min(1, max/Math.max(img.width,img.height));
+      const canvas = document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      let q=.8, url=canvas.toDataURL('image/jpeg',q);
+      while(url.length>350000 && q>.4){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
+      pendingVenueContactThumb = url;
+      m.querySelector('#vcPreview').src = url;
+      m.querySelector('#vcPreviewWrap').style.display='block';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function saveVenueContact(){
+  const m = document.getElementById('venueContactModal');
+  const warn = m.querySelector('#vcWarn');
+  const name = m.querySelector('#vcName').value.trim();
+  if(!name){ warn.textContent='Give the venue a name.'; warn.style.display='block'; return; }
+  const data = {name, thumbnail: pendingVenueContactThumb, rawReply: m.querySelector('#vcRawReply').value.trim(), notes: m.querySelector('#vcNotes').value.trim()};
+  VENUE_CONTACT_FIELDS.forEach(([key])=>{ data[key] = m.querySelector('#vc_'+key).value.trim(); });
+  if(editingVenueContactId){
+    if(dbReady) db.collection('venueContacts').doc(editingVenueContactId).update(data).catch(err=>{ console.error(err); warn.textContent='Could not save changes.'; warn.style.display='block'; });
+    else { const existing = state.venueContacts.find(v=>v.id===editingVenueContactId); if(existing) Object.assign(existing, data); renderVenueContacts(); }
+  } else {
+    data.createdAt = Date.now();
+    if(dbReady) db.collection('venueContacts').add(data).catch(err=>{ console.error(err); warn.textContent='Could not save this reply.'; warn.style.display='block'; });
+    else { localAdd(state.venueContacts, data); renderVenueContacts(); }
+  }
+  m.classList.remove('open');
+}
+document.getElementById('addVenueContactBtn').addEventListener('click', ()=> openVenueContactModal(null));
+function renderVenueContacts(){
+  const wrap = document.getElementById('venueContactsGrid'); if(!wrap) return;
+  wrap.innerHTML='';
+  if(!state.venueContacts.length){ wrap.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">No replies logged yet. When a venue answers you, click "+ Add a reply" and paste in the details.</p>'; return; }
+  state.venueContacts.forEach(v=>{
+    const card = document.createElement('div'); card.className='card venue-contact-card';
+    const bullets = VENUE_CONTACT_FIELDS.filter(([key])=> (v[key]||'').trim()).map(([key,label])=> '<li><b>'+esc(label)+':</b> '+esc(v[key])+'</li>').join('');
+    card.innerHTML =
+      (v.thumbnail ? '<img src="'+esc(v.thumbnail)+'" class="venue-contact-thumb" alt="">' : '')
+      + '<div class="venue-contact-body">'
+      + '<h4>'+esc(v.name)+'</h4>'
+      + (bullets ? '<ul class="venue-contact-bullets">'+bullets+'</ul>' : '<p style="font-size:12.5px;color:var(--ink-faint);">No details filled in yet, click Edit to add some.</p>')
+      + (v.notes ? '<p class="venue-contact-notes"><b>Notes:</b> '+esc(v.notes)+'</p>' : '')
+      + (v.rawReply ? '<details class="venue-contact-raw"><summary>Show their full reply</summary><p>'+esc(v.rawReply)+'</p></details>' : '')
+      + '<div class="diy-actions">'
+      + '<button class="btn small ghost edit-vc">Edit</button>'
+      + '<button class="btn small ghost del-vc">Delete</button>'
+      + '</div></div>';
+    card.querySelector('.edit-vc').addEventListener('click', ()=> openVenueContactModal(v));
+    card.querySelector('.del-vc').addEventListener('click', ()=>{
+      confirmAction('Delete this venue reply?', ()=>{
+        if(dbReady) db.collection('venueContacts').doc(v.id).delete().catch(err=> console.error(err));
+        else { state.venueContacts = state.venueContacts.filter(x=>x.id!==v.id); renderVenueContacts(); }
+      });
+    });
+    wrap.appendChild(card);
+  });
+}
+renderVenueContacts();

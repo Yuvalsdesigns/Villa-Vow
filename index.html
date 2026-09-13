@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260913-39">
+<link rel="stylesheet" href="styles.css?v=20260913-40">
 <link rel="stylesheet" href="mobile-app.css?v=20260913-24">
 
 <div class="bg-watermark no-print" style="background-image:url('watermark.jpg');"></div>
@@ -207,6 +207,13 @@
         <h2>Venues and Destinations</h2>
       </div>
       <div class="discovery-note"><b>How to use this:</b> do not eliminate a place just because it is not a famous wedding destination. The best fit for you may be a tiny lake, village or estate that only appears when we search by property type. <b>Kosher, rabbi, chuppah and final pricing are verification items</b> unless explicitly confirmed by the venue.</div>
+
+      <div class="style-head">
+        <h3 class="tint-text-wine">Venues you've contacted</h3>
+        <button class="btn small" id="addVenueContactBtn">+ Add a reply</button>
+      </div>
+      <div id="venueContactsGrid" class="venue-contacts-grid" style="margin-bottom:32px;"></div>
+
       <div class="venue-discovery">
         <input id="venueSearch" type="text" placeholder="Search a place, venue, lake, village…">
         <select id="venueRegionFilter"><option value="">All regions</option></select>
@@ -246,6 +253,10 @@
       <div class="view-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <h2 style="margin-bottom:0;">Who's Coming</h2>
         <button class="btn small" id="exportEmailsBtn">Download email list (CSV)</button>
+      </div>
+
+      <div class="note-box">
+        <b>How e-vites actually work:</b> there's no way to "send" from inside this app since it doesn't have email-sending built in, no planner app really does that safely. What you actually do is pick an e-vite service (<b>Paperless Post</b>, <b>Greenvelope</b>, <b>Zola</b>, <b>Joy</b>, etc.), then import your guest list into their platform, and they handle the bulk send and RSVP tracking for you. So the useful thing this app can do is give you an email field per guest, plus a one-click export of names and emails, so you can paste that list straight into whichever service you pick instead of retyping everyone by hand.
       </div>
 
       <div class="stat-row" id="guestStatRow"></div>
@@ -300,7 +311,7 @@
 <!-- WEDDING DIY -->
     <section class="view" id="view-diy">
       <div class="view-head">
-        <h2>Wedding DIY</h2>
+        <h2>Wedding d.i.y</h2>
       </div>
       <div class="card" style="padding:16px;margin-bottom:20px;">
         <div style="display:flex;flex-direction:column;gap:8px;">
@@ -422,8 +433,8 @@
 </div>
 
 <script src="firebase-sync.js?v=20260913-23"></script>
-<script src="app-1.js?v=20260913-30"></script>
+<script src="app-1.js?v=20260913-31"></script>
 <script src="app-4.js?v=20260913-21"></script>
-<script src="app-2.js?v=20260913-23"></script>
-<script src="app-3.js?v=20260913-28"></script>
+<script src="app-2.js?v=20260913-24"></script>
+<script src="app-3.js?v=20260913-29"></script>
 <script src="moodboard-pinterest.js?v=14"></script>

@@ -159,7 +159,7 @@ const GIFT_IDEAS = [
 function renderGiftIdeas(){
   const wrap = document.getElementById('giftIdeas'); if(!wrap) return;
   wrap.innerHTML='';
-  const howLabel = {diy:'DIY', brand:'Ask a brand', budget:'Budget buy'};
+  const howLabel = {diy:'d.i.y', brand:'Ask a brand', budget:'Budget buy'};
   GIFT_IDEAS.forEach(g=>{
     const section = document.createElement('div'); section.className='style-section';
     const head = document.createElement('div'); head.className='style-head';
@@ -239,7 +239,7 @@ let editingDiyId = null;
 function renderDiyIdeas(){
   const wrap = document.getElementById('diyGrid'); if(!wrap) return;
   wrap.innerHTML='';
-  if(!state.diyIdeas.length){ wrap.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">No saved ideas yet. Paste a link above to start your DIY collection.</p>'; return; }
+  if(!state.diyIdeas.length){ wrap.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">No saved ideas yet. Paste a link above to start your d.i.y collection.</p>'; return; }
   state.diyIdeas.forEach(idea=>{
     const card = document.createElement('div'); card.className='card diy-card';
     const editing = editingDiyId === idea.id;
@@ -553,7 +553,7 @@ const MOBILE_NAV_ICONS = {
   list:'<path d="M7 4h10l2 3v13H5V7l2-3z"/><path d="M8.5 10.5l1.4 1.4 2.5-2.8M8.5 16l1.4 1.4 2.5-2.8M14 10.5h2M14 16h2"/>',
 };
 const MOBILE_NAV_PRIMARY = [['start','home','Home'],['todo','check','Checklist'],['budget','budget','Budget'],['considerations','list','Things to Get'],['venues','venue','Venues']];
-const MOBILE_NAV_MORE = [['board','Moodboard'],['style','Style Gallery'],['emails','Emails and Gifts'],['guestapp','Guest App'],['diy','Wedding DIY']];
+const MOBILE_NAV_MORE = [['board','Moodboard'],['style','Style Gallery'],['emails','Emails and Gifts'],['guestapp','Guest App'],['diy','Wedding d.i.y']];
 
 function buildMobileNav(){
   if(document.getElementById('vvMobileNav')) return;
