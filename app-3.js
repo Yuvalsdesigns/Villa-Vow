@@ -203,16 +203,27 @@ renderGiftIdeas();
    sites set one for social-share previews. Works for a wide range of
    links, not just Pinterest, but still needs a real image tag on the page. */
 async function fetchLinkPreviewThumbnail(url, onSuccess, onError){
+  console.log('[DIY thumb] starting fetch for', url, 'worker:', window.VV_WORKER_URL);
   try{
     const user = window.firebase && firebase.auth && firebase.auth().currentUser;
+    console.log('[DIY thumb] signed in user:', user && user.email);
     if(!user || !window.VV_WORKER_URL){ onError('Sign in first, then try again.'); return; }
     const idToken = await user.getIdToken();
-    const resp = await fetch(window.VV_WORKER_URL, {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
-      body: JSON.stringify({action:'resolveLinkPreview', url})
-    });
+    let resp;
+    try{
+      resp = await fetch(window.VV_WORKER_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
+        body: JSON.stringify({action:'resolveLinkPreview', url})
+      });
+    }catch(networkErr){
+      console.error('[DIY thumb] network/fetch error (likely CORS or offline)', networkErr);
+      onError('Could not reach the server (network or CORS error). Check your internet connection and try again.');
+      return;
+    }
+    console.log('[DIY thumb] response status', resp.status);
     let data; try{ data = await resp.json(); }catch(e){ data = null; }
+    console.log('[DIY thumb] response body', data);
     if(!resp.ok || !data || !data.thumbnailUrl){
       const serverMsg = data && data.error;
       if(serverMsg === 'messages array is required'){
@@ -222,8 +233,9 @@ async function fetchLinkPreviewThumbnail(url, onSuccess, onError){
       onError(serverMsg || 'Could not find a preview image on that page.');
       return;
     }
+    console.log('[DIY thumb] success', data.thumbnailUrl);
     onSuccess(data.thumbnailUrl, data.title||'');
-  }catch(e){ onError('Request failed: '+(e&&e.message||e)); }
+  }catch(e){ console.error('[DIY thumb] unexpected error', e); onError('Request failed: '+(e&&e.message||e)); }
 }
 let pendingDiyThumb = '';
 function readDiyThumb(file){
@@ -246,22 +258,33 @@ function readDiyThumb(file){
   reader.readAsDataURL(file);
 }
 document.getElementById('diyThumbInput').addEventListener('change', e=>{ if(e.target.files[0]) readDiyThumb(e.target.files[0]); });
+function setDiyFetchStatus(msg, isError){
+  const el = document.getElementById('diyFetchStatus');
+  if(!el) return;
+  if(!msg){ el.style.display='none'; return; }
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--danger)' : 'var(--ink-faint)';
+  el.style.display = 'block';
+}
 document.getElementById('diyFetchThumbBtn')?.addEventListener('click', ()=>{
   const urlInput = document.getElementById('diyUrl');
   let url = urlInput.value.trim();
-  if(!url){ alert('Paste a link above first, then try fetching a thumbnail.'); return; }
+  setDiyFetchStatus('');
+  if(!url){ setDiyFetchStatus('Paste a link above first, then try fetching a thumbnail.', true); return; }
   if(!/^https?:\/\//i.test(url)) url = 'https://'+url;
   const btn = document.getElementById('diyFetchThumbBtn');
   btn.disabled = true; btn.textContent = 'Fetching…';
+  setDiyFetchStatus('Fetching thumbnail...');
   fetchLinkPreviewThumbnail(url,
     (thumbnailUrl)=>{
       pendingDiyThumb = thumbnailUrl;
       const preview = document.getElementById('diyThumbPreview');
       preview.src = thumbnailUrl; preview.style.display='inline-block';
       btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
+      setDiyFetchStatus('Thumbnail found.');
     },
     (reason)=>{
-      alert("Couldn't fetch a thumbnail: "+reason+" You can still upload one instead.");
+      setDiyFetchStatus("Couldn't fetch a thumbnail: "+reason+" You can still upload one instead.", true);
       btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
     }
   );
@@ -321,6 +344,7 @@ function renderDiyIdeas(){
             + '<label class="btn small ghost" style="cursor:pointer;">'+(idea.thumbnail?'Or change it':'Or upload one')+'<input type="file" id="diyEditThumbInput" accept="image/*" style="display:none;"></label>'
             + '<img id="diyEditThumbPreview" src="'+esc(editingDiyThumb||'')+'" style="'+(editingDiyThumb?'':'display:none;')+'width:32px;height:32px;object-fit:cover;border-radius:6px;">'
             + '</div>'
+            + '<p id="diyEditFetchStatus" style="display:none;font-size:13px;margin:4px 0 0;"></p>'
           : '<p class="diy-desc">'+esc(idea.description)+'</p>')
       + '<div class="diy-meta"><a href="'+esc(idea.url)+'" target="_blank" rel="noopener">'+esc(host)+' ↗</a></div>'
       + '<div class="diy-actions">'
@@ -331,16 +355,26 @@ function renderDiyIdeas(){
     card.querySelector('#diyEditThumbInput')?.addEventListener('change', e=>{ if(e.target.files[0]) readDiyEditThumb(e.target.files[0]); });
     card.querySelector('#diyEditFetchThumbBtn')?.addEventListener('click', ()=>{
       const btn = card.querySelector('#diyEditFetchThumbBtn');
+      const statusEl = card.querySelector('#diyEditFetchStatus');
+      const setStatus = (msg, isError)=>{
+        if(!statusEl) return;
+        if(!msg){ statusEl.style.display='none'; return; }
+        statusEl.textContent = msg;
+        statusEl.style.color = isError ? 'var(--danger)' : 'var(--ink-faint)';
+        statusEl.style.display = 'block';
+      };
       btn.disabled = true; btn.textContent = 'Fetching…';
+      setStatus('Fetching thumbnail...');
       fetchLinkPreviewThumbnail(idea.url,
         (thumbnailUrl)=>{
           editingDiyThumb = thumbnailUrl;
           const preview = card.querySelector('#diyEditThumbPreview');
           preview.src = thumbnailUrl; preview.style.display='inline-block';
           btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
+          setStatus('Thumbnail found.');
         },
         (reason)=>{
-          alert("Couldn't fetch a thumbnail: "+reason+" You can still upload one instead.");
+          setStatus("Couldn't fetch a thumbnail: "+reason+" You can still upload one instead.", true);
           btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
         }
       );
