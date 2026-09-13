@@ -266,11 +266,9 @@ function setDiyFetchStatus(msg, isError){
   el.style.color = isError ? 'var(--danger)' : 'var(--ink-faint)';
   el.style.display = 'block';
 }
-document.getElementById('diyFetchThumbBtn')?.addEventListener('click', ()=>{
-  const urlInput = document.getElementById('diyUrl');
-  let url = urlInput.value.trim();
-  setDiyFetchStatus('');
-  if(!url){ setDiyFetchStatus('Paste a link above first, then try fetching a thumbnail.', true); return; }
+function runDiyThumbFetch(rawUrl){
+  let url = rawUrl.trim();
+  if(!url) return;
   if(!/^https?:\/\//i.test(url)) url = 'https://'+url;
   const btn = document.getElementById('diyFetchThumbBtn');
   btn.disabled = true; btn.textContent = 'Fetching…';
@@ -288,6 +286,19 @@ document.getElementById('diyFetchThumbBtn')?.addEventListener('click', ()=>{
       btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
     }
   );
+}
+document.getElementById('diyFetchThumbBtn')?.addEventListener('click', ()=>{
+  const url = document.getElementById('diyUrl').value.trim();
+  setDiyFetchStatus('');
+  if(!url){ setDiyFetchStatus('Paste a link above first, then try fetching a thumbnail.', true); return; }
+  runDiyThumbFetch(url);
+});
+/* Auto-fetch as soon as a link is pasted, same as the Pinterest board does,
+   so saving an idea doesn't silently require remembering a separate button. */
+document.getElementById('diyUrl')?.addEventListener('blur', ()=>{
+  const url = document.getElementById('diyUrl').value.trim();
+  if(!url || pendingDiyThumb) return;
+  runDiyThumbFetch(url);
 });
 
 document.getElementById('diySaveBtn').addEventListener('click', ()=>{
@@ -303,6 +314,7 @@ document.getElementById('diySaveBtn').addEventListener('click', ()=>{
   urlInput.value=''; descInput.value=''; pendingDiyThumb='';
   document.getElementById('diyThumbPreview').style.display='none';
   document.getElementById('diyThumbInput').value='';
+  setDiyFetchStatus('');
 });
 
 let editingDiyId = null, editingDiyThumb = '';

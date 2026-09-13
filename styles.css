@@ -321,7 +321,7 @@
 
   /* Style gallery */
   .style-section{margin-bottom:34px;}
-  .style-section .style-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px;}
+  .style-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px;}
   .style-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;}
   .style-card{
     background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
