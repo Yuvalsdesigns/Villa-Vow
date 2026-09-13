@@ -144,6 +144,32 @@
     addPinterestBoard(saved);
   }
 
+  function moveBoard(id,dir){
+    const boards=boardList().slice();
+    const idx=boards.findIndex(function(b){return b.id===id;});
+    if(idx<0) return;
+    const swapIdx=dir==='up'?idx-1:idx+1;
+    if(swapIdx<0||swapIdx>=boards.length) return;
+    const a=boards[idx], b=boards[swapIdx];
+    const aTime=a.addedAt, bTime=b.addedAt;
+    if(dbReady){
+      const batch=db.batch();
+      batch.update(db.collection('pinterestBoards').doc(a.id),{addedAt:bTime});
+      batch.update(db.collection('pinterestBoards').doc(b.id),{addedAt:aTime});
+      batch.commit();
+    }else{
+      a.addedAt=bTime; b.addedAt=aTime;
+      localPinterestBoards.sort(function(x,y){return x.addedAt-y.addedAt;});
+      window.renderPinterestBoards();
+    }
+  }
+
+  function renameBoard(id,newTitle){
+    if(dbReady&&id){ db.collection('pinterestBoards').doc(id).update({title:newTitle}); return; }
+    const b=localPinterestBoards.find(function(x){return x.id===id;});
+    if(b) b.title=newTitle;
+  }
+
   function addPinterestBoard(rawUrl){
     const parsed=classifyPinterestUrl(rawUrl);
     if(!parsed){
@@ -173,10 +199,17 @@
     if(!shelf) return;
     migrateLegacyBoardUrl();
     const boards=boardList();
-    shelf.innerHTML=boards.map(function(b){
+    shelf.innerHTML=boards.map(function(b,i){
+      const id=esc(b.id||'');
       return '<div class="pinterest-board-item">'
-        +(b.title?'<h5 class="pinterest-board-title">'+esc(b.title)+'</h5>':'')
-        +'<button class="board-remove" type="button" data-id="'+esc(b.id||'')+'" aria-label="Remove board">'+svg(ICON.x)+'</button>'
+        +'<div class="pinterest-board-head">'
+          +'<input class="board-title-input" type="text" value="'+esc(b.title||'')+'" placeholder="Add a title, e.g. Flowers" data-id="'+id+'">'
+          +'<div class="board-head-actions">'
+            +'<button class="board-move" type="button" data-dir="up" data-id="'+id+'" aria-label="Move board up"'+(i===0?' disabled':'')+'>'+svg(ICON.chevron)+'</button>'
+            +'<button class="board-move board-move-down" type="button" data-dir="down" data-id="'+id+'" aria-label="Move board down"'+(i===boards.length-1?' disabled':'')+'>'+svg(ICON.chevron)+'</button>'
+            +'<button class="board-remove" type="button" data-id="'+id+'" aria-label="Remove board">'+svg(ICON.x)+'</button>'
+          +'</div>'
+        +'</div>'
         +'<a data-pin-do="embedBoard" data-pin-board-width="900" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(b.url)+'"></a>'
         +'</div>';
     }).join('');
@@ -185,6 +218,22 @@
         const id=btn.dataset.id;
         if(dbReady&&id) db.collection('pinterestBoards').doc(id).delete();
         else { localPinterestBoards=localPinterestBoards.filter(function(x){return x.id!==id;}); window.renderPinterestBoards(); }
+      });
+    });
+    shelf.querySelectorAll('.board-move').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        if(btn.disabled) return;
+        moveBoard(btn.dataset.id,btn.dataset.dir);
+      });
+    });
+    shelf.querySelectorAll('.board-title-input').forEach(function(input){
+      const committed=input.value;
+      input.addEventListener('keydown',function(e){
+        if(e.key==='Enter'){ e.preventDefault(); input.blur(); }
+      });
+      input.addEventListener('blur',function(){
+        const val=input.value.trim();
+        if(val!==committed) renameBoard(input.dataset.id,val);
       });
     });
     if(boards.length){ ensurePinterestScript(); requestPinterestBuild(); }

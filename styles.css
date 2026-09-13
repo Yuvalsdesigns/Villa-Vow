@@ -463,15 +463,23 @@
   .pinterest-board-tools{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px;}
   .pinterest-board-shelf{margin-top:14px;display:flex;flex-direction:column;gap:14px;}
   .pinterest-board-shelf:empty{display:none;}
-  .pinterest-board-item{position:relative;overflow:hidden;border-radius:var(--radius);}
-  .pinterest-board-title{font-size:13px;font-weight:700;color:var(--wine);margin:0 0 8px;padding-right:34px;}
-  .pinterest-board-item .board-remove{
-    position:absolute;top:8px;right:8px;z-index:2;width:26px;height:26px;border-radius:50%;
-    background:rgba(20,16,8,.55);border:none;display:flex;align-items:center;justify-content:center;
-    cursor:pointer;opacity:0;transition:opacity .12s;
+  .pinterest-board-item{overflow:hidden;border-radius:var(--radius);border:1px solid var(--line);}
+  .pinterest-board-head{display:flex;align-items:center;gap:6px;background:var(--surface-2);padding:6px 6px 6px 12px;}
+  .board-title-input{flex:1;min-width:0;border:none;background:transparent;font:700 13px 'Karla',sans-serif;color:var(--wine);padding:8px 6px;border-radius:8px;}
+  .board-title-input:focus{outline:none;background:var(--surface);box-shadow:0 0 0 2px var(--line);}
+  .board-title-input::placeholder{color:var(--ink-faint);font-weight:600;}
+  .board-head-actions{display:flex;gap:4px;flex:none;}
+  .board-head-actions button{
+    width:30px;height:30px;border-radius:50%;border:none;background:var(--surface);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-soft);
+    transition:background .12s,color .12s;
   }
-  .pinterest-board-item:hover .board-remove{opacity:1;}
-  .pinterest-board-item .board-remove svg{width:13px;height:13px;stroke:#fff;}
+  .board-head-actions button svg{width:15px;height:15px;stroke-width:2;}
+  .board-head-actions button:hover:not(:disabled){background:var(--line-soft);color:var(--wine);}
+  .board-head-actions button:disabled{opacity:.3;cursor:default;}
+  .board-move:not(.board-move-down) svg{transform:rotate(180deg);}
+  .board-remove{color:#b3372f !important;}
+  .board-remove:hover:not(:disabled){background:#f6d9d6 !important;}
   .pinterest-limit-note{font-size:11.5px;color:var(--ink-faint);line-height:1.45;margin-top:8px;}
   @media(max-width:620px){.pinterest-search-row,.pinterest-board-tools{grid-template-columns:1fr;}}
 
