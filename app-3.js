@@ -235,7 +235,26 @@ document.getElementById('diySaveBtn').addEventListener('click', ()=>{
   document.getElementById('diyThumbInput').value='';
 });
 
-let editingDiyId = null;
+let editingDiyId = null, editingDiyThumb = '';
+function readDiyEditThumb(file){
+  if(!file || !/^image\//.test(file.type)) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const max = 300, scale = Math.min(1, max/Math.max(img.width,img.height));
+      const canvas = document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      let q=.8, url=canvas.toDataURL('image/jpeg',q);
+      while(url.length>150000 && q>.4){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
+      editingDiyThumb = url;
+      const preview = document.getElementById('diyEditThumbPreview');
+      if(preview){ preview.src = url; preview.style.display='inline-block'; }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 function renderDiyIdeas(){
   const wrap = document.getElementById('diyGrid'); if(!wrap) return;
   wrap.innerHTML='';
@@ -250,19 +269,25 @@ function renderDiyIdeas(){
       + '<div class="diy-body">'
       + (editing
           ? '<textarea class="diy-desc-edit" rows="3">'+esc(idea.description)+'</textarea>'
+            + '<div style="display:flex;align-items:center;gap:8px;">'
+            + '<label class="btn small ghost" style="cursor:pointer;">'+(idea.thumbnail?'Change thumbnail':'Add thumbnail')+'<input type="file" id="diyEditThumbInput" accept="image/*" style="display:none;"></label>'
+            + '<img id="diyEditThumbPreview" src="'+esc(editingDiyThumb||'')+'" style="'+(editingDiyThumb?'':'display:none;')+'width:32px;height:32px;object-fit:cover;border-radius:6px;">'
+            + '</div>'
           : '<p class="diy-desc">'+esc(idea.description)+'</p>')
       + '<div class="diy-meta"><a href="'+esc(idea.url)+'" target="_blank" rel="noopener">'+esc(host)+' ↗</a></div>'
       + '<div class="diy-actions">'
       + (editing ? '<button class="btn small save-diy">Save</button>' : '<button class="btn small ghost edit-diy">Edit</button>')
       + '<button class="btn small danger-outline del-diy">Delete</button>'
       + '</div></div>';
-    card.querySelector('.edit-diy')?.addEventListener('click', ()=>{ editingDiyId = idea.id; renderDiyIdeas(); });
+    card.querySelector('.edit-diy')?.addEventListener('click', ()=>{ editingDiyId = idea.id; editingDiyThumb = idea.thumbnail||''; renderDiyIdeas(); });
+    card.querySelector('#diyEditThumbInput')?.addEventListener('change', e=>{ if(e.target.files[0]) readDiyEditThumb(e.target.files[0]); });
     card.querySelector('.save-diy')?.addEventListener('click', ()=>{
       const text = card.querySelector('.diy-desc-edit').value.trim();
       if(!text) return;
-      if(dbReady) db.collection('diyIdeas').doc(idea.id).update({description:text}).catch(err=>{ console.error('[DIY] update failed', err); alert('Could not save: '+err.message); });
-      else idea.description = text;
-      editingDiyId = null; renderDiyIdeas();
+      const data = {description:text, thumbnail: editingDiyThumb};
+      if(dbReady) db.collection('diyIdeas').doc(idea.id).update(data).catch(err=>{ console.error('[DIY] update failed', err); alert('Could not save: '+err.message); });
+      else Object.assign(idea, data);
+      editingDiyId = null; editingDiyThumb=''; renderDiyIdeas();
     });
     card.querySelector('.del-diy').addEventListener('click', ()=>{
       confirmAction('Delete this saved idea?', ()=>{
