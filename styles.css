@@ -103,7 +103,7 @@
     flex:none;
   }
   .brand-text h1{font-family:'Armelie','Fraunces',Georgia,serif;font-size:24px;line-height:1.1;font-style:normal;font-weight:400;color:var(--ink);}
-  .brand-text h1 .amp, .view-head h2 .amp{display:inline;font-family:'Fraunces',Georgia,serif;font-style:italic;color:inherit;letter-spacing:normal;text-transform:none;font-size:0.65em;}
+  .brand-text h1 .amp, .view-head h2 .amp{display:inline-block;font-family:'Fraunces',Georgia,serif;font-style:italic;color:inherit;letter-spacing:normal;text-transform:none;font-size:0.65em;margin:0 -0.18em;}
   .brand-text span{font-size:11px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;letter-spacing:.03em;}
 
   nav.tabs{display:flex;flex-direction:column;gap:2px;flex:1;overflow-y:auto;}
