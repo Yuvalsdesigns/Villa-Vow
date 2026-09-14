@@ -358,7 +358,15 @@
       }else{
         const nonce=boardRefreshNonce.get(b.id);
         const embedHref=nonce?b.url+(b.url.indexOf('?')<0?'?':'&')+'_r='+nonce:b.url;
-        body='<a data-pin-do="embedBoard" data-pin-board-width="'+boardWidth+'" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(embedHref)+'"></a>';
+        /* data-pin-scale-height/-width set the pixel size of the widget's
+           preview grid; a board with more pins than fit in that area just
+           gets cut off, it's not a bug, Pinterest's board widget only ever
+           shows a preview, not the whole board. Raised well past the
+           default (420) so a board with many pins (e.g. lots of dresses)
+           has more room to show more of them before being cut off, though
+           a board with enough pins will still always be truncated
+           somewhere; only pinterest.com itself shows literally all of it. */
+        body='<a data-pin-do="embedBoard" data-pin-board-width="'+boardWidth+'" data-pin-scale-height="1200" data-pin-scale-width="110" href="'+esc(embedHref)+'"></a>';
         hasWidgetBoard=true;
       }
       return '<div class="pinterest-board-item">'
