@@ -225,9 +225,20 @@
      iframe at build time, it does not respond to CSS or container resizes
      on its own, so a hardcoded width left a large empty gap once the
      moodboard view was allowed to grow past that number on a wide screen. */
+  /* This value is handed straight to Pinterest's widget as
+     data-pin-board-width, which sets the fixed pixel width of the iframe
+     it builds. The page's own container width was made viewport-relative
+     with no ceiling (see the Moodboard/Venues/Budget/d.i.y width rules in
+     styles.css) so it keeps growing on a wide monitor, but this cap was
+     still fixed at 1600, so past that point the surrounding box kept
+     growing while the iframe inside it stopped, which is exactly the
+     "empty space on the right" a wide-enough screen would show. Raised
+     well past any width a real screen is likely to hand it; Pinterest's
+     own widget may still enforce some internal limit of its own beyond
+     this, which isn't something this page can detect or control. */
   function pinterestBoardWidth(shelf){
     const available=(shelf&&shelf.clientWidth)||(shelf&&shelf.parentElement&&shelf.parentElement.clientWidth)||900;
-    return Math.max(500, Math.min(1600, Math.round(available)));
+    return Math.max(500, Math.min(3000, Math.round(available)));
   }
 
   /* One board-shelf feature is used in two places (Moodboard and Wedding
