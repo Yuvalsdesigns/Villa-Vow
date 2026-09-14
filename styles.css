@@ -364,6 +364,7 @@
   .venue-body p{font-size:13.5px;line-height:1.55;color:var(--ink-soft);}
   .venue-facts{display:flex;flex-wrap:wrap;gap:6px;}
   .fact{font-size:11.5px;background:var(--surface-2);border:1px solid var(--line);padding:3px 8px;border-radius:20px;color:var(--ink-soft);}
+  .fact-capacity{background:var(--brass-soft);border-color:var(--brass);color:var(--brass);font-weight:600;}
   .venue-foot{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:6px;}
   .heart{background:none;border:none;cursor:pointer;color:var(--wine);}
   .heart svg{width:19px;height:19px;stroke:currentColor;fill:none;}
@@ -625,8 +626,9 @@
   }
   .venue-hero .venue-image-label{position:relative;z-index:2;}
   .venue-hero .price{position:relative;z-index:3;}
-  .venue-discovery{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:8px;margin:0 0 20px;}
+  .venue-discovery{display:grid;grid-template-columns:1.3fr .85fr .85fr .85fr;gap:8px;margin:0 0 8px;}
   .venue-discovery input,.venue-discovery select{width:100%;}
+  .venue-capacity-note{margin:0 0 20px;color:var(--ink-faint);font-size:11.5px;line-height:1.5;}
   .discovery-note{margin:0 0 18px;padding:12px 14px;border:1px dashed var(--line);border-radius:var(--radius);background:var(--surface-2);color:var(--ink-soft);font-size:12.5px;line-height:1.55;}
   .venue-card .venue-image-credit{font-size:10px;color:var(--ink-faint);}
   .venue-card .venue-foot{gap:7px;flex-wrap:wrap;}

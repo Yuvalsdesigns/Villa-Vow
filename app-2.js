@@ -702,6 +702,26 @@ const VENUES_PART_5 = [
 
 const VENUES = [...VENUES_PART_1,...VENUES_PART_2,...VENUES_PART_3,...VENUES_PART_4,...VENUES_PART_5];
 
+/* There's no structured guest-capacity field on these venue entries, only
+   free-text desc/facts written as prose ("wedding day up to 30", "Masserias
+   sleeping 30-40 guests", "Large event capacity available" with no number
+   at all). This pulls out a best-effort number rather than adding one, in
+   the same spirit as the page's existing "verification item" disclaimer
+   for kosher/chuppah/pricing: prefers phrasing that's actually about event
+   capacity ("wedding day", "capacity") over sleeping/accommodation counts,
+   which describe a different thing, and returns null (not zero) when
+   nothing usable is there so those venues aren't wrongly filtered out. */
+function extractVenueCapacity(v){
+  const text=[v.desc,...(v.facts||[])].join(' ');
+  let m=text.match(/wedding day up to (\d+)/i); if(m) return parseInt(m[1],10);
+  m=text.match(/(?:event )?capacity (?:of |up to |: )?(\d+)/i); if(m) return parseInt(m[1],10);
+  m=text.match(/(\d+)\s*[–-]\s*(\d+)\s*guests/i); if(m) return parseInt(m[2],10);
+  m=text.match(/up to (\d+)\s*guests/i); if(m) return parseInt(m[1],10);
+  m=text.match(/(\d+)\+?\s*guests/i); if(m) return parseInt(m[1],10);
+  m=text.match(/sleeping (\d+)/i); if(m) return parseInt(m[1],10);
+  m=text.match(/sleeps?\s*(\d+)/i); if(m) return parseInt(m[1],10);
+  return null;
+}
 function renderVenueFilters(){
   const regionSel=document.getElementById('venueRegionFilter');
   const tagSel=document.getElementById('venueTagFilter');
@@ -716,10 +736,13 @@ function renderVenues(){
   const q=(document.getElementById('venueSearch')?.value||'').trim().toLowerCase();
   const region=(document.getElementById('venueRegionFilter')?.value||'').toLowerCase();
   const tag=(document.getElementById('venueTagFilter')?.value||'').toLowerCase();
+  const minGuests=parseInt(document.getElementById('venueCapacityFilter')?.value||'',10);
   grid.innerHTML='';
   const filtered=VENUES.filter(v=>{
     const hay=[v.name,v.region,v.desc,...(v.facts||[])].join(' ').toLowerCase();
-    return (!q || hay.includes(q)) && (!region || v.region.toLowerCase().startsWith(region)) && (!tag || (v.badge||'').toLowerCase()===tag);
+    const capacity=extractVenueCapacity(v);
+    return (!q || hay.includes(q)) && (!region || v.region.toLowerCase().startsWith(region)) && (!tag || (v.badge||'').toLowerCase()===tag)
+      && (!minGuests || capacity===null || capacity>=minGuests);
   });
   if(!filtered.length){
     grid.innerHTML='<div class="empty-board" style="grid-column:1/-1;">No matches yet. Try a broader search.</div>';
@@ -727,6 +750,7 @@ function renderVenues(){
   }
   filtered.forEach(v=>{
     const fav = state.venues[v.id]||{};
+    const capacity=extractVenueCapacity(v);
     const card = document.createElement('div'); card.className='venue-card';
     const venuePhoto = v.image || STYLE_PHOTOS[{
       'tuscany':'venueTuscany','puglia':'venuePuglia','provence':'venueProvence','algarve':'venueAlgarve','dajas':'venueDouro',
@@ -743,7 +767,7 @@ function renderVenues(){
       + '<div class="venue-body">'
       + '<div><h3>'+esc(v.name)+'</h3><div class="region">'+esc(v.region)+'</div></div>'
       + '<p>'+esc(v.desc)+'</p>'
-      + '<div class="venue-facts">'+(v.facts||[]).map(f=>'<span class="fact">'+esc(f)+'</span>').join('')+'</div>'
+      + '<div class="venue-facts">'+(capacity!==null?'<span class="fact fact-capacity">~'+capacity+' guests</span>':'')+(v.facts||[]).map(f=>'<span class="fact">'+esc(f)+'</span>').join('')+'</div>'
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'+(v.sources||[]).map(s=>'<a class="src-link" target="_blank" rel="noopener" href="'+esc(s[1])+'">'+esc(s[0])+' ↗</a>').join('')+'</div>'
       + '<div class="venue-image-credit">'+(v.image ? 'Venue / wedding source image' : 'Destination visual reference, verify the exact property photo before publishing')+'</div>'
       + '<div class="venue-note"><textarea placeholder="Notes on '+esc(v.name)+'…">'+esc(fav.note||'')+'</textarea></div>'
@@ -756,7 +780,7 @@ function renderVenues(){
   });
 }
 renderVenueFilters();
-['venueSearch','venueRegionFilter','venueTagFilter'].forEach(id=>document.getElementById(id)?.addEventListener('input',renderVenues));
+['venueSearch','venueRegionFilter','venueTagFilter','venueCapacityFilter'].forEach(id=>document.getElementById(id)?.addEventListener('input',renderVenues));
 function setVenueFav(id, data){
   state.venues[id] = Object.assign({}, state.venues[id], data);
   if(dbReady) db.collection('venueFavorites').doc(id).set(state.venues[id]);
