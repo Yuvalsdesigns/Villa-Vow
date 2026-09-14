@@ -674,6 +674,12 @@
   .board-move:not(.board-move-down) svg{transform:rotate(180deg);}
   .board-remove{color:#b3372f !important;}
   .pinterest-board-url-row{background:var(--surface-2);padding:0 6px 8px 12px;}
+  /* Same idea as the auto-growing, manually-resizable textareas elsewhere
+     (Budget notes, Checklist items): a default height that still lets you
+     scroll to see everything, with a drag handle (the browser's native
+     resize grip, bottom-right corner) to make any one board taller or
+     shorter on demand. */
+  .pinterest-board-embed-wrap{resize:vertical;overflow-x:hidden;overflow-y:auto;height:420px;min-height:160px;max-height:2400px;}
   .board-url-input{width:100%;box-sizing:border-box;border:none;background:transparent;font:12px 'IBM Plex Mono',monospace;color:var(--ink-soft);padding:5px 6px;border-radius:8px;}
   .board-url-input:focus{outline:none;background:var(--surface);box-shadow:0 0 0 2px var(--line);color:var(--ink);}
   .board-url-input::placeholder{color:var(--ink-faint);}

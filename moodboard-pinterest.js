@@ -240,6 +240,16 @@
     let localBoards=[];
     let lastWidth=null;
     const refreshNonce=new Map();
+    /* Pinterest's widget renders at whatever height its content needs
+       (especially now that the preview area is set tall, see the
+       data-pin-scale-height comment below), which made a board with a lot
+       of pins take over the whole page. Wrapping it in its own scrollable
+       box, sized like a resizable textarea, lets each board be shrunk or
+       grown on demand instead of every board being either fully expanded
+       or fully hidden. Heights are kept in memory only (not saved to
+       Firestore), same as scroll position, since it's just a per-viewing
+       preference. */
+    const embedHeights=new Map();
 
     function boardList(){ return (dbReady?state[cfg.stateKey]:localBoards)||[]; }
 
@@ -370,9 +380,19 @@
             +'</div>'
           +'</div>'
           +'<div class="pinterest-board-url-row"><input class="board-url-input" type="text" value="'+esc(b.url||'')+'" placeholder="https://www.pinterest.com/you/board/" data-id="'+id+'" spellcheck="false"></div>'
-          +body
+          +'<div class="pinterest-board-embed-wrap" data-id="'+id+'"'+(embedHeights.has(b.id)?' style="height:'+embedHeights.get(b.id)+'px"':'')+'>'+body+'</div>'
           +'</div>';
       }).join('');
+      /* Track whatever height each box ends up at, whether from the user
+         dragging its resize handle or just its initial CSS default, so the
+         next render (adding a board, editing a URL, refreshing) restores
+         it instead of snapping back to the default every time. */
+      shelf.querySelectorAll('.pinterest-board-embed-wrap').forEach(function(wrap){
+        new ResizeObserver(function(entries){
+          const h=Math.round(entries[0].contentRect.height);
+          if(h>0) embedHeights.set(wrap.dataset.id,h);
+        }).observe(wrap);
+      });
       shelf.querySelectorAll('.section-retry').forEach(function(btn){
         btn.addEventListener('click',function(){
           sectionGalleryCache.delete(btn.dataset.url);
