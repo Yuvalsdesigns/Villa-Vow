@@ -17,7 +17,16 @@
       if(parts[0]&&parts[0].toLowerCase()==='pin'&&parts[1]){
         return {kind:'pin',url:'https://www.pinterest.com/pin/'+encodeURIComponent(parts[1])+'/'};
       }
-      if(parts.length>=2){
+      /* A board can be organized into sections (e.g. a "Flowers" section
+         inside a "Wedding" board), which live at a THIRD path segment:
+         pinterest.com/you/wedding-board/flowers/. Dropping that segment
+         collapsed every section link back down to the same whole-board
+         URL, which is why two different sections ended up embedding
+         identical content. Keep it when present. */
+      if(parts.length>=3){
+        return {kind:'board',url:'https://www.pinterest.com/'+encodeURIComponent(parts[0])+'/'+encodeURIComponent(parts[1])+'/'+encodeURIComponent(parts[2])+'/'};
+      }
+      if(parts.length===2){
         return {kind:'board',url:'https://www.pinterest.com/'+encodeURIComponent(parts[0])+'/'+encodeURIComponent(parts[1])+'/'};
       }
       return null;
@@ -202,12 +211,14 @@
     const available=(shelf&&shelf.clientWidth)||(shelf&&shelf.parentElement&&shelf.parentElement.clientWidth)||900;
     return Math.max(500, Math.min(1600, Math.round(available)));
   }
+  let lastPinterestBoardWidth=null;
   window.renderPinterestBoards=function(){
     const shelf=document.getElementById('pinterestBoardShelf');
     if(!shelf) return;
     migrateLegacyBoardUrl();
     const boards=boardList();
     const boardWidth=pinterestBoardWidth(shelf);
+    lastPinterestBoardWidth=boardWidth;
     shelf.innerHTML=boards.map(function(b,i){
       const id=esc(b.id||'');
       return '<div class="pinterest-board-item">'
@@ -252,15 +263,23 @@
     if(boards.length){ ensurePinterestScript(); requestPinterestBuild(); }
   };
 
-  /* The embed's width is fixed at build time, so a window resize (or the
-     moodboard container simply becoming visible at its real size, since a
-     hidden view measures 0 width) needs a full rebuild to pick up the new
-     size, not just a rebuild of the existing iframe. */
+  /* The embed's width is fixed at build time, so a genuine window resize
+     (or the moodboard container simply becoming visible at its real size,
+     since a hidden view measures 0 width) needs a full rebuild to pick up
+     the new size, not just a rebuild of the existing iframe. Mobile browsers
+     also fire "resize" purely from the address bar showing/hiding while you
+     scroll, with no width change at all; rebuilding on those (destroying and
+     recreating every board's iframe mid-scroll) is what caused the page to
+     visibly jump, so skip the rebuild unless the measured width actually
+     changed. */
   let boardResizeTimer=null;
   window.addEventListener('resize', function(){
     clearTimeout(boardResizeTimer);
     boardResizeTimer=setTimeout(function(){
-      if(document.getElementById('pinterestBoardShelf')) window.renderPinterestBoards();
+      const shelf=document.getElementById('pinterestBoardShelf');
+      if(!shelf) return;
+      if(pinterestBoardWidth(shelf)===lastPinterestBoardWidth) return;
+      window.renderPinterestBoards();
     }, 300);
   });
 
