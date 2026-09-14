@@ -191,8 +191,8 @@
      container only while one of these views is active, so a full screen
      actually uses the space and a narrower one falls back like every
      other page. */
-  #view-board.active, #view-venues.active, #view-budget.active{max-width:1680px;}
-  main:has(#view-board.active), main:has(#view-venues.active), main:has(#view-budget.active){max-width:1720px;}
+  #view-board.active, #view-venues.active, #view-budget.active, #view-diy.active{max-width:1680px;}
+  main:has(#view-board.active), main:has(#view-venues.active), main:has(#view-budget.active), main:has(#view-diy.active){max-width:1720px;}
   /* Checklist/Things to Get are a single column of text, not a grid, so
      stretching them as wide as the grid pages would leave a short item
      looking lost on a near-edge-to-edge line. A smaller bump still uses
