@@ -84,10 +84,15 @@ const TABS = [
 const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac'};
 const tabNav = document.getElementById('tabNav');
 const tabsScrollArrow = document.getElementById('tabsScrollArrow');
+/* Only these tabs ever get a count filled in by renderStart() below; an
+   empty .count span still renders as a small pill (its padding/background
+   apply with no text), which looked like a stray dash after every other
+   tab, so skip creating it for tabs that will never have one. */
+const TABS_WITH_COUNT = new Set(['todo','considerations','board','budget']);
 TABS.forEach(t=>{
   const b = document.createElement('button');
   b.className='tab-btn tabtint-'+TAB_TINTS[t.id]; b.dataset.tab=t.id;
-  b.innerHTML = svg(t.icon) + '<span>'+t.label+'</span><span class="count" data-count="'+t.id+'"></span>';
+  b.innerHTML = svg(t.icon) + '<span>'+t.label+'</span>' + (TABS_WITH_COUNT.has(t.id) ? '<span class="count" data-count="'+t.id+'"></span>' : '');
   b.addEventListener('click', ()=> showTab(t.id));
   tabNav.appendChild(b);
 });

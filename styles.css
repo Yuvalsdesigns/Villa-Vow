@@ -151,6 +151,10 @@
     background:rgba(0,0,0,.08);padding:1px 6px;border-radius:20px;
   }
   .tab-btn.active .count{background:rgba(255,255,255,.22);}
+  /* An empty count badge (e.g. a real count of 0, or one no tab data has
+     been assigned yet) still renders its background/padding as a small
+     dash-like pill with no visible text, hide it outright when empty. */
+  .tab-btn .count:empty{display:none;}
 
   .sidebar-foot{display:none;}
 

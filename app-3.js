@@ -707,6 +707,13 @@ function buildMobileNav(){
   scroll.addEventListener('scroll', mobileNavUpdateArrow);
   window.addEventListener('resize', mobileNavUpdateArrow);
   setTimeout(mobileNavUpdateArrow, 0);
+  /* showTab() already restored the right page before this script even
+     loaded (app-1.js runs first and calls it once on startup), but that
+     first call happened before syncMobileNav existed to highlight the
+     matching bottom-nav button, so the nav looked reset even though the
+     content wasn't. Sync it now to whatever is actually showing. */
+  const currentView = document.querySelector('.view.active');
+  if(currentView) syncMobileNav(currentView.id.replace('view-',''));
 }
 function syncMobileNav(activeId){
   document.querySelectorAll('#vvMobileNav button[data-tab]').forEach(b=> b.classList.toggle('active', b.dataset.tab===activeId));
