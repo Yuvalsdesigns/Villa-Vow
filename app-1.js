@@ -21,6 +21,7 @@ const ICON = {
   chevron:'<path d="M6 9l6 6 6-6"/>',
   external:'<path d="M14 5h5v5M19 5l-9 9M9 5H6a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1v-3"/>',
   refresh:'<path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0020.49 15"/>',
+  compass:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
   check2:'<path d="M4 12l5 5L20 6"/>',
   dressA:'<path d="M12 3v6M9.5 9l-4 12h13l-4-12M9.5 9c0-2 1-3 2.5-3s2.5 1 2.5 3"/>',
   dressMermaid:'<path d="M12 3v5M9.5 8c0 3-2 6-2.5 10 1.7 2.5 6.3 2.5 8 0-.5-4-2.5-7-2.5-10M9.5 8c0-2 1-3 2.5-3s2.5 1 2.5 3"/>',
@@ -81,8 +82,9 @@ const TABS = [
   {id:'emails', label:'Emails and Gifts', icon:ICON.mail},
   {id:'guestapp', label:'Guest App', icon:ICON.guests},
   {id:'diy', label:'Wedding d.i.y', icon:ICON.scissors},
+  {id:'travelguide', label:'Travel Guide', icon:ICON.compass},
 ];
-const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac'};
+const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac', travelguide:'brass'};
 const tabNav = document.getElementById('tabNav');
 const tabsScrollArrow = document.getElementById('tabsScrollArrow');
 const tabsScrollArrowLeft = document.getElementById('tabsScrollArrowLeft');
@@ -90,7 +92,7 @@ const tabsScrollArrowLeft = document.getElementById('tabsScrollArrowLeft');
    empty .count span still renders as a small pill (its padding/background
    apply with no text), which looked like a stray dash after every other
    tab, so skip creating it for tabs that will never have one. */
-const TABS_WITH_COUNT = new Set(['todo','considerations','board','budget']);
+const TABS_WITH_COUNT = new Set(['todo','considerations','board','budget','travelguide']);
 TABS.forEach(t=>{
   const b = document.createElement('button');
   b.className='tab-btn tabtint-'+TAB_TINTS[t.id]; b.dataset.tab=t.id;
@@ -123,7 +125,7 @@ function showTab(id){
   if(id==='budget' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
   if(id==='board' && typeof renderPinterestBoards==='function') renderPinterestBoards();
   if(id==='diy' && typeof renderDiyPinterestBoards==='function') renderDiyPinterestBoards();
-  if((id==='todo' || id==='considerations') && typeof resizeAllItemTextareas==='function') resizeAllItemTextareas();
+  if((id==='todo' || id==='considerations' || id==='travelguide') && typeof resizeAllItemTextareas==='function') resizeAllItemTextareas();
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}
   setTimeout(updateTabsScrollArrow, 260);
 }
@@ -155,6 +157,7 @@ function renderStart(){
     if(k==='considerations') c.textContent = considDone+'/'+state.considerations.length;
     if(k==='board') c.textContent = pins||'';
     if(k==='budget') c.textContent = state.budget.length||'';
+    if(k==='travelguide') c.textContent = state.travelGuide.filter(t=>t.done).length+'/'+state.travelGuide.length;
   });
 }
 function tile(n,l,accent){ return '<div class="stat-tile'+(accent?' accent':'')+'"><div class="n mono">'+n+'</div><div class="l">'+l+'</div></div>'; }
@@ -246,7 +249,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 "use strict";
 
 let db = null, dbReady=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[] };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -623,6 +626,10 @@ async function initDb(){
       state.considerations = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_CONSIDERATIONS.map(([category,text],i)=>({id:'seed-consid-'+i, category, text, done:false, order:i}));
       renderConsiderations(); renderStart();
     }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('travelGuide').orderBy('order','asc').onSnapshot(snap=>{
+      state.travelGuide = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(typeof renderTravelGuide==='function'){ renderTravelGuide(); renderStart(); }
+    }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('guests').orderBy('order','asc').onSnapshot(snap=>{
       state.guests = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderGuestApp();
@@ -692,7 +699,7 @@ function renderTodos(){
    Get tab isn't the one currently visible (their normal state, since
    both render regardless of which tab is open), so re-run it once the
    tab actually becomes visible too (see showTab). */
-function resizeAllItemTextareas(){ document.querySelectorAll('#view-todo textarea.item-text, #view-considerations textarea.item-text').forEach(autoGrowTextarea); }
+function resizeAllItemTextareas(){ document.querySelectorAll('#view-todo textarea.item-text, #view-considerations textarea.item-text, #view-travelguide textarea.item-text').forEach(autoGrowTextarea); }
 function itemRow(it, coll){
   const row = document.createElement('div'); row.className='item-row'+(it.done?' done':'');
   row.draggable = true;
@@ -821,24 +828,24 @@ function reorderItems(coll, category, draggedId, targetId, before){
       if(dbReady) db.collection(coll).doc(it.id).update({order:newOrder});
     }
   });
-  if(!dbReady) ({todos:renderTodos, considerations:renderConsiderations})[coll]();
+  if(!dbReady) ({todos:renderTodos, considerations:renderConsiderations, travelGuide:renderTravelGuide})[coll]();
 }
 function addItem(coll, data){
   if(dbReady){ db.collection(coll).add(data); }
-  else { localAdd(state[coll], data); ({todos:renderTodos, considerations:renderConsiderations})[coll](); renderStart(); }
+  else { localAdd(state[coll], data); ({todos:renderTodos, considerations:renderConsiderations, travelGuide:renderTravelGuide})[coll](); renderStart(); }
 }
 function toggleItem(coll, it){
   if(dbReady){ db.collection(coll).doc(it.id).update({done: !it.done}); }
-  else { it.done = !it.done; ({todos:renderTodos, considerations:renderConsiderations})[coll](); renderStart(); }
+  else { it.done = !it.done; ({todos:renderTodos, considerations:renderConsiderations, travelGuide:renderTravelGuide})[coll](); renderStart(); }
 }
 function updateItem(coll, it, data){
   Object.assign(it, data);
   if(dbReady){ db.collection(coll).doc(it.id).update(data); }
-  else { ({todos:renderTodos, considerations:renderConsiderations})[coll](); }
+  else { ({todos:renderTodos, considerations:renderConsiderations, travelGuide:renderTravelGuide})[coll](); }
 }
 function deleteItem(coll, it){
   if(dbReady){ db.collection(coll).doc(it.id).delete(); }
-  else { state[coll]=state[coll].filter(x=>x.id!==it.id); ({todos:renderTodos, considerations:renderConsiderations})[coll](); renderStart(); }
+  else { state[coll]=state[coll].filter(x=>x.id!==it.id); ({todos:renderTodos, considerations:renderConsiderations, travelGuide:renderTravelGuide})[coll](); renderStart(); }
 }
 
 /* ---------------- CONSIDERATIONS ---------------- */
@@ -867,6 +874,46 @@ function renderConsiderations(){
     add.querySelector('button').addEventListener('click', ()=>{
       const input = add.querySelector('input'); if(!input.value.trim()) return;
       addItem('considerations', {text:input.value.trim(), category:g, done:false, order: Date.now()});
+      input.value='';
+    });
+    add.querySelector('input').addEventListener('keydown', e=>{ if(e.key==='Enter') add.querySelector('button').click(); });
+    box.appendChild(add);
+    wrap.appendChild(box);
+  });
+  resizeAllItemTextareas();
+}
+
+/* ---------------- TRAVEL GUIDE ---------------- */
+/* The venue (and so the destination) usually isn't locked in yet, so this
+   starts as a ready-to-fill layout rather than empty: one example prompt
+   per section, worded as a placeholder, so the shape of the page is clear
+   even before there's a real destination to write about. Real content
+   replaces these once the venue is booked (see ensureTravelGuideSeedMigration
+   in firebase-sync.js for the actual seed text). */
+const TRAVEL_GROUPS = ['Getting there','Getting to the venue','Where guests can stay','Getting around locally','Weather & what to pack','Local culture & language','Things to do nearby','Practical & emergency info'];
+function renderTravelGuide(){
+  const wrap = document.getElementById('travelGroups');
+  if(!wrap) return;
+  const done = state.travelGuide.filter(t=>t.done).length;
+  document.getElementById('travelStats').innerHTML = [
+    tile(done+' / '+state.travelGuide.length,'Sections filled in', true),
+    tile(String(state.travelGuide.filter(t=>!t.done).length),'Still to fill in'),
+  ].join('');
+  wrap.innerHTML = '';
+  TRAVEL_GROUPS.forEach((g,gi)=>{
+    const items = state.travelGuide.filter(t=>t.category===g);
+    const tint = GROUP_TINTS[gi % GROUP_TINTS.length];
+    const box = document.createElement('div'); box.className='group';
+    box.innerHTML = '<div class="group-head"><h3 class="tint-text-'+tint+'">'+g+'</h3><span class="sub tint-'+tint+'">'+items.filter(i=>i.done).length+'/'+items.length+'</span></div>';
+    const list = document.createElement('div'); list.className='item-list';
+    if(items.length===0){ list.innerHTML = '<div class="item-row"><span class="item-text" style="color:var(--ink-faint)">Nothing here yet.</span></div>'; }
+    items.forEach(it=> list.appendChild(itemRow(it,'travelGuide')) );
+    box.appendChild(list);
+    const add = document.createElement('div'); add.className='add-row';
+    add.innerHTML = '<input type="text" placeholder="Add a detail…"><button class="btn small">'+svg(ICON.plus)+'</button>';
+    add.querySelector('button').addEventListener('click', ()=>{
+      const input = add.querySelector('input'); if(!input.value.trim()) return;
+      addItem('travelGuide', {text:input.value.trim(), category:g, done:false, order: Date.now()});
       input.value='';
     });
     add.querySelector('input').addEventListener('keydown', e=>{ if(e.key==='Enter') add.querySelector('button').click(); });

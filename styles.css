@@ -197,8 +197,8 @@
      stretching them as wide as the grid pages would leave a short item
      looking lost on a near-edge-to-edge line. A smaller bump still uses
      more of a full screen without hurting line length too much. */
-  #view-todo.active, #view-considerations.active{max-width:1400px;}
-  main:has(#view-todo.active), main:has(#view-considerations.active){max-width:1440px;}
+  #view-todo.active, #view-considerations.active, #view-travelguide.active{max-width:1400px;}
+  main:has(#view-todo.active), main:has(#view-considerations.active), main:has(#view-travelguide.active){max-width:1440px;}
   .view-head{margin-bottom:26px;}
   .view-head h2{font-family:'Armelie','Fraunces',Georgia,serif;font-size:40px;margin-bottom:8px;font-style:normal;font-weight:400;}
   .view-head p{color:var(--ink-soft);font-size:14.5px;max-width:640px;line-height:1.55;}
