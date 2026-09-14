@@ -179,20 +179,35 @@
     if(b) b.title=newTitle;
   }
 
-  function addPinterestBoard(rawUrl){
+  function updateBoardUrl(id,newUrl){
+    if(dbReady&&id){ db.collection('pinterestBoards').doc(id).update({url:newUrl}); return; }
+    const b=localPinterestBoards.find(function(x){return x.id===id;});
+    if(b){ b.url=newUrl; window.renderPinterestBoards(); }
+  }
+
+  /* Shared by both the "add a board" form and in-place URL editing, so a
+     board or section link is validated (and the same warnings shown) the
+     same way whichever path added or changed it. */
+  function validateBoardUrl(rawUrl){
     const parsed=classifyPinterestUrl(rawUrl);
     if(!parsed){
       boardWarn('That does not look like a Pinterest board URL.');
-      return;
+      return null;
     }
     if(parsed.kind==='short'){
       boardWarn('Pinterest short links need the full board address first. <a target="_blank" rel="noopener" href="'+esc(parsed.url)+'">Open Pinterest ↗</a>, then copy the full board URL from the address bar and paste it here.');
-      return;
+      return null;
     }
     if(parsed.kind!=='board'){
       boardWarn('That is an individual Pinterest Pin, not a board. Use “+ Pinterest” below for individual Pins.');
-      return;
+      return null;
     }
+    return parsed;
+  }
+
+  function addPinterestBoard(rawUrl){
+    const parsed=validateBoardUrl(rawUrl);
+    if(!parsed) return;
     const titleInput=document.getElementById('pinterestBoardTitle');
     const title=(titleInput&&titleInput.value.trim())||'';
     const data={url:parsed.url,title:title,addedAt:Date.now()};
@@ -230,6 +245,7 @@
             +'<button class="board-remove" type="button" data-id="'+id+'" aria-label="Remove board">'+svg(ICON.x)+'</button>'
           +'</div>'
         +'</div>'
+        +'<div class="pinterest-board-url-row"><input class="board-url-input" type="text" value="'+esc(b.url||'')+'" placeholder="https://www.pinterest.com/you/board/" data-id="'+id+'" spellcheck="false"></div>'
         +'<a data-pin-do="embedBoard" data-pin-board-width="'+boardWidth+'" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(b.url)+'"></a>'
         +'</div>';
     }).join('');
@@ -258,6 +274,19 @@
       input.addEventListener('blur',function(){
         const val=input.value.trim();
         if(val!==committed) renameBoard(input.dataset.id,val);
+      });
+    });
+    shelf.querySelectorAll('.board-url-input').forEach(function(input){
+      const committed=input.value;
+      input.addEventListener('keydown',function(e){
+        if(e.key==='Enter'){ e.preventDefault(); input.blur(); }
+      });
+      input.addEventListener('blur',function(){
+        const val=input.value.trim();
+        if(val===committed) return;
+        const parsed=validateBoardUrl(val);
+        if(!parsed){ input.value=committed; return; }
+        updateBoardUrl(input.dataset.id,parsed.url);
       });
     });
     if(boards.length){ ensurePinterestScript(); requestPinterestBuild(); }

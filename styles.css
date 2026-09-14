@@ -673,6 +673,10 @@
   .board-head-actions button:disabled{opacity:.3;cursor:default;}
   .board-move:not(.board-move-down) svg{transform:rotate(180deg);}
   .board-remove{color:#b3372f !important;}
+  .pinterest-board-url-row{background:var(--surface-2);padding:0 6px 8px 12px;}
+  .board-url-input{width:100%;box-sizing:border-box;border:none;background:transparent;font:12px 'IBM Plex Mono',monospace;color:var(--ink-soft);padding:5px 6px;border-radius:8px;}
+  .board-url-input:focus{outline:none;background:var(--surface);box-shadow:0 0 0 2px var(--line);color:var(--ink);}
+  .board-url-input::placeholder{color:var(--ink-faint);}
   .board-remove:hover:not(:disabled){background:#f6d9d6 !important;}
   .pinterest-limit-note{font-size:11.5px;color:var(--ink-faint);line-height:1.45;margin-top:8px;}
   @media(max-width:620px){.pinterest-search-row,.pinterest-board-tools{grid-template-columns:1fr;}}
