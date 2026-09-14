@@ -280,6 +280,18 @@
     if(titleInput) titleInput.value='';
   }
 
+  /* Pinterest's board widget (and, it turns out, Pinterest's own backend)
+     can keep showing a board's previous pins for a while after you've
+     actually moved/removed them on pinterest.com, since the embed is
+     fetched by Pinterest's servers from their own cache of that board,
+     not re-read live on every page load. A normal refresh doesn't help
+     because the URL is unchanged. Appending a one-off query parameter
+     when rebuilding a specific board's embed gives Pinterest a URL it
+     hasn't served before, which is a standard way to bypass a cache like
+     that; it's a real cache-buster, not guaranteed against every kind of
+     caching Pinterest might be doing on their end. */
+  const boardRefreshNonce=new Map();
+
   /* Pinterest's embed widget bakes data-pin-board-width into a fixed-size
      iframe at build time, it does not respond to CSS or container resizes
      on its own, so a hardcoded width left a large empty gap once the
@@ -321,13 +333,16 @@
           pendingSectionUrls.push(b.url);
         }
       }else{
-        body='<a data-pin-do="embedBoard" data-pin-board-width="'+boardWidth+'" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(b.url)+'"></a>';
+        const nonce=boardRefreshNonce.get(b.id);
+        const embedHref=nonce?b.url+(b.url.indexOf('?')<0?'?':'&')+'_r='+nonce:b.url;
+        body='<a data-pin-do="embedBoard" data-pin-board-width="'+boardWidth+'" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(embedHref)+'"></a>';
         hasWidgetBoard=true;
       }
       return '<div class="pinterest-board-item">'
         +'<div class="pinterest-board-head">'
           +'<input class="board-title-input" type="text" value="'+esc(b.title||'')+'" placeholder="Add a title, e.g. Flowers" data-id="'+id+'">'
           +'<div class="board-head-actions">'
+            +(kind!=='section'?'<button class="board-refresh" type="button" data-id="'+id+'" aria-label="Refresh this board’s pins">'+svg(ICON.refresh)+'</button>':'')
             +'<button class="board-move" type="button" data-dir="up" data-id="'+id+'" aria-label="Move board up"'+(i===0?' disabled':'')+'>'+svg(ICON.chevron)+'</button>'
             +'<button class="board-move board-move-down" type="button" data-dir="down" data-id="'+id+'" aria-label="Move board down"'+(i===boards.length-1?' disabled':'')+'>'+svg(ICON.chevron)+'</button>'
             +'<button class="board-remove" type="button" data-id="'+id+'" aria-label="Remove board">'+svg(ICON.x)+'</button>'
@@ -344,6 +359,12 @@
       });
     });
     pendingSectionUrls.forEach(function(url){ resolveSectionGallery(url); });
+    shelf.querySelectorAll('.board-refresh').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        boardRefreshNonce.set(btn.dataset.id,Date.now());
+        window.renderPinterestBoards();
+      });
+    });
     shelf.querySelectorAll('.board-remove').forEach(function(btn){
       btn.addEventListener('click',function(){
         const id=btn.dataset.id;

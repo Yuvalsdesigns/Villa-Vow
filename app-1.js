@@ -20,6 +20,7 @@ const ICON = {
   grip:'<circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/>',
   chevron:'<path d="M6 9l6 6 6-6"/>',
   external:'<path d="M14 5h5v5M19 5l-9 9M9 5H6a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1v-3"/>',
+  refresh:'<path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0020.49 15"/>',
   check2:'<path d="M4 12l5 5L20 6"/>',
   dressA:'<path d="M12 3v6M9.5 9l-4 12h13l-4-12M9.5 9c0-2 1-3 2.5-3s2.5 1 2.5 3"/>',
   dressMermaid:'<path d="M12 3v5M9.5 8c0 3-2 6-2.5 10 1.7 2.5 6.3 2.5 8 0-.5-4-2.5-7-2.5-10M9.5 8c0-2 1-3 2.5-3s2.5 1 2.5 3"/>',
