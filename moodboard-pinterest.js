@@ -596,7 +596,18 @@
       }else{
         inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
       }
-      el.innerHTML=inner+'<div class="pin-body"><div class="pin-tag">'+(p.tag||'other')+'</div><h5>'+esc(p.title||'')+'</h5>'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:\'IBM Plex Mono\',monospace;">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
+      el.innerHTML=inner+'<div class="pin-body"><div class="pin-tag">'+(p.tag||'other')+'</div><input class="pin-title-input" type="text" value="'+esc(p.title||'')+'" placeholder="Untitled">'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:\'IBM Plex Mono\',monospace;">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
+      const titleInput=el.querySelector('.pin-title-input');
+      const titleCommitted=titleInput.value;
+      titleInput.addEventListener('keydown',function(e){
+        if(e.key==='Enter'){ e.preventDefault(); titleInput.blur(); }
+      });
+      titleInput.addEventListener('blur',function(){
+        const val=titleInput.value.trim();
+        if(val===titleCommitted) return;
+        if(dbReady) db.collection('pinboard').doc(p.id).update({title:val});
+        else { p.title=val; }
+      });
       el.querySelector('.del-pin').addEventListener('click',function(){
         const label=p.title?'"'+p.title+'"':'this item';
         confirmAction('Are you sure you want to delete '+label+'?',function(){

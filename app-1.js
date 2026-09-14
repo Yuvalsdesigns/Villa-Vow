@@ -709,7 +709,10 @@ function itemRow(it, coll){
     updateItem(coll, it, {text: val});
   });
   const del = document.createElement('button'); del.className='btn ghost del'; del.innerHTML = svg(ICON.trash);
-  del.addEventListener('click', ()=> deleteItem(coll, it));
+  del.addEventListener('click', ()=>{
+    const label = it.text ? '"'+it.text+'"' : 'this item';
+    confirmAction('Are you sure you want to delete '+label+'?', ()=> deleteItem(coll, it));
+  });
   row.appendChild(grip); row.appendChild(chk); row.appendChild(text); row.appendChild(del);
 
   row.addEventListener('dragstart', e=>{ row.classList.add('dragging'); e.dataTransfer.setData('text/plain', it.id); e.dataTransfer.effectAllowed='move'; });
