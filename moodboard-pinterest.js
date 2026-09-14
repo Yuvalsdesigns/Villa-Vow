@@ -171,11 +171,13 @@
   const sectionGalleryCache=new Map();
   const sectionGalleryInFlight=new Set();
 
-  /* A section link can appear both in the dedicated boards shelf and as an
-     individually-added pin in the main moodboard grid, so refresh whichever
-     of those two renderers is actually in use. */
+  /* A section link can appear in either boards shelf (Moodboard or Wedding
+     d.i.y) and as an individually-added pin in the main moodboard grid, so
+     refresh whichever of those renderers are actually in use; each checks
+     for its own DOM container and no-ops if it isn't present. */
   function refreshSectionViews(){
     if(typeof window.renderPinterestBoards==='function') window.renderPinterestBoards();
+    if(typeof window.renderDiyPinterestBoards==='function') window.renderDiyPinterestBoards();
     if(typeof window.renderBoard==='function') window.renderBoard();
   }
 
@@ -219,102 +221,6 @@
     }
   }
 
-  let localPinterestBoards=[];
-  function boardList(){ return (dbReady?state.pinterestBoards:localPinterestBoards)||[]; }
-
-  function boardWarn(msg){
-    const warnEl=document.getElementById('pinterestBoardWarn');
-    if(warnEl){ warnEl.innerHTML=msg; warnEl.style.display='block'; }
-  }
-
-  /* A legacy install only ever remembered one board, locally, in
-     localStorage. Carry it over into the shared list once, then forget
-     the local copy so this never re-adds it on a later visit. Only runs
-     on whichever specific device actually had that value saved. */
-  function migrateLegacyBoardUrl(){
-    const saved=localStorage.getItem('vv_pinterest_board_url');
-    if(!saved||!dbReady) return;
-    localStorage.removeItem('vv_pinterest_board_url');
-    addPinterestBoard(saved);
-  }
-
-  function moveBoard(id,dir){
-    const boards=boardList().slice();
-    const idx=boards.findIndex(function(b){return b.id===id;});
-    if(idx<0) return;
-    const swapIdx=dir==='up'?idx-1:idx+1;
-    if(swapIdx<0||swapIdx>=boards.length) return;
-    const a=boards[idx], b=boards[swapIdx];
-    const aTime=a.addedAt, bTime=b.addedAt;
-    if(dbReady){
-      const batch=db.batch();
-      batch.update(db.collection('pinterestBoards').doc(a.id),{addedAt:bTime});
-      batch.update(db.collection('pinterestBoards').doc(b.id),{addedAt:aTime});
-      batch.commit();
-    }else{
-      a.addedAt=bTime; b.addedAt=aTime;
-      localPinterestBoards.sort(function(x,y){return x.addedAt-y.addedAt;});
-      window.renderPinterestBoards();
-    }
-  }
-
-  function renameBoard(id,newTitle){
-    if(dbReady&&id){ db.collection('pinterestBoards').doc(id).update({title:newTitle}); return; }
-    const b=localPinterestBoards.find(function(x){return x.id===id;});
-    if(b) b.title=newTitle;
-  }
-
-  function updateBoardUrl(id,newUrl){
-    if(dbReady&&id){ db.collection('pinterestBoards').doc(id).update({url:newUrl}); return; }
-    const b=localPinterestBoards.find(function(x){return x.id===id;});
-    if(b){ b.url=newUrl; window.renderPinterestBoards(); }
-  }
-
-  /* Shared by both the "add a board" form and in-place URL editing, so a
-     board or section link is validated (and the same warnings shown) the
-     same way whichever path added or changed it. */
-  function validateBoardUrl(rawUrl){
-    const parsed=classifyPinterestUrl(rawUrl);
-    if(!parsed){
-      boardWarn('That does not look like a Pinterest board URL.');
-      return null;
-    }
-    if(parsed.kind==='short'){
-      boardWarn('Pinterest short links need the full board address first. <a target="_blank" rel="noopener" href="'+esc(parsed.url)+'">Open Pinterest ↗</a>, then copy the full board URL from the address bar and paste it here.');
-      return null;
-    }
-    if(parsed.kind!=='board'&&parsed.kind!=='section'){
-      boardWarn('That is an individual Pinterest Pin, not a board. Use “+ Pinterest” below for individual Pins.');
-      return null;
-    }
-    return parsed;
-  }
-
-  function addPinterestBoard(rawUrl){
-    const parsed=validateBoardUrl(rawUrl);
-    if(!parsed) return;
-    const titleInput=document.getElementById('pinterestBoardTitle');
-    const title=(titleInput&&titleInput.value.trim())||'';
-    const data={url:parsed.url,title:title,addedAt:Date.now()};
-    if(dbReady) db.collection('pinterestBoards').add(data);
-    else { data.id='local-'+Math.random().toString(36).slice(2); localPinterestBoards.push(data); window.renderPinterestBoards(); }
-    const input=document.getElementById('pinterestBoardUrl');
-    if(input) input.value='';
-    if(titleInput) titleInput.value='';
-  }
-
-  /* Pinterest's board widget (and, it turns out, Pinterest's own backend)
-     can keep showing a board's previous pins for a while after you've
-     actually moved/removed them on pinterest.com, since the embed is
-     fetched by Pinterest's servers from their own cache of that board,
-     not re-read live on every page load. A normal refresh doesn't help
-     because the URL is unchanged. Appending a one-off query parameter
-     when rebuilding a specific board's embed gives Pinterest a URL it
-     hasn't served before, which is a standard way to bypass a cache like
-     that; it's a real cache-buster, not guaranteed against every kind of
-     caching Pinterest might be doing on their end. */
-  const boardRefreshNonce=new Map();
-
   /* Pinterest's embed widget bakes data-pin-board-width into a fixed-size
      iframe at build time, it does not respond to CSS or container resizes
      on its own, so a hardcoded width left a large empty gap once the
@@ -323,129 +229,271 @@
     const available=(shelf&&shelf.clientWidth)||(shelf&&shelf.parentElement&&shelf.parentElement.clientWidth)||900;
     return Math.max(500, Math.min(1600, Math.round(available)));
   }
-  let lastPinterestBoardWidth=null;
-  window.renderPinterestBoards=function(){
-    const shelf=document.getElementById('pinterestBoardShelf');
-    if(!shelf) return;
-    migrateLegacyBoardUrl();
-    const boards=boardList();
-    const boardWidth=pinterestBoardWidth(shelf);
-    lastPinterestBoardWidth=boardWidth;
-    const pendingSectionUrls=[];
-    let hasWidgetBoard=false;
-    shelf.innerHTML=boards.map(function(b,i){
-      const id=esc(b.id||'');
-      /* Classify from the URL itself on every render (see the same choice
-         in renderBoard below) rather than trusting a stored field, so
-         editing the URL in place always takes the correct rendering path
-         without needing a separate migration. */
-      const parsed=classifyPinterestUrl(b.url);
-      const kind=parsed&&parsed.kind;
-      let body;
-      if(kind==='section'){
-        const cached=sectionGalleryCache.get(b.url);
-        if(cached&&cached.pins){
-          body='<div class="pinterest-section-gallery">'+cached.pins.map(function(p){
-            return '<a class="pinterest-section-thumb" target="_blank" rel="noopener" href="'+esc(p.url)+'"><img src="'+esc(p.thumbnailUrl)+'" alt="'+esc(p.title||'')+'" loading="lazy"></a>';
-          }).join('')+'</div>';
-        }else if(cached&&cached.failed){
-          body='<div class="pinterest-section-status pinterest-section-error">Could not load this section: '+esc(cached.reason||'unknown error')
-            +'. <a target="_blank" rel="noopener" href="'+esc(b.url)+'">Open on Pinterest ↗</a> or <button type="button" class="section-retry" data-url="'+esc(b.url)+'">try again</button>.</div>';
-        }else{
-          body='<div class="pinterest-section-status">Loading this section’s pins…</div>';
-          pendingSectionUrls.push(b.url);
-        }
+
+  /* One board-shelf feature is used in two places (Moodboard and Wedding
+     d.i.y), each backed by its own Firestore collection and DOM ids so the
+     two never mix boards, but otherwise behaving identically: add/remove/
+     reorder/rename/edit-URL, the section gallery, and the cache-busting
+     refresh button. This factory builds one independent shelf instance per
+     config rather than duplicating all of that logic twice. */
+  function createBoardShelf(cfg){
+    let localBoards=[];
+    let lastWidth=null;
+    const refreshNonce=new Map();
+
+    function boardList(){ return (dbReady?state[cfg.stateKey]:localBoards)||[]; }
+
+    function warn(msg){
+      const warnEl=document.getElementById(cfg.warnId);
+      if(warnEl){ warnEl.innerHTML=msg; warnEl.style.display='block'; }
+    }
+
+    function moveBoard(id,dir){
+      const boards=boardList().slice();
+      const idx=boards.findIndex(function(b){return b.id===id;});
+      if(idx<0) return;
+      const swapIdx=dir==='up'?idx-1:idx+1;
+      if(swapIdx<0||swapIdx>=boards.length) return;
+      const a=boards[idx], b=boards[swapIdx];
+      const aTime=a.addedAt, bTime=b.addedAt;
+      if(dbReady){
+        const batch=db.batch();
+        batch.update(db.collection(cfg.collection).doc(a.id),{addedAt:bTime});
+        batch.update(db.collection(cfg.collection).doc(b.id),{addedAt:aTime});
+        batch.commit();
       }else{
-        const nonce=boardRefreshNonce.get(b.id);
-        const embedHref=nonce?b.url+(b.url.indexOf('?')<0?'?':'&')+'_r='+nonce:b.url;
-        /* data-pin-scale-height/-width set the pixel size of the widget's
-           preview grid; a board with more pins than fit in that area just
-           gets cut off, it's not a bug, Pinterest's board widget only ever
-           shows a preview, not the whole board. Raised well past the
-           default (420) so a board with many pins (e.g. lots of dresses)
-           has more room to show more of them before being cut off, though
-           a board with enough pins will still always be truncated
-           somewhere; only pinterest.com itself shows literally all of it. */
-        body='<a data-pin-do="embedBoard" data-pin-board-width="'+boardWidth+'" data-pin-scale-height="1200" data-pin-scale-width="110" href="'+esc(embedHref)+'"></a>';
-        hasWidgetBoard=true;
+        a.addedAt=bTime; b.addedAt=aTime;
+        localBoards.sort(function(x,y){return x.addedAt-y.addedAt;});
+        render();
       }
-      return '<div class="pinterest-board-item">'
-        +'<div class="pinterest-board-head">'
-          +'<input class="board-title-input" type="text" value="'+esc(b.title||'')+'" placeholder="Add a title, e.g. Flowers" data-id="'+id+'">'
-          +'<div class="board-head-actions">'
-            +(kind!=='section'?'<button class="board-refresh" type="button" data-id="'+id+'" aria-label="Refresh this board’s pins">'+svg(ICON.refresh)+'</button>':'')
-            +'<button class="board-move" type="button" data-dir="up" data-id="'+id+'" aria-label="Move board up"'+(i===0?' disabled':'')+'>'+svg(ICON.chevron)+'</button>'
-            +'<button class="board-move board-move-down" type="button" data-dir="down" data-id="'+id+'" aria-label="Move board down"'+(i===boards.length-1?' disabled':'')+'>'+svg(ICON.chevron)+'</button>'
-            +'<button class="board-remove" type="button" data-id="'+id+'" aria-label="Remove board">'+svg(ICON.x)+'</button>'
+    }
+
+    function renameBoard(id,newTitle){
+      if(dbReady&&id){ db.collection(cfg.collection).doc(id).update({title:newTitle}); return; }
+      const b=localBoards.find(function(x){return x.id===id;});
+      if(b) b.title=newTitle;
+    }
+
+    function updateBoardUrl(id,newUrl){
+      if(dbReady&&id){ db.collection(cfg.collection).doc(id).update({url:newUrl}); return; }
+      const b=localBoards.find(function(x){return x.id===id;});
+      if(b){ b.url=newUrl; render(); }
+    }
+
+    /* Shared by both the "add a board" form and in-place URL editing, so a
+       board or section link is validated (and the same warnings shown) the
+       same way whichever path added or changed it. */
+    function validateBoardUrl(rawUrl){
+      const parsed=classifyPinterestUrl(rawUrl);
+      if(!parsed){
+        warn('That does not look like a Pinterest board URL.');
+        return null;
+      }
+      if(parsed.kind==='short'){
+        warn('Pinterest short links need the full board address first. <a target="_blank" rel="noopener" href="'+esc(parsed.url)+'">Open Pinterest ↗</a>, then copy the full board URL from the address bar and paste it here.');
+        return null;
+      }
+      if(parsed.kind!=='board'&&parsed.kind!=='section'){
+        warn('That is an individual Pinterest Pin, not a board. Use “+ Pinterest” below for individual Pins.');
+        return null;
+      }
+      return parsed;
+    }
+
+    function addBoard(rawUrl){
+      const parsed=validateBoardUrl(rawUrl);
+      if(!parsed) return;
+      const titleInput=document.getElementById(cfg.titleInputId);
+      const title=(titleInput&&titleInput.value.trim())||'';
+      const data={url:parsed.url,title:title,addedAt:Date.now()};
+      if(dbReady) db.collection(cfg.collection).add(data);
+      else { data.id='local-'+Math.random().toString(36).slice(2); localBoards.push(data); render(); }
+      const input=document.getElementById(cfg.urlInputId);
+      if(input) input.value='';
+      if(titleInput) titleInput.value='';
+    }
+
+    function render(){
+      const shelf=document.getElementById(cfg.shelfId);
+      if(!shelf) return;
+      if(cfg.migrateLegacyUrl) cfg.migrateLegacyUrl(addBoard);
+      const boards=boardList();
+      const boardWidth=pinterestBoardWidth(shelf);
+      lastWidth=boardWidth;
+      const pendingSectionUrls=[];
+      let hasWidgetBoard=false;
+      shelf.innerHTML=boards.map(function(b,i){
+        const id=esc(b.id||'');
+        /* Classify from the URL itself on every render (see the same
+           choice in renderBoard below) rather than trusting a stored
+           field, so editing the URL in place always takes the correct
+           rendering path without needing a separate migration. */
+        const parsed=classifyPinterestUrl(b.url);
+        const kind=parsed&&parsed.kind;
+        let body;
+        if(kind==='section'){
+          const cached=sectionGalleryCache.get(b.url);
+          if(cached&&cached.pins){
+            body='<div class="pinterest-section-gallery">'+cached.pins.map(function(p){
+              return '<a class="pinterest-section-thumb" target="_blank" rel="noopener" href="'+esc(p.url)+'"><img src="'+esc(p.thumbnailUrl)+'" alt="'+esc(p.title||'')+'" loading="lazy"></a>';
+            }).join('')+'</div>';
+          }else if(cached&&cached.failed){
+            body='<div class="pinterest-section-status pinterest-section-error">Could not load this section: '+esc(cached.reason||'unknown error')
+              +'. <a target="_blank" rel="noopener" href="'+esc(b.url)+'">Open on Pinterest ↗</a> or <button type="button" class="section-retry" data-url="'+esc(b.url)+'">try again</button>.</div>';
+          }else{
+            body='<div class="pinterest-section-status">Loading this section’s pins…</div>';
+            pendingSectionUrls.push(b.url);
+          }
+        }else{
+          const nonce=refreshNonce.get(b.id);
+          const embedHref=nonce?b.url+(b.url.indexOf('?')<0?'?':'&')+'_r='+nonce:b.url;
+          /* data-pin-scale-height/-width set the pixel size of the
+             widget's preview grid; a board with more pins than fit in
+             that area just gets cut off, it's not a bug, Pinterest's
+             board widget only ever shows a preview, not the whole board.
+             Raised well past the default (420) so a board with many pins
+             has more room to show more of them before being cut off,
+             though a board with enough pins will still always be
+             truncated somewhere; only pinterest.com itself shows
+             literally all of it. */
+          body='<a data-pin-do="embedBoard" data-pin-board-width="'+boardWidth+'" data-pin-scale-height="1200" data-pin-scale-width="110" href="'+esc(embedHref)+'"></a>';
+          hasWidgetBoard=true;
+        }
+        return '<div class="pinterest-board-item">'
+          +'<div class="pinterest-board-head">'
+            +'<input class="board-title-input" type="text" value="'+esc(b.title||'')+'" placeholder="Add a title, e.g. Flowers" data-id="'+id+'">'
+            +'<div class="board-head-actions">'
+              +(kind!=='section'?'<button class="board-refresh" type="button" data-id="'+id+'" aria-label="Refresh this board’s pins">'+svg(ICON.refresh)+'</button>':'')
+              +'<button class="board-move" type="button" data-dir="up" data-id="'+id+'" aria-label="Move board up"'+(i===0?' disabled':'')+'>'+svg(ICON.chevron)+'</button>'
+              +'<button class="board-move board-move-down" type="button" data-dir="down" data-id="'+id+'" aria-label="Move board down"'+(i===boards.length-1?' disabled':'')+'>'+svg(ICON.chevron)+'</button>'
+              +'<button class="board-remove" type="button" data-id="'+id+'" aria-label="Remove board">'+svg(ICON.x)+'</button>'
+            +'</div>'
           +'</div>'
-        +'</div>'
-        +'<div class="pinterest-board-url-row"><input class="board-url-input" type="text" value="'+esc(b.url||'')+'" placeholder="https://www.pinterest.com/you/board/" data-id="'+id+'" spellcheck="false"></div>'
-        +body
-        +'</div>';
-    }).join('');
-    shelf.querySelectorAll('.section-retry').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        sectionGalleryCache.delete(btn.dataset.url);
-        window.renderPinterestBoards();
-      });
-    });
-    pendingSectionUrls.forEach(function(url){ resolveSectionGallery(url); });
-    shelf.querySelectorAll('.board-refresh').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        boardRefreshNonce.set(btn.dataset.id,Date.now());
-        window.renderPinterestBoards();
-        hardResetPinterestScript();
-      });
-    });
-    shelf.querySelectorAll('.board-remove').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        const id=btn.dataset.id;
-        const board=boards.find(function(x){return x.id===id;});
-        const label=board&&board.title?'"'+board.title+'"':'this board';
-        confirmAction('Are you sure you want to delete '+label+'?',function(){
-          if(dbReady&&id) db.collection('pinterestBoards').doc(id).delete();
-          else { localPinterestBoards=localPinterestBoards.filter(function(x){return x.id!==id;}); window.renderPinterestBoards(); }
+          +'<div class="pinterest-board-url-row"><input class="board-url-input" type="text" value="'+esc(b.url||'')+'" placeholder="https://www.pinterest.com/you/board/" data-id="'+id+'" spellcheck="false"></div>'
+          +body
+          +'</div>';
+      }).join('');
+      shelf.querySelectorAll('.section-retry').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          sectionGalleryCache.delete(btn.dataset.url);
+          render();
         });
       });
-    });
-    shelf.querySelectorAll('.board-move').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        if(btn.disabled) return;
-        moveBoard(btn.dataset.id,btn.dataset.dir);
+      pendingSectionUrls.forEach(function(url){ resolveSectionGallery(url); });
+      shelf.querySelectorAll('.board-refresh').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          refreshNonce.set(btn.dataset.id,Date.now());
+          render();
+          hardResetPinterestScript();
+        });
       });
-    });
-    shelf.querySelectorAll('.board-title-input').forEach(function(input){
-      const committed=input.value;
-      input.addEventListener('keydown',function(e){
-        if(e.key==='Enter'){ e.preventDefault(); input.blur(); }
+      shelf.querySelectorAll('.board-remove').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          const id=btn.dataset.id;
+          const board=boards.find(function(x){return x.id===id;});
+          const label=board&&board.title?'"'+board.title+'"':'this board';
+          confirmAction('Are you sure you want to delete '+label+'?',function(){
+            if(dbReady&&id) db.collection(cfg.collection).doc(id).delete();
+            else { localBoards=localBoards.filter(function(x){return x.id!==id;}); render(); }
+          });
+        });
       });
-      input.addEventListener('blur',function(){
-        const val=input.value.trim();
-        if(val!==committed) renameBoard(input.dataset.id,val);
+      shelf.querySelectorAll('.board-move').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          if(btn.disabled) return;
+          moveBoard(btn.dataset.id,btn.dataset.dir);
+        });
       });
-    });
-    shelf.querySelectorAll('.board-url-input').forEach(function(input){
-      const committed=input.value;
-      input.addEventListener('keydown',function(e){
-        if(e.key==='Enter'){ e.preventDefault(); input.blur(); }
+      shelf.querySelectorAll('.board-title-input').forEach(function(input){
+        const committed=input.value;
+        input.addEventListener('keydown',function(e){
+          if(e.key==='Enter'){ e.preventDefault(); input.blur(); }
+        });
+        input.addEventListener('blur',function(){
+          const val=input.value.trim();
+          if(val!==committed) renameBoard(input.dataset.id,val);
+        });
       });
-      input.addEventListener('blur',function(){
-        const val=input.value.trim();
-        if(val===committed) return;
-        const parsed=validateBoardUrl(val);
-        if(!parsed){ input.value=committed; return; }
-        updateBoardUrl(input.dataset.id,parsed.url);
+      shelf.querySelectorAll('.board-url-input').forEach(function(input){
+        const committed=input.value;
+        input.addEventListener('keydown',function(e){
+          if(e.key==='Enter'){ e.preventDefault(); input.blur(); }
+        });
+        input.addEventListener('blur',function(){
+          const val=input.value.trim();
+          if(val===committed) return;
+          const parsed=validateBoardUrl(val);
+          if(!parsed){ input.value=committed; return; }
+          updateBoardUrl(input.dataset.id,parsed.url);
+        });
       });
-    });
-    if(hasWidgetBoard){ ensurePinterestScript(); requestPinterestBuild(); }
-  };
+      if(hasWidgetBoard){ ensurePinterestScript(); requestPinterestBuild(); }
+    }
+
+    function resizeIfNeeded(){
+      const shelf=document.getElementById(cfg.shelfId);
+      if(!shelf) return;
+      if(pinterestBoardWidth(shelf)===lastWidth) return;
+      render();
+    }
+
+    const addBtn=document.getElementById(cfg.addBtnId);
+    if(addBtn){
+      const clean=addBtn.cloneNode(true);
+      addBtn.replaceWith(clean);
+      clean.addEventListener('click',function(){
+        const warnEl=document.getElementById(cfg.warnId);
+        if(warnEl) warnEl.style.display='none';
+        addBoard(document.getElementById(cfg.urlInputId)?.value);
+      });
+    }
+    const urlInput=document.getElementById(cfg.urlInputId);
+    if(urlInput){
+      urlInput.addEventListener('keydown',function(e){
+        if(e.key==='Enter'){
+          e.preventDefault();
+          const warnEl=document.getElementById(cfg.warnId);
+          if(warnEl) warnEl.style.display='none';
+          addBoard(urlInput.value);
+        }
+      });
+    }
+
+    return {render:render, resizeIfNeeded:resizeIfNeeded};
+  }
+
+  /* A legacy install only ever remembered one Moodboard board, locally, in
+     localStorage. Carry it over into the shared list once, then forget the
+     local copy so this never re-adds it on a later visit. Only runs on
+     whichever specific device actually had that value saved. Not relevant
+     to the Wedding d.i.y shelf, which never had a pre-shelf legacy form. */
+  function migrateLegacyMoodboardBoardUrl(addBoardFn){
+    const saved=localStorage.getItem('vv_pinterest_board_url');
+    if(!saved||!dbReady) return;
+    localStorage.removeItem('vv_pinterest_board_url');
+    addBoardFn(saved);
+  }
+
+  const moodboardShelf=createBoardShelf({
+    collection:'pinterestBoards', stateKey:'pinterestBoards',
+    shelfId:'pinterestBoardShelf', titleInputId:'pinterestBoardTitle',
+    urlInputId:'pinterestBoardUrl', addBtnId:'embedPinterestBoard', warnId:'pinterestBoardWarn',
+    migrateLegacyUrl:migrateLegacyMoodboardBoardUrl,
+  });
+  const diyShelf=createBoardShelf({
+    collection:'diyPinterestBoards', stateKey:'diyPinterestBoards',
+    shelfId:'diyPinterestBoardShelf', titleInputId:'diyPinterestBoardTitle',
+    urlInputId:'diyPinterestBoardUrl', addBtnId:'diyEmbedPinterestBoard', warnId:'diyPinterestBoardWarn',
+  });
+  window.renderPinterestBoards=moodboardShelf.render;
+  window.renderDiyPinterestBoards=diyShelf.render;
 
   /* The embed's width is fixed at build time, so a genuine window resize
-     (or the moodboard container simply becoming visible at its real size,
-     since a hidden view measures 0 width) needs a full rebuild to pick up
-     the new size, not just a rebuild of the existing iframe. Mobile browsers
-     also fire "resize" purely from the address bar showing/hiding while you
-     scroll, with no width change at all; rebuilding on those (destroying and
+     (or a view simply becoming visible at its real size, since a hidden
+     view measures 0 width) needs a full rebuild to pick up the new size,
+     not just a rebuild of the existing iframe. Mobile browsers also fire
+     "resize" purely from the address bar showing/hiding while you scroll,
+     with no width change at all; rebuilding on those (destroying and
      recreating every board's iframe mid-scroll) is what caused the page to
      visibly jump, so skip the rebuild unless the measured width actually
      changed. */
@@ -453,10 +501,8 @@
   window.addEventListener('resize', function(){
     clearTimeout(boardResizeTimer);
     boardResizeTimer=setTimeout(function(){
-      const shelf=document.getElementById('pinterestBoardShelf');
-      if(!shelf) return;
-      if(pinterestBoardWidth(shelf)===lastPinterestBoardWidth) return;
-      window.renderPinterestBoards();
+      moodboardShelf.resizeIfNeeded();
+      diyShelf.resizeIfNeeded();
     }, 300);
   });
 
@@ -581,28 +627,7 @@
   if(document.getElementById('savePinterest')) document.getElementById('savePinterest').textContent='Add to Moodboard';
   replacePinterestSaveHandler();
 
-  const boardButton=document.getElementById('embedPinterestBoard');
-  if(boardButton){
-    const clean=boardButton.cloneNode(true);
-    boardButton.replaceWith(clean);
-    clean.addEventListener('click',function(){
-      const warnEl=document.getElementById('pinterestBoardWarn');
-      if(warnEl) warnEl.style.display='none';
-      addPinterestBoard(document.getElementById('pinterestBoardUrl')?.value);
-    });
-  }
-  const boardUrlInput=document.getElementById('pinterestBoardUrl');
-  if(boardUrlInput){
-    boardUrlInput.addEventListener('keydown',function(e){
-      if(e.key==='Enter'){
-        e.preventDefault();
-        const warnEl=document.getElementById('pinterestBoardWarn');
-        if(warnEl) warnEl.style.display='none';
-        addPinterestBoard(boardUrlInput.value);
-      }
-    });
-  }
-
   setTimeout(function(){window.renderPinterestBoards();},50);
+  setTimeout(function(){window.renderDiyPinterestBoards();},50);
   setTimeout(function(){window.renderBoard();},80);
 })();

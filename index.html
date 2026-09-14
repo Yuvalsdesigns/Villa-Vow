@@ -340,6 +340,17 @@
           <p id="diyFetchStatus" style="display:none;font-size:13px;margin:0;"></p>
         </div>
       </div>
+      <div class="card" style="padding:16px;margin-bottom:20px;">
+        <h4 style="font-size:14px;">Show a Pinterest board here</h4>
+        <p style="font-size:12px;color:var(--ink-soft);line-height:1.5;margin-top:3px;">Paste the URL of a public Pinterest board and add as many as you like, same as on the Moodboard.</p>
+        <input type="text" id="diyPinterestBoardTitle" placeholder="Category, e.g. Table settings (optional)" style="margin-top:10px;">
+        <div class="pinterest-board-tools">
+          <input type="url" id="diyPinterestBoardUrl" placeholder="https://www.pinterest.com/username/board-name/">
+          <button class="btn" id="diyEmbedPinterestBoard">Add board</button>
+        </div>
+        <p class="warn" id="diyPinterestBoardWarn" style="display:none;"></p>
+        <div class="pinterest-board-shelf" id="diyPinterestBoardShelf"></div>
+      </div>
       <div id="diyGrid" class="diy-grid"></div>
     </section>
 
@@ -449,8 +460,8 @@
 </div>
 
 <script src="firebase-sync.js?v=20260913-31"></script>
-<script src="app-1.js?v=20260913-39"></script>
+<script src="app-1.js?v=20260913-40"></script>
 <script src="app-4.js?v=20260913-24"></script>
 <script src="app-2.js?v=20260913-28"></script>
 <script src="app-3.js?v=20260913-38"></script>
-<script src="moodboard-pinterest.js?v=21"></script>
+<script src="moodboard-pinterest.js?v=22"></script>

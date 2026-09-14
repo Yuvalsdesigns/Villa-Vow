@@ -122,6 +122,7 @@ function showTab(id){
   if(typeof syncMobileNav==='function') syncMobileNav(id);
   if(id==='budget' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
   if(id==='board' && typeof renderPinterestBoards==='function') renderPinterestBoards();
+  if(id==='diy' && typeof renderDiyPinterestBoards==='function') renderDiyPinterestBoards();
   if((id==='todo' || id==='considerations') && typeof resizeAllItemTextareas==='function') resizeAllItemTextareas();
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}
   setTimeout(updateTabsScrollArrow, 260);
@@ -245,7 +246,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 "use strict";
 
 let db = null, dbReady=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[] };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -601,6 +602,10 @@ async function initDb(){
     unsub.push(db.collection('pinterestBoards').orderBy('addedAt','asc').onSnapshot(snap=>{
       state.pinterestBoards = snap.docs.map(d=>({id:d.id, ...d.data()}));
       if(typeof renderPinterestBoards==='function') renderPinterestBoards();
+    }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('diyPinterestBoards').orderBy('addedAt','asc').onSnapshot(snap=>{
+      state.diyPinterestBoards = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(typeof renderDiyPinterestBoards==='function') renderDiyPinterestBoards();
     }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('loveNotes').orderBy('createdAt','desc').limit(30).onSnapshot(snap=>{
       state.loveNotes = snap.docs.map(d=>({id:d.id, ...d.data()}));
