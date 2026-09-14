@@ -696,6 +696,8 @@ function resizeAllItemTextareas(){ document.querySelectorAll('#view-todo textare
 function itemRow(it, coll){
   const row = document.createElement('div'); row.className='item-row'+(it.done?' done':'');
   row.draggable = true;
+  row.dataset.itemId = it.id;
+  row.dataset.category = it.category;
   const grip = document.createElement('span'); grip.className='grip'; grip.innerHTML = svg(ICON.grip);
   const chk = document.createElement('button'); chk.className='chk'+(it.done?' on':''); chk.innerHTML = it.done?svg(ICON.check2):'';
   chk.addEventListener('click', ()=> toggleItem(coll, it));
@@ -732,7 +734,73 @@ function itemRow(it, coll){
     reorderItems(coll, it.category, draggedId, it.id, before);
   });
 
+  /* Native HTML5 drag-and-drop (the dragstart/dragover/drop wiring above)
+     never fires from a touchscreen, browsers just don't map touch gestures
+     to it, so the grip handle did nothing on a phone even though it was
+     visually the same element. Wire the same reorder behavior to real
+     touch events on just the grip, so scrolling the list by touching
+     anywhere else still works normally. */
+  wireTouchDrag(grip, row, function(targetRow, before){
+    const targetId = targetRow.dataset.itemId;
+    if(!targetId || targetId===it.id) return;
+    if(targetRow.dataset.category !== it.category) return;
+    reorderItems(coll, it.category, it.id, targetId, before);
+  });
+
   return row;
+}
+/* Touch equivalent of the item-row drag-and-drop above: touchmove keeps
+   firing on the element that received touchstart, not on whatever the
+   finger is currently over, so the row under the finger has to be found
+   manually with elementFromPoint on every move, same technique any
+   from-scratch touch-drag implementation needs since there is no native
+   touch drag-and-drop API. */
+function wireTouchDrag(handle, row, onDrop){
+  let active = false;
+  function rowAt(x, y){
+    const el = document.elementFromPoint(x, y);
+    return el && el.closest ? el.closest('.item-row') : null;
+  }
+  function clearDropHighlight(){
+    document.querySelectorAll('.item-row.drag-over-top, .item-row.drag-over-bottom').forEach(r=>{
+      r.classList.remove('drag-over-top','drag-over-bottom');
+    });
+  }
+  handle.addEventListener('touchstart', ()=>{
+    active = true;
+    row.classList.add('dragging');
+  }, {passive:true});
+  handle.addEventListener('touchmove', e=>{
+    if(!active) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const target = rowAt(touch.clientX, touch.clientY);
+    clearDropHighlight();
+    if(target && target!==row){
+      const rect = target.getBoundingClientRect();
+      const before = (touch.clientY - rect.top) < rect.height/2;
+      target.classList.toggle('drag-over-top', before);
+      target.classList.toggle('drag-over-bottom', !before);
+    }
+  }, {passive:false});
+  handle.addEventListener('touchend', e=>{
+    if(!active) return;
+    active = false;
+    row.classList.remove('dragging');
+    const touch = e.changedTouches[0];
+    const target = rowAt(touch.clientX, touch.clientY);
+    clearDropHighlight();
+    if(target && target!==row){
+      const rect = target.getBoundingClientRect();
+      const before = (touch.clientY - rect.top) < rect.height/2;
+      onDrop(target, before);
+    }
+  });
+  handle.addEventListener('touchcancel', ()=>{
+    active = false;
+    row.classList.remove('dragging');
+    clearDropHighlight();
+  });
 }
 function reorderItems(coll, category, draggedId, targetId, before){
   const list = state[coll].filter(x=>x.category===category);
