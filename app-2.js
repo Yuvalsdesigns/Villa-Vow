@@ -1028,8 +1028,9 @@ function customStyleCard(s, sectionTitle){
     showTab('board');
   });
   card.querySelector('.del-custom').addEventListener('click', ()=>{
-    if(!confirm('Delete this style?')) return;
-    if(dbReady && s.id) db.collection('customStyles').doc(s.id).delete();
+    confirmAction('Are you sure you want to delete "'+(s.name||'this style')+'"?', ()=>{
+      if(dbReady && s.id) db.collection('customStyles').doc(s.id).delete();
+    });
   });
   return card;
 }

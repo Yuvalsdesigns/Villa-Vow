@@ -975,8 +975,11 @@ function renderBudget(){
     const delCell = tr.children[6];
     const delBtn = document.createElement('button'); delBtn.className='btn ghost small'; delBtn.innerHTML = svg(ICON.trash);
     delBtn.addEventListener('click', ()=>{
-      if(dbReady) db.collection('budget').doc(b.id).delete();
-      else { state.budget = state.budget.filter(x=>x.id!==b.id); renderBudget(); }
+      const label = b.item ? '"'+b.item+'"' : 'this line';
+      confirmAction('Are you sure you want to delete '+label+'?', ()=>{
+        if(dbReady) db.collection('budget').doc(b.id).delete();
+        else { state.budget = state.budget.filter(x=>x.id!==b.id); renderBudget(); }
+      });
     });
     delCell.appendChild(delBtn);
     tr.querySelector('.num-cell input[data-k="est"]')?.addEventListener('change', e=> updateBudget(b,{estCost:Number(e.target.value)||0}));
