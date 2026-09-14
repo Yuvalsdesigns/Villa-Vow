@@ -688,6 +688,8 @@ let mobileNavUpdateArrow = null;
 function buildMobileNav(){
   if(document.getElementById('vvMobileNav')) return;
   const nav = document.createElement('nav'); nav.id='vvMobileNav'; nav.setAttribute('aria-label','Wedding planner navigation');
+  const arrowLeft = document.createElement('button'); arrowLeft.type='button'; arrowLeft.id='vvMobileNavArrowLeft'; arrowLeft.className='vv-mobile-nav-arrow vv-mobile-nav-arrow-left'; arrowLeft.setAttribute('aria-label','Show earlier tabs'); arrowLeft.textContent='‹';
+  nav.appendChild(arrowLeft);
   const scroll = document.createElement('div'); scroll.className='mobile-nav-scroll';
   TABS.forEach(t=>{
     const b = document.createElement('button'); b.type='button'; b.className='tabtint-'+TAB_TINTS[t.id]; b.dataset.tab=t.id;
@@ -696,13 +698,15 @@ function buildMobileNav(){
     scroll.appendChild(b);
   });
   nav.appendChild(scroll);
-  const arrow = document.createElement('button'); arrow.type='button'; arrow.id='vvMobileNavArrow'; arrow.setAttribute('aria-label','Show more tabs'); arrow.textContent='›';
-  arrow.addEventListener('click', ()=> scroll.scrollBy({left:180, behavior:'smooth'}));
+  const arrow = document.createElement('button'); arrow.type='button'; arrow.id='vvMobileNavArrow'; arrow.className='vv-mobile-nav-arrow vv-mobile-nav-arrow-right'; arrow.setAttribute('aria-label','Show more tabs'); arrow.textContent='›';
   nav.appendChild(arrow);
   document.body.appendChild(nav);
+  arrow.addEventListener('click', ()=> scroll.scrollBy({left:180, behavior:'smooth'}));
+  arrowLeft.addEventListener('click', ()=> scroll.scrollBy({left:-180, behavior:'smooth'}));
   mobileNavUpdateArrow = function(){
     const hasMore = scroll.scrollWidth - scroll.clientWidth - scroll.scrollLeft > 4;
     arrow.classList.toggle('visible', hasMore);
+    arrowLeft.classList.toggle('visible', scroll.scrollLeft > 4);
   };
   scroll.addEventListener('scroll', mobileNavUpdateArrow);
   window.addEventListener('resize', mobileNavUpdateArrow);

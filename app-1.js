@@ -84,6 +84,7 @@ const TABS = [
 const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac'};
 const tabNav = document.getElementById('tabNav');
 const tabsScrollArrow = document.getElementById('tabsScrollArrow');
+const tabsScrollArrowLeft = document.getElementById('tabsScrollArrowLeft');
 /* Only these tabs ever get a count filled in by renderStart() below; an
    empty .count span still renders as a small pill (its padding/background
    apply with no text), which looked like a stray dash after every other
@@ -97,15 +98,17 @@ TABS.forEach(t=>{
   tabNav.appendChild(b);
 });
 /* The tab strip scrolls horizontally instead of hiding tabs behind a "More"
-   dropdown, so trackpad/shift-scroll works for free; the arrow is just a
-   discoverable hint that there's more, shown only while there's actually
-   somewhere left to scroll. */
+   dropdown, so trackpad/shift-scroll works for free; the arrows are just a
+   discoverable hint that there's more in either direction, each shown only
+   while there's actually somewhere left to scroll that way. */
 function updateTabsScrollArrow(){
   if(!tabsScrollArrow) return;
   const hasMoreToRight = tabNav.scrollWidth - tabNav.clientWidth - tabNav.scrollLeft > 4;
   tabsScrollArrow.classList.toggle('visible', hasMoreToRight);
+  tabsScrollArrowLeft?.classList.toggle('visible', tabNav.scrollLeft > 4);
 }
 tabsScrollArrow?.addEventListener('click', ()=> tabNav.scrollBy({left:220, behavior:'smooth'}));
+tabsScrollArrowLeft?.addEventListener('click', ()=> tabNav.scrollBy({left:-220, behavior:'smooth'}));
 tabNav.addEventListener('scroll', updateTabsScrollArrow);
 window.addEventListener('resize', updateTabsScrollArrow);
 setTimeout(updateTabsScrollArrow, 0);
