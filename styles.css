@@ -191,8 +191,14 @@
      container only while one of these views is active, so a full screen
      actually uses the space and a narrower one falls back like every
      other page. */
-  #view-board.active, #view-venues.active, #view-budget.active, #view-diy.active{max-width:1680px;}
-  main:has(#view-board.active), main:has(#view-venues.active), main:has(#view-budget.active), main:has(#view-diy.active){max-width:1720px;}
+  /* A fixed pixel cap here (1680/1720px) looked fine on a typical laptop
+     but left a visibly growing strip of empty space on anything wider
+     (ultrawide monitors, larger external displays), since the content
+     stopped growing once it hit that ceiling while the screen kept
+     going. A viewport-relative width has no such ceiling, it keeps
+     adapting no matter how wide the screen actually is. */
+  #view-board.active, #view-venues.active, #view-budget.active, #view-diy.active{max-width:calc(96vw - 40px);}
+  main:has(#view-board.active), main:has(#view-venues.active), main:has(#view-budget.active), main:has(#view-diy.active){max-width:96vw;}
   /* Checklist/Things to Get are a single column of text, not a grid, so
      stretching them as wide as the grid pages would leave a short item
      looking lost on a near-edge-to-edge line. A smaller bump still uses
