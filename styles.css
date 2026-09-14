@@ -183,12 +183,15 @@
      auto-fit/auto-fill+minmax) already spread into more columns as their
      container widens, or fewer/taller ones as it narrows, that's native
      behavior, it just never had room to show it since every view is
-     capped at the same 1080px. Widen the container only while one of
-     these card-grid views is active, so a full screen actually shows more
-     columns side by side and a narrower one falls back to fewer, taller
-     columns like every other page. */
-  #view-board.active, #view-venues.active{max-width:1680px;}
-  main:has(#view-board.active), main:has(#view-venues.active){max-width:1720px;}
+     capped at the same 1080px. The budget table (width:100%) has the same
+     problem in a simpler form, it was just stopping short of the page's
+     full width, leaving an empty margin instead of giving its columns
+     (the wrapping Notes textarea especially) more room. Widen the
+     container only while one of these views is active, so a full screen
+     actually uses the space and a narrower one falls back like every
+     other page. */
+  #view-board.active, #view-venues.active, #view-budget.active{max-width:1680px;}
+  main:has(#view-board.active), main:has(#view-venues.active), main:has(#view-budget.active){max-width:1720px;}
   .view-head{margin-bottom:26px;}
   .view-head h2{font-family:'Armelie','Fraunces',Georgia,serif;font-size:40px;margin-bottom:8px;font-style:normal;font-weight:400;}
   .view-head p{color:var(--ink-soft);font-size:14.5px;max-width:640px;line-height:1.55;}
@@ -303,6 +306,20 @@
     color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;font-weight:500;
     padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);
   }
+  /* table-layout:fixed with column widths taken from these header cells,
+     otherwise a wider table (see the view-widening rule above) stretches
+     every column evenly, including Estimate/Actual/Paid, which only ever
+     hold a few digits, leaving odd gaps between the currency sign and the
+     number instead of putting the extra room where it's actually useful:
+     Item and Notes. */
+  .budget-table{table-layout:fixed;}
+  .budget-table th:nth-child(1){width:13%;}
+  .budget-table th:nth-child(2){width:20%;}
+  .budget-table th:nth-child(3){width:130px;}
+  .budget-table th:nth-child(4){width:130px;}
+  .budget-table th:nth-child(5){width:82px;}
+  .budget-table th:nth-child(6){width:38%;}
+  .budget-table th:nth-child(7){width:34px;}
   .budget-table td{padding:9px 12px;border-bottom:1px solid var(--line-soft);font-size:13.5px;vertical-align:top;}
   .budget-table tr:last-child td{border-bottom:none;}
   .budget-table input{border:1px solid transparent;background:transparent;padding:4px 6px;}
