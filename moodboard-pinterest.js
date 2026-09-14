@@ -80,6 +80,29 @@
     document.body.appendChild(script);
   }
 
+  /* A URL-only cache-bust (a query param appended to the board link) turned
+     out not to be enough, Pinterest's widget script most likely normalizes
+     the URL back down internally before it ever asks Pinterest's servers
+     for that board's content, so it never saw a "new" URL to begin with.
+     This goes a level further: remove pinit.js entirely, drop whatever
+     window.PinUtils is holding in memory, and load a fresh copy of the
+     script from scratch, so it can't be reusing anything it cached
+     internally from the last time it ran. If Pinterest's own servers are
+     the ones serving stale board data (rather than anything happening in
+     this page), this still won't help, that would be outside what any
+     client-side code on this page can force. */
+  function hardResetPinterestScript(){
+    document.querySelectorAll('script[data-vv-pinterest="1"]').forEach(function(s){ s.remove(); });
+    try{ delete window.PinUtils; }catch(e){ window.PinUtils=undefined; }
+    const script=document.createElement('script');
+    script.src=PINTEREST_SCRIPT+'?_r='+Date.now();
+    script.async=true;
+    script.defer=true;
+    script.dataset.vvPinterest='1';
+    script.addEventListener('load',requestPinterestBuild,{once:true});
+    document.body.appendChild(script);
+  }
+
   window.ensurePinterestWidgets=ensurePinterestScript;
   window.classifyPinterestUrl=classifyPinterestUrl;
 
@@ -363,6 +386,7 @@
       btn.addEventListener('click',function(){
         boardRefreshNonce.set(btn.dataset.id,Date.now());
         window.renderPinterestBoards();
+        hardResetPinterestScript();
       });
     });
     shelf.querySelectorAll('.board-remove').forEach(function(btn){
