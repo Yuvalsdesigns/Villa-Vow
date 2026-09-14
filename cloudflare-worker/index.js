@@ -231,6 +231,80 @@ async function handleResolveEmbed(provider, rawUrl) {
   }
 }
 
+/* Pinterest's public embed widget (pinit.js) only recognizes a whole board,
+   a profile, or a single pin, there is no "section widget"; handing it a
+   board-section URL just makes it silently resolve to the section's parent
+   board, showing that board's general pins instead of the section's own.
+   This works around that entirely by not using Pinterest's widget for
+   sections at all: fetch the section's page HTML directly, pull out
+   whatever /pin/<id>/ links appear in the raw markup, and resolve each
+   one's thumbnail the same way an individual pin already is elsewhere in
+   this file. Pinterest heavily client-renders its own site, so this only
+   finds pins present in the initial HTML response, which can vary by
+   User-Agent and change without notice on Pinterest's side. Best-effort,
+   not guaranteed. */
+async function handleResolveSection(rawUrl) {
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return json({ error: 'Invalid URL' }, 400);
+  }
+  const host = url.hostname.toLowerCase();
+  if (host !== 'pinterest.com' && !host.endsWith('.pinterest.com')) {
+    return json({ error: 'Not a Pinterest link' }, 400);
+  }
+
+  let html = null;
+  let lastStatus = null;
+  for (const userAgent of LINK_PREVIEW_USER_AGENTS) {
+    let result;
+    try {
+      result = await fetchHtml(url, userAgent);
+    } catch (err) {
+      return json({ error: 'Could not fetch that section', debug: String(err && err.message || err) }, 502);
+    }
+    if (!result.ok) { lastStatus = result.status; continue; }
+    html = result.html;
+    break;
+  }
+  if (!html) {
+    return json({ error: 'Could not fetch that section', status: lastStatus }, 502);
+  }
+
+  const ids = [];
+  const seen = new Set();
+  const pinIdRe = /\/pin\/(\d{6,})\//g;
+  let match;
+  while ((match = pinIdRe.exec(html)) && ids.length < 18) {
+    if (!seen.has(match[1])) { seen.add(match[1]); ids.push(match[1]); }
+  }
+  if (!ids.length) {
+    return json({
+      error: "No pins found on that section's page. Pinterest may be serving a stripped-down page to this request, or the section/board may not be public.",
+      bodySnippet: html.slice(0, 300),
+    }, 404);
+  }
+
+  const browserHeaders = {
+    'User-Agent': LINK_PREVIEW_USER_AGENTS[0],
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  };
+  const settled = await Promise.allSettled(ids.map(async (id) => {
+    const pinUrl = 'https://www.pinterest.com/pin/' + id + '/';
+    const resp = await fetch('https://www.pinterest.com/oembed.json?url=' + encodeURIComponent(pinUrl), { headers: browserHeaders });
+    if (!resp.ok) throw new Error('oEmbed failed for ' + id);
+    const data = await resp.json();
+    if (!data.thumbnail_url) throw new Error('No thumbnail for ' + id);
+    return { id, url: pinUrl, title: data.title || '', thumbnailUrl: data.thumbnail_url };
+  }));
+  const pins = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+  if (!pins.length) {
+    return json({ error: 'Found pin links in that section but could not resolve any of their thumbnails.' }, 502);
+  }
+  return json({ pins, sourceUrl: url.toString() });
+}
+
 /* Generic Open Graph image lookup for the Wedding d.i.y tab. Most sites set
    og:image (or twitter:image) for social-share previews, so fetching the
    page HTML server-side and reading that tag gives a real thumbnail for
@@ -376,6 +450,9 @@ export default {
     }
     if (body && body.action === 'resolveEmbed') {
       return handleResolveEmbed(body.provider, body.url);
+    }
+    if (body && body.action === 'resolveSection') {
+      return handleResolveSection(body.url);
     }
     if (body && body.action === 'resolveLinkPreview') {
       return handleResolveLinkPreview(body.url);

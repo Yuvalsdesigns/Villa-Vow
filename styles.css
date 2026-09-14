@@ -677,6 +677,14 @@
   .board-url-input{width:100%;box-sizing:border-box;border:none;background:transparent;font:12px 'IBM Plex Mono',monospace;color:var(--ink-soft);padding:5px 6px;border-radius:8px;}
   .board-url-input:focus{outline:none;background:var(--surface);box-shadow:0 0 0 2px var(--line);color:var(--ink);}
   .board-url-input::placeholder{color:var(--ink-faint);}
+  .pinterest-section-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:4px;padding:4px;}
+  .pinterest-section-thumb{display:block;aspect-ratio:1/1;overflow:hidden;border-radius:6px;}
+  .pinterest-section-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .pinterest-section-gallery-small{grid-template-columns:repeat(2,1fr);height:100%;}
+  .pinterest-section-status{padding:22px 14px;text-align:center;font:12px 'Karla',sans-serif;color:var(--ink-soft);}
+  .pinterest-section-error{color:#b3372f;}
+  .pinterest-section-error a,.section-retry{color:inherit;text-decoration:underline;}
+  .section-retry{background:none;border:none;padding:0;font:inherit;cursor:pointer;}
   .board-remove:hover:not(:disabled){background:#f6d9d6 !important;}
   .pinterest-limit-note{font-size:11.5px;color:var(--ink-faint);line-height:1.45;margin-top:8px;}
   @media(max-width:620px){.pinterest-search-row,.pinterest-board-tools{grid-template-columns:1fr;}}

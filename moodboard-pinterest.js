@@ -21,10 +21,13 @@
          inside a "Wedding" board), which live at a THIRD path segment:
          pinterest.com/you/wedding-board/flowers/. Dropping that segment
          collapsed every section link back down to the same whole-board
-         URL, which is why two different sections ended up embedding
-         identical content. Keep it when present. */
+         URL. Pinterest's own embed widget has no separate "section" type
+         either, so even keeping the full URL, its widget just resolves a
+         section back to its parent board, both of a reason a section link
+         needs a different rendering path than a real board (see 'section'
+         handling in renderPinterestBoards). */
       if(parts.length>=3){
-        return {kind:'board',url:'https://www.pinterest.com/'+encodeURIComponent(parts[0])+'/'+encodeURIComponent(parts[1])+'/'+encodeURIComponent(parts[2])+'/'};
+        return {kind:'section',url:'https://www.pinterest.com/'+encodeURIComponent(parts[0])+'/'+encodeURIComponent(parts[1])+'/'+encodeURIComponent(parts[2])+'/'};
       }
       if(parts.length===2){
         return {kind:'board',url:'https://www.pinterest.com/'+encodeURIComponent(parts[0])+'/'+encodeURIComponent(parts[1])+'/'};
@@ -134,6 +137,65 @@
     }
   }
 
+  /* Pinterest's board-embed widget has no concept of a "section" (see the
+     comment on the 'section' kind in classifyPinterestUrl above), so a
+     section link can't be handed to it and get section-specific content.
+     Instead the Worker fetches the section's page directly and hands back
+     a small set of that section's own pins, which are rendered here as a
+     plain grid instead of Pinterest's iframe. This depends on Pinterest's
+     page still including plain pin links in its HTML response, which is
+     not guaranteed and can stop working if Pinterest changes their site. */
+  const sectionGalleryCache=new Map();
+  const sectionGalleryInFlight=new Set();
+
+  /* A section link can appear both in the dedicated boards shelf and as an
+     individually-added pin in the main moodboard grid, so refresh whichever
+     of those two renderers is actually in use. */
+  function refreshSectionViews(){
+    if(typeof window.renderPinterestBoards==='function') window.renderPinterestBoards();
+    if(typeof window.renderBoard==='function') window.renderBoard();
+  }
+
+  async function resolveSectionGallery(sectionUrl){
+    if(sectionGalleryInFlight.has(sectionUrl)) return;
+    sectionGalleryInFlight.add(sectionUrl);
+    try{
+      const user=window.firebase&&firebase.auth&&firebase.auth().currentUser;
+      if(!user||!window.VV_WORKER_URL){
+        const reason='Not signed in yet, or the worker URL is missing.';
+        console.error('[Pinterest section]',reason,{hasUser:!!user,workerUrl:window.VV_WORKER_URL});
+        sectionGalleryCache.set(sectionUrl,{failed:true,reason}); refreshSectionViews(); return;
+      }
+      const idToken=await user.getIdToken();
+      const resp=await fetch(window.VV_WORKER_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
+        body:JSON.stringify({action:'resolveSection',url:sectionUrl})
+      });
+      let data;
+      try{ data=await resp.json(); }catch(parseErr){
+        const reason='HTTP '+resp.status+' '+resp.statusText+' (response was not JSON)';
+        console.error('[Pinterest section]',reason,{url:sectionUrl});
+        sectionGalleryCache.set(sectionUrl,{failed:true,reason}); refreshSectionViews(); return;
+      }
+      if(!resp.ok||!data.pins||!data.pins.length){
+        let reason=data&&data.error||('HTTP '+resp.status);
+        if(data&&data.bodySnippet) reason+=': '+String(data.bodySnippet).slice(0,160);
+        console.error('[Pinterest section]',reason,{status:resp.status,data,url:sectionUrl});
+        sectionGalleryCache.set(sectionUrl,{failed:true,reason}); refreshSectionViews(); return;
+      }
+      sectionGalleryCache.set(sectionUrl,{pins:data.pins});
+      refreshSectionViews();
+    }catch(e){
+      const reason='Request failed: '+String(e&&e.message||e);
+      console.error('[Pinterest section]',reason,{url:sectionUrl});
+      sectionGalleryCache.set(sectionUrl,{failed:true,reason});
+      refreshSectionViews();
+    }finally{
+      sectionGalleryInFlight.delete(sectionUrl);
+    }
+  }
+
   let localPinterestBoards=[];
   function boardList(){ return (dbReady?state.pinterestBoards:localPinterestBoards)||[]; }
 
@@ -198,7 +260,7 @@
       boardWarn('Pinterest short links need the full board address first. <a target="_blank" rel="noopener" href="'+esc(parsed.url)+'">Open Pinterest ↗</a>, then copy the full board URL from the address bar and paste it here.');
       return null;
     }
-    if(parsed.kind!=='board'){
+    if(parsed.kind!=='board'&&parsed.kind!=='section'){
       boardWarn('That is an individual Pinterest Pin, not a board. Use “+ Pinterest” below for individual Pins.');
       return null;
     }
@@ -234,8 +296,34 @@
     const boards=boardList();
     const boardWidth=pinterestBoardWidth(shelf);
     lastPinterestBoardWidth=boardWidth;
+    const pendingSectionUrls=[];
+    let hasWidgetBoard=false;
     shelf.innerHTML=boards.map(function(b,i){
       const id=esc(b.id||'');
+      /* Classify from the URL itself on every render (see the same choice
+         in renderBoard below) rather than trusting a stored field, so
+         editing the URL in place always takes the correct rendering path
+         without needing a separate migration. */
+      const parsed=classifyPinterestUrl(b.url);
+      const kind=parsed&&parsed.kind;
+      let body;
+      if(kind==='section'){
+        const cached=sectionGalleryCache.get(b.url);
+        if(cached&&cached.pins){
+          body='<div class="pinterest-section-gallery">'+cached.pins.map(function(p){
+            return '<a class="pinterest-section-thumb" target="_blank" rel="noopener" href="'+esc(p.url)+'"><img src="'+esc(p.thumbnailUrl)+'" alt="'+esc(p.title||'')+'" loading="lazy"></a>';
+          }).join('')+'</div>';
+        }else if(cached&&cached.failed){
+          body='<div class="pinterest-section-status pinterest-section-error">Could not load this section: '+esc(cached.reason||'unknown error')
+            +'. <a target="_blank" rel="noopener" href="'+esc(b.url)+'">Open on Pinterest ↗</a> or <button type="button" class="section-retry" data-url="'+esc(b.url)+'">try again</button>.</div>';
+        }else{
+          body='<div class="pinterest-section-status">Loading this section’s pins…</div>';
+          pendingSectionUrls.push(b.url);
+        }
+      }else{
+        body='<a data-pin-do="embedBoard" data-pin-board-width="'+boardWidth+'" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(b.url)+'"></a>';
+        hasWidgetBoard=true;
+      }
       return '<div class="pinterest-board-item">'
         +'<div class="pinterest-board-head">'
           +'<input class="board-title-input" type="text" value="'+esc(b.title||'')+'" placeholder="Add a title, e.g. Flowers" data-id="'+id+'">'
@@ -246,9 +334,16 @@
           +'</div>'
         +'</div>'
         +'<div class="pinterest-board-url-row"><input class="board-url-input" type="text" value="'+esc(b.url||'')+'" placeholder="https://www.pinterest.com/you/board/" data-id="'+id+'" spellcheck="false"></div>'
-        +'<a data-pin-do="embedBoard" data-pin-board-width="'+boardWidth+'" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(b.url)+'"></a>'
+        +body
         +'</div>';
     }).join('');
+    shelf.querySelectorAll('.section-retry').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        sectionGalleryCache.delete(btn.dataset.url);
+        window.renderPinterestBoards();
+      });
+    });
+    pendingSectionUrls.forEach(function(url){ resolveSectionGallery(url); });
     shelf.querySelectorAll('.board-remove').forEach(function(btn){
       btn.addEventListener('click',function(){
         const id=btn.dataset.id;
@@ -289,7 +384,7 @@
         updateBoardUrl(input.dataset.id,parsed.url);
       });
     });
-    if(boards.length){ ensurePinterestScript(); requestPinterestBuild(); }
+    if(hasWidgetBoard){ ensurePinterestScript(); requestPinterestBuild(); }
   };
 
   /* The embed's width is fixed at build time, so a genuine window resize
@@ -344,6 +439,17 @@
         if(kind==='board'){
           inner='<div class="pin-pinterest pin-pinterest-board"><a data-pin-do="embedBoard" data-pin-board-width="320" data-pin-scale-height="240" data-pin-scale-width="80" href="'+esc(clean)+'"></a></div>';
           hasBoardPinterest=true;
+        }else if(kind==='section'){
+          const cached=sectionGalleryCache.get(clean);
+          if(cached&&cached.pins){
+            inner='<div class="pinterest-section-gallery pinterest-section-gallery-small">'+cached.pins.slice(0,4).map(function(sp){
+              return '<a class="pinterest-section-thumb" target="_blank" rel="noopener" href="'+esc(sp.url)+'"><img src="'+esc(sp.thumbnailUrl)+'" alt="" loading="lazy"></a>';
+            }).join('')+'</div>';
+          }else{
+            inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
+            if(cached&&cached.failed) previewError=cached.reason||'Could not load this section';
+            else resolveSectionGallery(clean);
+          }
         }else if(kind==='pin'||kind==='short'){
           const preview=(p.pinThumbnail&&{thumbnailUrl:p.pinThumbnail})||pinPreviewCache.get(clean);
           if(preview&&preview.thumbnailUrl){
@@ -400,7 +506,7 @@
         return;
       }
       const url=parsed.url;
-      const defaultTitle=parsed.kind==='board'?'Pinterest Board':'Pinterest Pin';
+      const defaultTitle=parsed.kind==='board'?'Pinterest Board':parsed.kind==='section'?'Pinterest Section':'Pinterest Pin';
       const data={type:'pinterest',pinterestKind:parsed.kind,url:url,title:document.getElementById('pinterestTitle').value.trim()||defaultTitle,note:document.getElementById('pinterestNote').value.trim(),tag:document.getElementById('pinterestTag').value,createdAt:Date.now()};
       if(dbReady) db.collection('pinboard').add(data);
       else {localAdd(state.pins,data);renderBoard();renderStart();}
