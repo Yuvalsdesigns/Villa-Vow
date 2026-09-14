@@ -1176,7 +1176,11 @@ function autoFillVenueContact(){
   if(!text.trim()){ alert('Paste their reply into the box above first, then try auto-fill.'); return; }
   const setIfEmpty = (key, val)=>{ if(!val) return; const el = m.querySelector('#vc_'+key); if(el && !el.value.trim()) el.value = val.trim(); };
 
-  const guestsMatch = text.match(/(\d{1,4}\+?\s*(?:guests|people|pax|persons))/i);
+  /* Venue replies come in whatever language the venue does, French shows
+     up often enough (guests, vendors) that these keyword checks match
+     both languages rather than silently returning nothing on a French
+     reply, like Villa Porta's did before this. */
+  const guestsMatch = text.match(/(\d{1,4}\+?\s*(?:guests|people|pax|persons|personnes|invit[ée]s|convives))/i);
   setIfEmpty('maxGuests', guestsMatch && guestsMatch[0]);
 
   /* Currency amounts show up as a symbol ("€3,500") or, just as often in
@@ -1193,18 +1197,18 @@ function autoFillVenueContact(){
   /* [^.?!\n]*KEYWORD[^.?!\n]*[.?!]? grabs the clause around a keyword.
      The trailing punctuation is optional (not required) since bulleted
      lines in a pasted email often end at a newline with no period. */
-  const negativeAvail = /not available|fully booked|no longer available|already booked/i.test(text);
-  const availSentence = text.match(/[^.?!\n]*availab[^.?!\n]*[.?!]?/i);
+  const negativeAvail = /not available|fully booked|no longer available|already booked|indisponible|complet|plus disponible/i.test(text);
+  const availSentence = text.match(/[^.?!\n]*(?:availab|disponib)[^.?!\n]*[.?!]?/i);
   if(negativeAvail) setIfEmpty('availability', (availSentence && availSentence[0].trim()) || 'Sounds not available, check their reply');
   else if(availSentence) setIfEmpty('availability', availSentence[0].trim());
 
-  const kosherSentence = text.match(/[^.?!\n]*kosher[^.?!\n]*[.?!]?/i);
+  const kosherSentence = text.match(/[^.?!\n]*(?:kosher|casher)[^.?!\n]*[.?!]?/i);
   setIfEmpty('kosherCatering', kosherSentence && kosherSentence[0].trim());
 
-  const ceremonySentence = text.match(/[^.?!\n]*(?:ceremony|chuppah|rain|indoor backup)[^.?!\n]*[.?!]?/i);
+  const ceremonySentence = text.match(/[^.?!\n]*(?:ceremony|chuppah|rain|indoor backup|c[ée]r[ée]monie|ext[ée]rieur)[^.?!\n]*[.?!]?/i);
   setIfEmpty('ceremonySpace', ceremonySentence && ceremonySentence[0].trim());
 
-  const depositSentence = text.match(/[^.?!\n]*(?:deposit|cancellation)[^.?!\n]*[.?!]?/i);
+  const depositSentence = text.match(/[^.?!\n]*(?:deposit|cancellation|acompte|d[ée]p[ôo]t|arrhes|annulation)[^.?!\n]*[.?!]?/i);
   setIfEmpty('depositPolicy', depositSentence && depositSentence[0].trim());
 
   alert("Filled in what it could find by scanning for keywords, this is just a rough guess so please check every field against their actual reply.");
