@@ -814,10 +814,18 @@ async function sendToPlanner(){
     plannerHistory.push({role:'assistant', content: result.text});
   }catch(e){
     thinking.remove();
-    const code = e && e.code;
-    let msg = "Something went wrong reaching your planner. Try again in a moment.";
-    if(code === 'not_granted'){ msg = "This view hasn't granted the planner assistant. Reopen the board from your own copy of the link."; }
-    if(code === 'rate_limited'){ msg = "Your planner is fielding a lot of questions right now. Try again shortly."; }
+    /* e.code is set from the Worker's HTTP response status (a number,
+       e.g. 401/429/502), not the string values this used to check for
+       ('not_granted'/'rate_limited'), so those branches could never
+       actually match and every failure fell through to the same generic
+       message, hiding whatever the real problem was. Surface the actual
+       error text from the Worker (already a real, specific message, see
+       the Worker's own error responses) so a real failure is diagnosable
+       instead of always looking identical. */
+    const status = e && e.code;
+    let msg = (e && e.message) || "Something went wrong reaching your planner. Try again in a moment.";
+    if(status === 429){ msg = "Your planner is fielding a lot of questions right now. Try again shortly."; }
+    console.error('[Planner]', status, e && e.message, e);
     addMsg('assistant', msg, 'error');
     if(e && e.text) plannerHistory.push({role:'assistant', content:e.text});
   }

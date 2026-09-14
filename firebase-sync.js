@@ -122,8 +122,9 @@
           const idToken=await services.auth.currentUser.getIdToken();
           const messages=turns.filter(t=>t.role==='user'||t.role==='assistant').map(t=>({role:t.role,content:t.content}));
           const resp=await fetch(PLANNER_WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},body:JSON.stringify({messages})});
-          const data=await resp.json();
-          if(!resp.ok)throw Object.assign(new Error(data.error||'planner request failed'),{code:resp.status});
+          let data;
+          try{ data=await resp.json(); }catch(parseErr){ throw Object.assign(new Error('Planner request failed: HTTP '+resp.status+' '+resp.statusText+' (response was not JSON)'),{code:resp.status}); }
+          if(!resp.ok)throw Object.assign(new Error((data.error||'planner request failed')+(data.debug?': '+data.debug:'')),{code:resp.status});
           const text=data.text||'';
           if(opts&&typeof opts.onText==='function')opts.onText({text});
           return{text};
