@@ -681,13 +681,56 @@ function renderTodos(){
 }
 function itemRow(it, coll){
   const row = document.createElement('div'); row.className='item-row'+(it.done?' done':'');
+  row.draggable = true;
+  const grip = document.createElement('span'); grip.className='grip'; grip.innerHTML = svg(ICON.grip);
   const chk = document.createElement('button'); chk.className='chk'+(it.done?' on':''); chk.innerHTML = it.done?svg(ICON.check2):'';
   chk.addEventListener('click', ()=> toggleItem(coll, it));
   const text = document.createElement('span'); text.className='item-text'; text.textContent = it.text;
   const del = document.createElement('button'); del.className='btn ghost del'; del.innerHTML = svg(ICON.trash);
   del.addEventListener('click', ()=> deleteItem(coll, it));
-  row.appendChild(chk); row.appendChild(text); row.appendChild(del);
+  row.appendChild(grip); row.appendChild(chk); row.appendChild(text); row.appendChild(del);
+
+  row.addEventListener('dragstart', e=>{ row.classList.add('dragging'); e.dataTransfer.setData('text/plain', it.id); e.dataTransfer.effectAllowed='move'; });
+  row.addEventListener('dragend', ()=> row.classList.remove('dragging'));
+  row.addEventListener('dragover', e=>{
+    e.preventDefault();
+    const rect = row.getBoundingClientRect();
+    const before = (e.clientY - rect.top) < rect.height/2;
+    row.classList.toggle('drag-over-top', before);
+    row.classList.toggle('drag-over-bottom', !before);
+  });
+  row.addEventListener('dragleave', ()=> row.classList.remove('drag-over-top','drag-over-bottom'));
+  row.addEventListener('drop', e=>{
+    e.preventDefault();
+    row.classList.remove('drag-over-top','drag-over-bottom');
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if(!draggedId || draggedId===it.id) return;
+    const dragged = state[coll].find(x=>x.id===draggedId);
+    if(!dragged || dragged.category!==it.category) return;
+    const rect = row.getBoundingClientRect();
+    const before = (e.clientY - rect.top) < rect.height/2;
+    reorderItems(coll, it.category, draggedId, it.id, before);
+  });
+
   return row;
+}
+function reorderItems(coll, category, draggedId, targetId, before){
+  const list = state[coll].filter(x=>x.category===category);
+  const fromIdx = list.findIndex(x=>x.id===draggedId);
+  if(fromIdx<0) return;
+  const [item] = list.splice(fromIdx,1);
+  let toIdx = list.findIndex(x=>x.id===targetId);
+  if(toIdx<0) toIdx = list.length;
+  list.splice(before ? toIdx : toIdx+1, 0, item);
+  const base = Date.now();
+  list.forEach((it,i)=>{
+    const newOrder = base+i;
+    if(it.order !== newOrder){
+      it.order = newOrder;
+      if(dbReady) db.collection(coll).doc(it.id).update({order:newOrder});
+    }
+  });
+  if(!dbReady) ({todos:renderTodos, considerations:renderConsiderations})[coll]();
 }
 function addItem(coll, data){
   if(dbReady){ db.collection(coll).add(data); }
