@@ -225,20 +225,18 @@
      iframe at build time, it does not respond to CSS or container resizes
      on its own, so a hardcoded width left a large empty gap once the
      moodboard view was allowed to grow past that number on a wide screen. */
-  /* This value is handed straight to Pinterest's widget as
-     data-pin-board-width, which sets the fixed pixel width of the iframe
-     it builds. The page's own container width was made viewport-relative
-     with no ceiling (see the Moodboard/Venues/Budget/d.i.y width rules in
-     styles.css) so it keeps growing on a wide monitor, but this cap was
-     still fixed at 1600, so past that point the surrounding box kept
-     growing while the iframe inside it stopped, which is exactly the
-     "empty space on the right" a wide-enough screen would show. Raised
-     well past any width a real screen is likely to hand it; Pinterest's
-     own widget may still enforce some internal limit of its own beyond
-     this, which isn't something this page can detect or control. */
-  function pinterestBoardWidth(shelf){
-    const available=(shelf&&shelf.clientWidth)||(shelf&&shelf.parentElement&&shelf.parentElement.clientWidth)||900;
-    return Math.max(500, Math.min(3000, Math.round(available)));
+  /* Confirmed from an actual screenshot: Pinterest's board widget does not
+     scale its own internal column layout to fill whatever width it's
+     handed, it renders the same handful of columns regardless and leaves
+     the rest of that width as blank space inside its own iframe. Matching
+     this to the container's width (what this used to do) just changes how
+     much of that leftover space there is, it never closes it, since
+     Pinterest was never going to use the extra width either way. A fixed,
+     modest width is the one value actually confirmed to render with
+     (close to) no leftover space, so board width no longer depends on the
+     page's own width at all. */
+  function pinterestBoardWidth(){
+    return 1100;
   }
 
   /* One board-shelf feature is used in two places (Moodboard and Wedding
