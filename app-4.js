@@ -79,7 +79,7 @@ function totalPeopleAllStatuses(list){
 
 function renderGuestStats(){
   const all = state.guests;
-  const invited = all.length;
+  const invitesSent = all.filter(g=>g.invited).length;
   const hc = headcountBreakdown(all);
   const totalAll = totalPeopleAllStatuses(all);
   const likely = likelyHeadcount(all);
@@ -89,9 +89,9 @@ function renderGuestStats(){
   const el = document.getElementById('guestStatRow');
   if(!el) return;
   el.innerHTML = [
-    tile(String(invited), 'Invites sent (rows on the list)', true),
+    tile(String(likely.total), 'Likely to attend (your estimate)<br><span class="tile-breakdown">'+likely.base+' guests + '+likely.plus+' plus-ones</span>', true),
     tile(String(totalAll.total), 'Total people, any status<br><span class="tile-breakdown">'+totalAll.base+' rows + '+totalAll.plus+' plus-ones</span>'),
-    tile(String(likely.total), 'Likely to attend (your estimate)<br><span class="tile-breakdown">'+likely.base+' guests + '+likely.plus+' plus-ones</span>'),
+    tile(String(invitesSent)+' / '+all.length, 'Invites actually sent'),
     tile(String(hc.total), 'Confirmed headcount (real RSVPs)<br><span class="tile-breakdown">'+hc.base+' guests + '+hc.plus+' plus-ones</span>'),
     tile(String(pending), 'Awaiting RSVP'),
     tile(String(declined), "Can't make it"),
@@ -143,6 +143,7 @@ function buildGuestRow(g, side){
       + '<option value="confirmed"'+(g.rsvp==='confirmed'?' selected':'')+'>Confirmed</option>'
       + '<option value="declined"'+(g.rsvp==='declined'?' selected':'')+'>Declined</option>'
     + '</select>'
+    + '<button class="invite-btn'+(g.invited?' sent':'')+'" title="'+(g.invited?'Invite marked as sent, click to undo':'Invite not sent yet, click once you\'ve sent it')+'">'+svg(ICON.mail)+'<span>'+(g.invited?'Sent':'Not sent')+'</span></button>'
     + '<span class="stepper" title="Plus-ones invited">'
       + '<button class="step-minus" '+(g.plusOnesTBD?'disabled':'')+'>−</button>'
       + '<span class="val'+(g.plusOnesTBD?' tbd':'')+'">'+(g.plusOnesTBD? 'X' : '+'+(g.plusOnes||0))+'</span>'
@@ -174,6 +175,13 @@ function buildGuestRow(g, side){
   main.querySelector('.row-name').addEventListener('change', e=> updateGuest(g, {name: e.target.value.trim() || g.name}));
   main.querySelector('.likelihood').addEventListener('change', e=>{ e.target.className='likelihood '+e.target.value; updateGuest(g, {likelihood: e.target.value}); });
   main.querySelector('.rsvp').addEventListener('change', e=>{ e.target.className='rsvp '+e.target.value; updateGuest(g, {rsvp: e.target.value}); });
+  main.querySelector('.invite-btn').addEventListener('click', e=>{
+    const nowSent = !g.invited;
+    updateGuest(g, {invited: nowSent});
+    e.currentTarget.classList.toggle('sent', nowSent);
+    e.currentTarget.title = nowSent ? 'Invite marked as sent, click to undo' : "Invite not sent yet, click once you've sent it";
+    e.currentTarget.querySelector('span').textContent = nowSent ? 'Sent' : 'Not sent';
+  });
   main.querySelector('.step-minus').addEventListener('click', ()=>{
     const newPlusOnes = Math.max(0, (g.plusOnes||0)-1);
     updateGuest(g, {plusOnes: newPlusOnes, plusOnesTBD:false});
@@ -251,7 +259,7 @@ function addGuest(side){
   if(!name) return;
   const existing = guestsFor(side);
   const maxOrder = existing.reduce((m,g)=>Math.max(m,g.order||0),0);
-  const data = {name, side, likelihood:'likely', rsvp:'pending', plusOnes:0, plusOnesTBD:false, plusLikelihood:'likely', plusRsvp:'pending', plusOneNotes:'', dietary:'', table:'', notes:'', email:'', order:maxOrder+1};
+  const data = {name, side, likelihood:'likely', rsvp:'pending', invited:false, plusOnes:0, plusOnesTBD:false, plusLikelihood:'likely', plusRsvp:'pending', plusOneNotes:'', dietary:'', table:'', notes:'', email:'', order:maxOrder+1};
   if(dbReady) db.collection('guests').add(data);
   input.value='';
 }

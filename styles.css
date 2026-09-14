@@ -702,6 +702,14 @@
   .guest-row.drag-over-bottom{box-shadow:inset 0 -2px 0 var(--brass);}
   .guest-row.dragging{opacity:.4;}
   .row-main{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:default;flex-wrap:wrap;row-gap:6px;}
+  .invite-btn{
+    display:flex;align-items:center;gap:5px;flex:none;
+    font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:20px;
+    background:var(--line-soft);color:var(--ink-faint);border:1px solid transparent;cursor:pointer;
+  }
+  .invite-btn svg{width:14px;height:14px;stroke-width:1.8;}
+  .invite-btn:hover{border-color:var(--line);}
+  .invite-btn.sent{background:var(--cypress-soft);color:var(--cypress-ink);}
   .stepper{display:flex;align-items:center;gap:2px;background:var(--surface-2);border:1px solid var(--line);border-radius:20px;padding:2px;flex:none;}
   .stepper button{width:19px;height:19px;border-radius:50%;border:none;background:var(--surface);color:var(--ink);font-size:13px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
   .stepper button:hover:not(:disabled){background:var(--brass-soft);color:var(--brass);}
