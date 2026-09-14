@@ -196,9 +196,17 @@
      (ultrawide monitors, larger external displays), since the content
      stopped growing once it hit that ceiling while the screen kept
      going. A viewport-relative width has no such ceiling, it keeps
-     adapting no matter how wide the screen actually is. */
-  #view-board.active, #view-venues.active, #view-budget.active, #view-diy.active{max-width:calc(96vw - 40px);}
-  main:has(#view-board.active), main:has(#view-venues.active), main:has(#view-budget.active), main:has(#view-diy.active){max-width:96vw;}
+     adapting no matter how wide the screen actually is. Scoped to
+     desktop widths only: on mobile this selector's higher specificity
+     than the base .view{max-width:1080px} rule was winning over the
+     mobile layout's own width:100%, which doesn't set max-width at all
+     (only display), so 96vw-40px was actually being applied there too,
+     capping the view narrower than the phone's own screen and leaving
+     an empty strip on the right on every one of these pages. */
+  @media(min-width:821px){
+    #view-board.active, #view-venues.active, #view-budget.active, #view-diy.active{max-width:calc(96vw - 40px);}
+    main:has(#view-board.active), main:has(#view-venues.active), main:has(#view-budget.active), main:has(#view-diy.active){max-width:96vw;}
+  }
   /* Checklist/Things to Get are a single column of text, not a grid, so
      stretching them as wide as the grid pages would leave a short item
      looking lost on a near-edge-to-edge line. A smaller bump still uses
