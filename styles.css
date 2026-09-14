@@ -298,6 +298,12 @@
   .chk.on{background:var(--cypress);border-color:var(--cypress);}
   .chk.on svg{width:12px;height:12px;stroke:#fff;}
   .item-text{font-size:14px;line-height:1.45;flex:1;}
+  textarea.item-text{
+    display:block;width:100%;box-sizing:border-box;font:inherit;color:inherit;
+    border:1px solid transparent;background:transparent;padding:2px 4px;margin:-2px -4px;
+    border-radius:6px;resize:vertical;overflow:hidden;
+  }
+  textarea.item-text:hover,textarea.item-text:focus{border-color:var(--line);background:var(--surface-2);outline:none;}
   .item-row .del{opacity:0;transition:opacity .12s;}
   .item-row:hover .del{opacity:1;}
   .add-row{display:flex;gap:8px;margin-top:10px;}

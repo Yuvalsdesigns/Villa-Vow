@@ -121,6 +121,7 @@ function showTab(id){
   if(typeof syncMobileNav==='function') syncMobileNav(id);
   if(id==='budget' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
   if(id==='board' && typeof renderPinterestBoards==='function') renderPinterestBoards();
+  if((id==='todo' || id==='considerations') && typeof resizeAllItemTextareas==='function') resizeAllItemTextareas();
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}
   setTimeout(updateTabsScrollArrow, 260);
 }
@@ -678,14 +679,27 @@ function renderTodos(){
     box.appendChild(add);
     wrap.appendChild(box);
   });
+  resizeAllItemTextareas();
 }
+/* Same 0-height-while-hidden issue as the budget notes textarea: sizing
+   only at creation time measures wrong whenever the Checklist/Things to
+   Get tab isn't the one currently visible (their normal state, since
+   both render regardless of which tab is open), so re-run it once the
+   tab actually becomes visible too (see showTab). */
+function resizeAllItemTextareas(){ document.querySelectorAll('#view-todo textarea.item-text, #view-considerations textarea.item-text').forEach(autoGrowTextarea); }
 function itemRow(it, coll){
   const row = document.createElement('div'); row.className='item-row'+(it.done?' done':'');
   row.draggable = true;
   const grip = document.createElement('span'); grip.className='grip'; grip.innerHTML = svg(ICON.grip);
   const chk = document.createElement('button'); chk.className='chk'+(it.done?' on':''); chk.innerHTML = it.done?svg(ICON.check2):'';
   chk.addEventListener('click', ()=> toggleItem(coll, it));
-  const text = document.createElement('span'); text.className='item-text'; text.textContent = it.text;
+  const text = document.createElement('textarea'); text.className='item-text'; text.rows=1; text.value = it.text;
+  text.addEventListener('input', ()=> autoGrowTextarea(text));
+  text.addEventListener('change', ()=>{
+    const val = text.value.trim();
+    if(!val){ text.value = it.text; return; }
+    updateItem(coll, it, {text: val});
+  });
   const del = document.createElement('button'); del.className='btn ghost del'; del.innerHTML = svg(ICON.trash);
   del.addEventListener('click', ()=> deleteItem(coll, it));
   row.appendChild(grip); row.appendChild(chk); row.appendChild(text); row.appendChild(del);
@@ -740,6 +754,11 @@ function toggleItem(coll, it){
   if(dbReady){ db.collection(coll).doc(it.id).update({done: !it.done}); }
   else { it.done = !it.done; ({todos:renderTodos, considerations:renderConsiderations})[coll](); renderStart(); }
 }
+function updateItem(coll, it, data){
+  Object.assign(it, data);
+  if(dbReady){ db.collection(coll).doc(it.id).update(data); }
+  else { ({todos:renderTodos, considerations:renderConsiderations})[coll](); }
+}
 function deleteItem(coll, it){
   if(dbReady){ db.collection(coll).doc(it.id).delete(); }
   else { state[coll]=state[coll].filter(x=>x.id!==it.id); ({todos:renderTodos, considerations:renderConsiderations})[coll](); renderStart(); }
@@ -777,6 +796,7 @@ function renderConsiderations(){
     box.appendChild(add);
     wrap.appendChild(box);
   });
+  resizeAllItemTextareas();
 }
 
 
