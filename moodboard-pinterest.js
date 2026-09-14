@@ -194,11 +194,20 @@
     if(titleInput) titleInput.value='';
   }
 
+  /* Pinterest's embed widget bakes data-pin-board-width into a fixed-size
+     iframe at build time, it does not respond to CSS or container resizes
+     on its own, so a hardcoded width left a large empty gap once the
+     moodboard view was allowed to grow past that number on a wide screen. */
+  function pinterestBoardWidth(shelf){
+    const available=(shelf&&shelf.clientWidth)||(shelf&&shelf.parentElement&&shelf.parentElement.clientWidth)||900;
+    return Math.max(500, Math.min(1600, Math.round(available)));
+  }
   window.renderPinterestBoards=function(){
     const shelf=document.getElementById('pinterestBoardShelf');
     if(!shelf) return;
     migrateLegacyBoardUrl();
     const boards=boardList();
+    const boardWidth=pinterestBoardWidth(shelf);
     shelf.innerHTML=boards.map(function(b,i){
       const id=esc(b.id||'');
       return '<div class="pinterest-board-item">'
@@ -210,7 +219,7 @@
             +'<button class="board-remove" type="button" data-id="'+id+'" aria-label="Remove board">'+svg(ICON.x)+'</button>'
           +'</div>'
         +'</div>'
-        +'<a data-pin-do="embedBoard" data-pin-board-width="900" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(b.url)+'"></a>'
+        +'<a data-pin-do="embedBoard" data-pin-board-width="'+boardWidth+'" data-pin-scale-height="420" data-pin-scale-width="110" href="'+esc(b.url)+'"></a>'
         +'</div>';
     }).join('');
     shelf.querySelectorAll('.board-remove').forEach(function(btn){
@@ -242,6 +251,18 @@
     });
     if(boards.length){ ensurePinterestScript(); requestPinterestBuild(); }
   };
+
+  /* The embed's width is fixed at build time, so a window resize (or the
+     moodboard container simply becoming visible at its real size, since a
+     hidden view measures 0 width) needs a full rebuild to pick up the new
+     size, not just a rebuild of the existing iframe. */
+  let boardResizeTimer=null;
+  window.addEventListener('resize', function(){
+    clearTimeout(boardResizeTimer);
+    boardResizeTimer=setTimeout(function(){
+      if(document.getElementById('pinterestBoardShelf')) window.renderPinterestBoards();
+    }, 300);
+  });
 
   window.renderBoard=function(){
     const grid=document.getElementById('boardGrid'), empty=document.getElementById('boardEmpty');

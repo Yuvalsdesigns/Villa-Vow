@@ -112,6 +112,7 @@ function showTab(id){
   window.scrollTo(0,0);
   if(typeof syncMobileNav==='function') syncMobileNav(id);
   if(id==='budget' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
+  if(id==='board' && typeof renderPinterestBoards==='function') renderPinterestBoards();
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}
   setTimeout(updateTabsScrollArrow, 260);
 }

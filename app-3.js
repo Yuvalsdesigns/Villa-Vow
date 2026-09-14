@@ -679,48 +679,40 @@ document.getElementById('saveLink').addEventListener('click', ()=>{
 });
 
 /* ---------------- MOBILE NAV ---------------- */
-const MOBILE_NAV_ICONS = {
-  home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M9.5 20v-6h5v6"/>',
-  check:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8l1.5 1.5L12 7"/><path d="M14 8h3"/><path d="M8 14l1.5 1.5L12 13"/><path d="M14 14h3"/>',
-  venue:'<path d="M3 20h18"/><path d="M5 20V9l7-5 7 5v11"/><path d="M9 20v-6h6v6"/>',
-  more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
-  budget:'<path d="M4 7.5h13.5a2.5 2.5 0 012.5 2.5v7a2.5 2.5 0 01-2.5 2.5h-11A2.5 2.5 0 014 17V7.5z"/><path d="M4.5 7.5l1.5-3h10l1.5 3M15.5 12h4.5v3h-4.5a1.5 1.5 0 010-3z"/><circle cx="16.8" cy="13.5" r=".4" fill="currentColor" stroke="none"/>',
-  list:'<path d="M7 4h10l2 3v13H5V7l2-3z"/><path d="M8.5 10.5l1.4 1.4 2.5-2.8M8.5 16l1.4 1.4 2.5-2.8M14 10.5h2M14 16h2"/>',
-};
-const MOBILE_NAV_PRIMARY = [['start','home','Home'],['todo','check','Checklist'],['budget','budget','Budget'],['considerations','list','Things to Get'],['venues','venue','Venues']];
-const MOBILE_NAV_MORE = [['board','Moodboard'],['style','Style Gallery'],['emails','Emails and Gifts'],['guestapp','Guest App'],['diy','Wedding d.i.y']];
-
+/* Same horizontally-scrollable strip as the desktop header (see app-1.js
+   showTab/updateTabsScrollArrow): every tab is reachable by swiping or
+   tapping the fade-edged arrow, instead of the 5 extra tabs being hidden
+   behind a separate "More" bottom sheet. Reuses TABS/svg() from app-1.js
+   rather than keeping a second, separate icon/label list in sync. */
+let mobileNavUpdateArrow = null;
 function buildMobileNav(){
   if(document.getElementById('vvMobileNav')) return;
   const nav = document.createElement('nav'); nav.id='vvMobileNav'; nav.setAttribute('aria-label','Wedding planner navigation');
-  MOBILE_NAV_PRIMARY.forEach(([id,icon,label])=>{
-    const b = document.createElement('button'); b.type='button'; b.className='tabtint-'+TAB_TINTS[id]; b.dataset.tab=id;
-    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+MOBILE_NAV_ICONS[icon]+'</svg><span>'+label+'</span>';
-    b.addEventListener('click', ()=> showTab(id));
-    nav.appendChild(b);
+  const scroll = document.createElement('div'); scroll.className='mobile-nav-scroll';
+  TABS.forEach(t=>{
+    const b = document.createElement('button'); b.type='button'; b.className='tabtint-'+TAB_TINTS[t.id]; b.dataset.tab=t.id;
+    b.innerHTML = svg(t.icon) + '<span>'+t.label+'</span>';
+    b.addEventListener('click', ()=> showTab(t.id));
+    scroll.appendChild(b);
   });
-  const more = document.createElement('button'); more.type='button'; more.id='vvMoreButton';
-  more.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+MOBILE_NAV_ICONS.more+'</svg><span>More</span>';
-  more.addEventListener('click', ()=> document.getElementById('vvMobileMore')?.classList.add('open'));
-  nav.appendChild(more);
+  nav.appendChild(scroll);
+  const arrow = document.createElement('button'); arrow.type='button'; arrow.id='vvMobileNavArrow'; arrow.setAttribute('aria-label','Show more tabs'); arrow.textContent='›';
+  arrow.addEventListener('click', ()=> scroll.scrollBy({left:180, behavior:'smooth'}));
+  nav.appendChild(arrow);
   document.body.appendChild(nav);
-
-  const overlay = document.createElement('div'); overlay.id='vvMobileMore';
-  overlay.innerHTML = '<div class="sheet"><div class="handle"></div></div>';
-  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
-  document.body.appendChild(overlay);
-  const sheet = overlay.querySelector('.sheet');
-  MOBILE_NAV_MORE.forEach(([id,label])=>{
-    const b = document.createElement('button'); b.type='button'; b.textContent=label;
-    b.addEventListener('click', ()=>{ overlay.classList.remove('open'); showTab(id); });
-    sheet.appendChild(b);
-  });
+  mobileNavUpdateArrow = function(){
+    const hasMore = scroll.scrollWidth - scroll.clientWidth - scroll.scrollLeft > 4;
+    arrow.classList.toggle('visible', hasMore);
+  };
+  scroll.addEventListener('scroll', mobileNavUpdateArrow);
+  window.addEventListener('resize', mobileNavUpdateArrow);
+  setTimeout(mobileNavUpdateArrow, 0);
 }
 function syncMobileNav(activeId){
   document.querySelectorAll('#vvMobileNav button[data-tab]').forEach(b=> b.classList.toggle('active', b.dataset.tab===activeId));
-  const more = document.getElementById('vvMoreButton');
-  const inMore = MOBILE_NAV_MORE.some(([id])=>id===activeId);
-  if(more) more.className = (inMore ? 'active tabtint-'+TAB_TINTS[activeId] : '');
+  const activeBtn = document.querySelector('#vvMobileNav button[data-tab="'+activeId+'"]');
+  if(activeBtn) activeBtn.scrollIntoView({inline:'nearest', block:'nearest', behavior:'smooth'});
+  if(mobileNavUpdateArrow) setTimeout(mobileNavUpdateArrow, 260);
 }
 buildMobileNav();
 
