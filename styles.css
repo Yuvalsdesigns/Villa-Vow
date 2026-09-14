@@ -455,7 +455,14 @@
   }
   .filter-chip.active{background:var(--ink);border-color:var(--ink);color:var(--bg);}
   .board-actions{margin-left:auto;display:flex;gap:8px;}
-  .board-columns{column-width:230px;column-gap:14px;}
+  /* column-width (true masonry, staggered heights) can only add more
+     columns of the same fixed width as the container grows, unlike the
+     grid+minmax used for venues/boards, which stretches each card wider.
+     Switching to grid here would fix that but lose the height-staggered
+     packing that makes a Pinterest-style board look right, so instead
+     the column width itself scales with the viewport, individual pins
+     actually get bigger on a wide screen, not just more numerous. */
+  .board-columns{column-width:clamp(230px, 20vw, 340px);column-gap:14px;}
   .pin{
     break-inside:avoid;margin-bottom:14px;border:1px solid var(--line);border-radius:var(--radius);
     background:var(--surface);box-shadow:var(--shadow-sm);overflow:hidden;position:relative;
