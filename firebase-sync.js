@@ -105,6 +105,41 @@
      this never runs again (or duplicates) once it's back, whether restored
      by this migration or manually re-added by the user first. */
   async function ensureBeautyLineRestoreMigration(db){const migRef=db.collection('meta').doc('migration_beauty_line_restore');const mig=await migRef.get();if(mig.exists)return;const snap=await db.collection('budget').where('category','==','Beauty').limit(1).get();if(snap.empty){await db.collection('budget').add({category:'Beauty',item:'Hair & makeup (trial + day-of)',estCost:1000,actCost:0,paid:0,notes:'Local Lake Iseo artists, already lean.',order:9});}await migRef.set({migratedAt:firebase.firestore.FieldValue.serverTimestamp()});}
+  /* Cross-checked against "The Ultimate Jewish Wedding Checklist" (Smashing
+     The Glass) the user uploaded, item by item, against every existing
+     Checklist line (all four TODO_SEED_PART arrays) to find genuine gaps,
+     skipping anything already covered even under different wording, so
+     this only adds what's actually missing, nothing that already exists in
+     a different phrasing. Appended to the end of each item's matching
+     time-bucket category (a high, timestamp-based order value sorts after
+     every existing item in that category) rather than touching the order
+     of anything already there, so nothing gets reshuffled or removed. */
+  const CHECKLIST_GAP_FILL=[
+    ['12+ months out','Talk through what kind of wedding you actually want, big vs. intimate, formal vs. casual, before locking in a venue brief'],
+    ['9–12 months out','Organize an engagement shoot, if you want one'],
+    ['6–9 months out','Renew or apply for passports needed for the honeymoon'],
+    ['6–9 months out','Set up your wedding gift registry'],
+    ['3–6 months out','Reserve a hotel room for the wedding night itself, separate from the honeymoon'],
+    ['3–6 months out','Organize wedding favors, if having them'],
+    ['3–6 months out','Organize wedding-party and parent gifts, if giving them'],
+    ['3–6 months out','Start creating a wedding program / ceremony booklet, if having one, and get it ready to print'],
+    ['1–3 months out','Decide what you’re wearing to the rehearsal dinner / Auf Ruf'],
+    ['1–3 months out','Put together a honeymoon packing list'],
+    ['1–3 months out','Pick a wedding hashtag'],
+    ['1–3 months out','Set up a guest book, if you want one'],
+    ['1–3 months out','Make a photographer shot list of must-have shots'],
+    ['Final weeks','Remind the caterer to order challah, wine and any other ritual foods'],
+    ['Final weeks','Give every vendor one emergency contact number, not your own'],
+    ['Final weeks','Assign a family member as the photographer’s point of contact on the day'],
+    ['Final weeks','Confirm who’s handling overall venue setup and breakdown beyond just décor (tables, catering equipment, staging)'],
+    ['Final weeks','Set aside vendor payments/tips in labeled envelopes ahead of time'],
+    ['Final weeks','Put together a bathroom basket for guests, if doing one'],
+    ['Wedding weekend','Eat a real breakfast before getting ready'],
+    ['Wedding weekend','Hand off the wedding bands to the best man and maid of honor to hold during the ceremony'],
+    ['After the wedding','Leave reviews for vendors you loved'],
+    ['After the wedding','Get the wedding gown cleaned, then store, sell or donate it'],
+  ];
+  async function ensureChecklistGapFillMigration(db){const migRef=db.collection('meta').doc('migration_checklist_gap_fill');const mig=await migRef.get();if(mig.exists)return;const base=Date.now();const batch=db.batch();CHECKLIST_GAP_FILL.forEach(([category,text],i)=>{batch.set(db.collection('todos').doc(),{category,text,done:false,order:base+i});});batch.set(migRef,{migratedAt:firebase.firestore.FieldValue.serverTimestamp()});await batch.commit();}
   async function ensureTravelGuideSeedMigration(db){const migRef=db.collection('meta').doc('migration_travelguide_seed');const mig=await migRef.get();if(mig.exists)return;const batch=db.batch();SEED_TRAVEL_GUIDE.forEach(([category,text],i)=>batch.set(db.collection('travelGuide').doc('seed-travel-'+i),{category,text,done:false,order:i}));batch.set(migRef,{migratedAt:firebase.firestore.FieldValue.serverTimestamp()});await batch.commit();}
   async function ensurePinterestLinkTypeMigration(db){const migRef=db.collection('meta').doc('migration_pinterest_link_typefix');const mig=await migRef.get();if(mig.exists)return;const snap=await db.collection('pinboard').get();const batch=db.batch();let changed=0;snap.docs.forEach(doc=>{const d=doc.data();if(d.type==='link'&&typeof d.url==='string'){try{const u=new URL(d.url);const host=u.hostname.toLowerCase();if(host==='pin.it'||host==='www.pin.it'||host==='pinterest.com'||host.endsWith('.pinterest.com')){batch.update(doc.ref,{type:'pinterest'});changed++;}}catch(e){}}});batch.set(migRef,{migratedAt:firebase.firestore.FieldValue.serverTimestamp(),changed});await batch.commit();}
   function installAuthUi(){if(document.getElementById('vvAuthBox'))return;const box=document.createElement('div');box.id='vvAuthBox';box.style.cssText='position:fixed;right:18px;top:16px;z-index:9999;background:rgba(255,253,250,.98);border:1px solid rgba(84,66,65,.16);box-shadow:0 8px 28px rgba(44,35,35,.10);border-radius:14px;padding:9px 11px;font:12px Karla,system-ui,sans-serif;color:#493f3e;max-width:min(390px,calc(100vw - 36px));';(document.querySelector('.sidebar')||document.body).appendChild(box);updateAuthUi(auth.currentUser);auth.onAuthStateChanged(updateAuthUi);}
@@ -113,7 +148,7 @@
   async function emailSignIn(){const email=document.getElementById('vvEmail').value.trim();const password=document.getElementById('vvPassword').value;if(!email||!password)return alert('Enter your email and password.');try{await auth.signInWithEmailAndPassword(email,password);location.reload();}catch(err){alert('Sign-in failed. Check the email/password, or make sure this account has been created in Firebase Authentication.');}}
   async function resetPassword(){const email=document.getElementById('vvEmail').value.trim();if(!email)return alert('Enter your email first, then click Forgot password.');try{await auth.sendPasswordResetEmail(email);alert('Password reset email sent.');}catch(err){alert('Could not send the reset email. Make sure the account exists.');}}
   const existingClaude=window.claude||{};const existingUse=typeof existingClaude.use==='function'?existingClaude.use.bind(existingClaude):null;window.claude=existingClaude;window.claude.use=async function(name){
-    if(name==='db'){try{const services=await ensureFirebase();if(!services.auth.currentUser)return null;await ensureWeddingSeed(services.firestore);await ensureRainPlanAndSurvivalKitMigration(services.firestore);await ensureParkingCheckMigration(services.firestore);await ensureBudgetGoalDefault(services.firestore);await ensureBudgetEstimatesMigration(services.firestore);await ensureBudgetCostCuttingNotesMigration(services.firestore);await ensureBudgetLeanIseoUpdateMigration(services.firestore);await ensureGuestAppMigration(services.firestore);await ensureGuestPlusConfirmedMigration(services.firestore);await ensureRsvpLikelihoodSplitMigration(services.firestore);await ensureCastrumVenueContactMigration(services.firestore);await ensureVillaPortaVenueContactMigration(services.firestore);await ensureVillaPortaBrochureMigration(services.firestore);await ensureVillaPortaBrochureSpacingFixMigration(services.firestore);await ensurePinterestLinkTypeMigration(services.firestore);await ensureTravelGuideSeedMigration(services.firestore);await ensureBeautyLineRestoreMigration(services.firestore);return services.firestore;}catch(err){console.error('Villa & Vow Firebase sync error:',err);return null;}}
+    if(name==='db'){try{const services=await ensureFirebase();if(!services.auth.currentUser)return null;await ensureWeddingSeed(services.firestore);await ensureRainPlanAndSurvivalKitMigration(services.firestore);await ensureParkingCheckMigration(services.firestore);await ensureBudgetGoalDefault(services.firestore);await ensureBudgetEstimatesMigration(services.firestore);await ensureBudgetCostCuttingNotesMigration(services.firestore);await ensureBudgetLeanIseoUpdateMigration(services.firestore);await ensureGuestAppMigration(services.firestore);await ensureGuestPlusConfirmedMigration(services.firestore);await ensureRsvpLikelihoodSplitMigration(services.firestore);await ensureCastrumVenueContactMigration(services.firestore);await ensureVillaPortaVenueContactMigration(services.firestore);await ensureVillaPortaBrochureMigration(services.firestore);await ensureVillaPortaBrochureSpacingFixMigration(services.firestore);await ensurePinterestLinkTypeMigration(services.firestore);await ensureTravelGuideSeedMigration(services.firestore);await ensureBeautyLineRestoreMigration(services.firestore);await ensureChecklistGapFillMigration(services.firestore);return services.firestore;}catch(err){console.error('Villa & Vow Firebase sync error:',err);return null;}}
     if(name==='sample'){
       try{
         const services=await ensureFirebase();
