@@ -248,7 +248,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 
 "use strict";
 
-let db = null, dbReady=false;
+let db = null, dbReady=false, syncUnavailable=false;
 const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
@@ -581,9 +581,9 @@ function setSync(ok, text){
 
 async function initDb(){
   try{
-    if(!window.claude || !window.claude.use){ setSync(false,'no live sync in this view'); renderAll(); return; }
+    if(!window.claude || !window.claude.use){ syncUnavailable=true; setSync(false,'no live sync in this view'); renderAll(); return; }
     db = await window.claude.use('db');
-    if(!db){ setSync(false,'no live sync in this view, changes stay on this device only'); renderAll(); return; }
+    if(!db){ syncUnavailable=true; setSync(false,'no live sync in this view, changes stay on this device only'); renderAll(); return; }
     dbReady = true;
     setSync(true,'synced');
     unsub.push(db.collection('todos').orderBy('order','asc').onSnapshot(snap=>{
@@ -651,7 +651,7 @@ async function initDb(){
       state.customStyles = snap.docs.map(d=>({id:d.id, ...d.data()}));
       if(typeof renderStyleSections==='function') renderStyleSections();
     }, err=>setSync(false,'sync error')));
-  }catch(e){ setSync(false,'no live sync, changes stay on this device only'); renderAll(); }
+  }catch(e){ syncUnavailable=true; setSync(false,'no live sync, changes stay on this device only'); renderAll(); }
 }
 function renderAll(){ renderTodos(); renderBudget(); renderBoard(); renderConsiderations(); renderVenues(); renderGuestApp(); renderStart(); }
 
@@ -933,7 +933,7 @@ function renderTravelGuide(){
 function autoGrowTextarea(el){ el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
 function resizeAllBudgetNotes(){ document.querySelectorAll('#view-budget .notes-input').forEach(autoGrowTextarea); }
 function renderBudget(){
-  if(!dbReady && state.budget.length===0){
+  if(syncUnavailable && state.budget.length===0){
     state.budget = SEED_BUDGET.map((b,i)=>({id:'local-budget-'+i, ...b}));
   }
   const body = document.getElementById('budgetBody');
