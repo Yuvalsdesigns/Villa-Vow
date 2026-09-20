@@ -704,6 +704,7 @@ const VENUES_PART_5 = [
     "region": "Ameno / Vacciaghetto, Lake Orta, Piedmont, Italy",
     "price": "TBD: inquire",
     "badge": "Full-property buyout",
+    "image": "https://ladarbia.com/wp-content/uploads/2024/11/homepage-ladarbia.webp",
     "grad": [
       "#DCE8E2",
       "#4A6C7A"
