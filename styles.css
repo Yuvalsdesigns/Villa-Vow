@@ -562,7 +562,11 @@
   .modal-tabs button.active{background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm);}
   .modal-pane{display:none;flex-direction:column;gap:10px;}
   .modal-pane.active{display:flex;}
-  .modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;}
+  /* Sticky rather than just the last item in the flex column, so Save/Cancel
+     stay in view at the bottom of the modal's own scroll area, instead of
+     the user needing to scroll a long form all the way down to find them,
+     which is what made them look "missing" behind the mobile bottom nav. */
+  .modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;position:sticky;bottom:0;background:var(--surface);padding-top:10px;}
   .drop-zone{
     border:1.5px dashed var(--line);border-radius:10px;padding:18px;text-align:center;
     font-size:12.5px;color:var(--ink-soft);cursor:pointer;

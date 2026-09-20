@@ -2,6 +2,11 @@
 @media (max-width: 820px){
   html,body{width:100%;max-width:100%;overflow-x:hidden;}
   body{padding-bottom:calc(82px + env(safe-area-inset-bottom));}
+  /* 88vh (the desktop-tuned default) barely clears the fixed bottom nav bar's
+     own height on a phone, so the modal box and the nav can end up right on
+     top of each other. Give it real headroom instead of a near-miss. */
+  .modal{max-height:calc(100vh - 130px - env(safe-area-inset-bottom)) !important;}
+  .modal{max-height:calc(100dvh - 130px - env(safe-area-inset-bottom)) !important;}
   .bg-watermark{opacity:.48;}
   .app{display:block !important;min-height:100vh;}
   .sidebar{position:sticky !important;top:0;z-index:45;width:100% !important;height:auto !important;display:flex !important;align-items:center !important;justify-content:space-between;padding:10px 14px !important;padding-top:calc(10px + env(safe-area-inset-top)) !important;background:rgba(251,243,236,.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-right:0 !important;border-bottom:1px solid var(--line);overflow:visible !important;}
