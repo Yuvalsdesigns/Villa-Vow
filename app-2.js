@@ -724,28 +724,27 @@ function extractVenueCapacity(v){
 }
 function renderVenueFilters(){
   const regionSel=document.getElementById('venueRegionFilter');
-  const tagSel=document.getElementById('venueTagFilter');
-  if(!regionSel || !tagSel) return;
+  if(!regionSel) return;
   const regions=[...new Set(VENUES.map(v=>v.region.split(',')[0]))].sort();
-  const tags=[...new Set(VENUES.map(v=>v.badge).filter(Boolean))].sort();
   regionSel.innerHTML='<option value="">All regions</option>'+regions.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
-  tagSel.innerHTML='<option value="">All tags</option>'+tags.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
 }
 function renderVenues(){
   const grid = document.getElementById('venueGrid'); if(!grid) return;
   const q=(document.getElementById('venueSearch')?.value||'').trim().toLowerCase();
   const region=(document.getElementById('venueRegionFilter')?.value||'').toLowerCase();
-  const tag=(document.getElementById('venueTagFilter')?.value||'').toLowerCase();
   const minGuests=parseInt(document.getElementById('venueCapacityFilter')?.value||'',10);
   const contactedFilter=document.getElementById('venueContactedFilter')?.value||'';
+  const shortlistedFilter=document.getElementById('venueShortlistedFilter')?.value||'';
   grid.innerHTML='';
   const filtered=VENUES.filter(v=>{
     const hay=[v.name,v.region,v.desc,...(v.facts||[])].join(' ').toLowerCase();
     const capacity=extractVenueCapacity(v);
+    const shortlisted=!!(state.venues[v.id]||{}).favorited;
     const contacted=!!(state.venues[v.id]||{}).contacted;
-    return (!q || hay.includes(q)) && (!region || v.region.toLowerCase().startsWith(region)) && (!tag || (v.badge||'').toLowerCase()===tag)
+    return (!q || hay.includes(q)) && (!region || v.region.toLowerCase().startsWith(region))
       && (!minGuests || capacity===null || capacity>=minGuests)
-      && (!contactedFilter || (contactedFilter==='contacted' ? contacted : !contacted));
+      && (!contactedFilter || (contactedFilter==='contacted' ? contacted : !contacted))
+      && (!shortlistedFilter || (shortlistedFilter==='shortlisted' ? shortlisted : !shortlisted));
   });
   if(!filtered.length){
     grid.innerHTML='<div class="empty-board" style="grid-column:1/-1;">No matches yet. Try a broader search.</div>';
@@ -792,7 +791,7 @@ function renderVenues(){
   });
 }
 renderVenueFilters();
-['venueSearch','venueRegionFilter','venueTagFilter','venueCapacityFilter','venueContactedFilter'].forEach(id=>document.getElementById(id)?.addEventListener('input',renderVenues));
+['venueSearch','venueRegionFilter','venueCapacityFilter','venueContactedFilter','venueShortlistedFilter'].forEach(id=>document.getElementById(id)?.addEventListener('input',renderVenues));
 function setVenueFav(id, data){
   state.venues[id] = Object.assign({}, state.venues[id], data);
   if(dbReady) db.collection('venueFavorites').doc(id).set(state.venues[id]);
