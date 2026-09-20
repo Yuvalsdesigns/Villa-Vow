@@ -553,7 +553,7 @@
   .brand-floral{width:22px;height:22px;flex:none;opacity:.95;}
   #view-board.drag-over{outline:2px dashed var(--brass);outline-offset:8px;border-radius:var(--radius);background:var(--brass-soft);}
 
-  .modal-backdrop{position:fixed;inset:0;background:rgba(20,16,8,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(20,16,8,.45);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
   .modal-backdrop.open{display:flex;}
   .modal{position:relative;background:var(--surface);border-radius:var(--radius);padding:22px;max-width:420px;width:100%;box-shadow:var(--shadow-md);display:flex;flex-direction:column;gap:12px;max-height:88vh;overflow-y:auto;}
   .modal h3{font-size:18px;}
