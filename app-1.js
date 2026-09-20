@@ -77,6 +77,7 @@ const TABS = [
   {id:'budget', label:'Budget', icon:ICON.budget},
   {id:'considerations', label:'Things to Get', icon:ICON.list},
   {id:'venues', label:'Venues & Destinations', icon:ICON.map},
+  {id:'venuereplies', label:'Venue Replies', icon:ICON.check2},
   {id:'board', label:'Moodboard', icon:ICON.board},
   {id:'style', label:'Style Gallery', icon:ICON.style},
   {id:'emails', label:'Emails and Gifts', icon:ICON.mail},
@@ -84,7 +85,7 @@ const TABS = [
   {id:'diy', label:'Wedding d.i.y', icon:ICON.scissors},
   {id:'travelguide', label:'Travel Guide', icon:ICON.compass},
 ];
-const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac', travelguide:'brass'};
+const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', venuereplies:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac', travelguide:'brass'};
 const tabNav = document.getElementById('tabNav');
 const tabsScrollArrow = document.getElementById('tabsScrollArrow');
 const tabsScrollArrowLeft = document.getElementById('tabsScrollArrowLeft');
@@ -621,6 +622,7 @@ async function initDb(){
     unsub.push(db.collection('venueContacts').orderBy('createdAt','desc').onSnapshot(snap=>{
       state.venueContacts = snap.docs.map(d=>({id:d.id, ...d.data()}));
       if(typeof renderVenueContacts==='function') renderVenueContacts();
+      if(typeof renderVenues==='function') renderVenues();
     }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('considerations').orderBy('order','asc').onSnapshot(snap=>{
       state.considerations = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_CONSIDERATIONS.map(([category,text],i)=>({id:'seed-consid-'+i, category, text, done:false, order:i}));
