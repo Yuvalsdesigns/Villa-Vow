@@ -697,6 +697,30 @@ const VENUES_PART_5 = [
         "https://bolenbliss.com/2026/02/10/weddings-in-slovenia"
       ]
     ]
+  },
+  {
+    "id": "la-darbia",
+    "name": "La Darbia",
+    "region": "Ameno / Vacciaghetto, Lake Orta, Piedmont, Italy",
+    "price": "TBD: inquire",
+    "badge": "Full-property buyout",
+    "grad": [
+      "#DCE8E2",
+      "#4A6C7A"
+    ],
+    "desc": "A 20-suite boutique resort on the hillside above Orta San Giulio, built by two local architect brothers, with kitchen gardens, a working vineyard and a heated saltwater pool. Can be booked as a full exclusive buyout for a wedding, no other hotel guests around, but Lake Orta's own kosher/rabbi ecosystem still needs verifying, same as the rest of this list.",
+    "facts": [
+      "20 apartment-style suites, full-buyout weddings",
+      "View of Lake Orta, Isola San Giulio & Monte Rosa",
+      "Heated saltwater pool + yoga deck",
+      "On-site restaurant, vineyard & kitchen gardens"
+    ],
+    "sources": [
+      [
+        "Official site",
+        "https://ladarbia.com/lago-d-orta/"
+      ]
+    ]
   }
 ];
 
