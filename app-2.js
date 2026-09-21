@@ -794,6 +794,7 @@ function renderVenues(){
       + '</div>'
       + '<div class="venue-body">'
       + '<div><h3>'+esc(v.name)+'</h3><div class="region">'+esc(v.region)+'</div></div>'
+      + (linkedReply && linkedReply.decision ? '<span class="decision-badge '+linkedReply.decision+'">'+(linkedReply.decision==='explore'?'Explore more':'Not a fit')+'</span>' : '')
       + '<p>'+esc(v.desc)+'</p>'
       + '<div class="venue-facts">'+(capacity!==null?'<span class="fact fact-capacity">~'+capacity+' guests</span>':'')+(v.facts||[]).map(f=>'<span class="fact">'+esc(f)+'</span>').join('')+'</div>'
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'+(v.sources||[]).map(s=>'<a class="src-link" target="_blank" rel="noopener" href="'+esc(s[1])+'">'+esc(s[0])+' ↗</a>').join('')+'</div>'
@@ -1174,6 +1175,11 @@ function ensureVenueContactModal(){
     + '<button class="close-x" id="vcModalClose">'+svg(ICON.x)+'</button>'
     + '<h3 id="vcModalTitle">Add a venue reply</h3>'
     + '<label class="field">Venue name<input type="text" id="vcName" placeholder="e.g. Dájas Douro Valley"></label>'
+    + '<label class="field">Our decision<select id="vcDecision">'
+      + '<option value="">No decision yet</option>'
+      + '<option value="explore">Explore more</option>'
+      + '<option value="not-fit">Not a fit</option>'
+    + '</select></label>'
     + '<div class="drop-zone" id="vcDropZone">Click to choose a photo, or drag one here</div>'
     + '<input type="file" id="vcFileInput" accept="image/*" style="display:none;">'
     + '<div id="vcPreviewWrap" style="display:none;"><img id="vcPreview" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;"></div>'
@@ -1219,6 +1225,7 @@ function openVenueContactModal(existing, prefillVenue){
   const m = ensureVenueContactModal();
   m.querySelector('#vcModalTitle').textContent = existing ? 'Edit venue reply' : 'Add a venue reply';
   m.querySelector('#vcName').value = existing ? (existing.name||'') : (prefillVenue ? prefillVenue.name : '');
+  m.querySelector('#vcDecision').value = existing ? (existing.decision||'') : '';
   VENUE_CONTACT_FIELDS.forEach(([key])=>{ m.querySelector('#vc_'+key).value = existing ? (existing[key]||'') : ''; });
   m.querySelector('#vcRawReply').value = existing ? (existing.rawReply||'') : '';
   m.querySelector('#vcNotes').value = existing ? (existing.notes||'') : '';
@@ -1301,7 +1308,7 @@ function saveVenueContact(){
   const warn = m.querySelector('#vcWarn');
   const name = m.querySelector('#vcName').value.trim();
   if(!name){ warn.textContent='Give the venue a name.'; warn.style.display='block'; return; }
-  const data = {name, thumbnail: pendingVenueContactThumb, venueId: pendingVenueContactVenueId, rawReply: m.querySelector('#vcRawReply').value.trim(), notes: m.querySelector('#vcNotes').value.trim()};
+  const data = {name, thumbnail: pendingVenueContactThumb, venueId: pendingVenueContactVenueId, decision: m.querySelector('#vcDecision').value, rawReply: m.querySelector('#vcRawReply').value.trim(), notes: m.querySelector('#vcNotes').value.trim()};
   VENUE_CONTACT_FIELDS.forEach(([key])=>{ data[key] = m.querySelector('#vc_'+key).value.trim(); });
   if(editingVenueContactId){
     const id = editingVenueContactId;
@@ -1328,7 +1335,8 @@ function renderVenueContacts(){
   wrap.innerHTML='';
   if(!state.venueContacts.length){ wrap.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">No replies logged yet. When a venue answers you, click "+ Add a reply" and paste in the details.</p>'; return; }
   state.venueContacts.forEach(v=>{
-    const card = document.createElement('div'); card.className='card venue-contact-card';
+    const decision = v.decision||'';
+    const card = document.createElement('div'); card.className='card venue-contact-card decision-'+(decision||'none');
     card.dataset.contactId = v.id;
     const linkedVenue = v.venueId ? VENUES.find(x=>x.id===v.venueId) : null;
     const bullets = VENUE_CONTACT_FIELDS.filter(([key])=> (v[key]||'').trim()).map(([key,label])=> '<li><b>'+esc(label)+':</b> '+esc(v[key])+'</li>').join('');
@@ -1336,6 +1344,11 @@ function renderVenueContacts(){
       (v.thumbnail ? '<img src="'+esc(v.thumbnail)+'" class="venue-contact-thumb" alt="">' : '')
       + '<div class="venue-contact-body">'
       + '<h4>'+esc(v.name)+'</h4>'
+      + '<select class="decision-select '+(decision||'none')+'">'
+        + '<option value=""'+(!decision?' selected':'')+'>No decision yet</option>'
+        + '<option value="explore"'+(decision==='explore'?' selected':'')+'>Explore more</option>'
+        + '<option value="not-fit"'+(decision==='not-fit'?' selected':'')+'>Not a fit</option>'
+      + '</select>'
       + (linkedVenue ? '<p class="venue-contact-backlink">Linked to "'+esc(linkedVenue.name)+'" on the Venues tab</p>' : '')
       + (bullets ? '<ul class="venue-contact-bullets">'+bullets+'</ul>' : '<p style="font-size:12.5px;color:var(--ink-faint);">No details filled in yet, click Edit to add some.</p>')
       + (v.notes ? '<p class="venue-contact-notes"><b>Notes:</b> '+esc(v.notes)+'</p>' : '')
@@ -1344,6 +1357,13 @@ function renderVenueContacts(){
       + '<button class="btn small ghost edit-vc">Edit</button>'
       + '<button class="btn small danger-outline del-vc">Delete</button>'
       + '</div></div>';
+    card.querySelector('.decision-select').addEventListener('change', e=>{
+      const val = e.target.value;
+      e.target.className = 'decision-select '+(val||'none');
+      card.className = 'card venue-contact-card decision-'+(val||'none');
+      if(dbReady) db.collection('venueContacts').doc(v.id).update({decision: val}).catch(err=> console.error(err));
+      else { v.decision = val; renderVenues(); }
+    });
     card.querySelector('.edit-vc').addEventListener('click', ()=> openVenueContactModal(v));
     card.querySelector('.del-vc').addEventListener('click', ()=>{
       confirmAction('Delete this venue reply?', ()=>{

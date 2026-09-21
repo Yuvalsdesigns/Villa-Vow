@@ -464,6 +464,18 @@
   .contacted-toggle{display:inline-flex;align-items:center;gap:5px;}
   .contacted-toggle svg{width:14px;height:14px;}
   .contacted-toggle.active{background:var(--cypress-soft);border-color:var(--cypress-soft);color:var(--cypress-ink);}
+  /* Left border on the whole card so a "not a fit" reply visibly fades
+     back and an "explore more" one pops, scannable at a glance without
+     reading any of the notes underneath. */
+  .venue-contact-card.decision-explore{border-left:4px solid var(--cypress);}
+  .venue-contact-card.decision-not-fit{border-left:4px solid var(--danger);opacity:.72;}
+  select.decision-select{align-self:flex-start;font-size:11.5px;padding:4px 9px;border-radius:20px;font-weight:600;}
+  select.decision-select.none{background:var(--surface-2);color:var(--ink-soft);border-color:var(--line);}
+  select.decision-select.explore{background:var(--cypress-soft);color:var(--cypress-ink);border-color:var(--cypress-soft);}
+  select.decision-select.not-fit{background:var(--danger-soft);color:var(--danger);border-color:var(--danger-soft);}
+  .decision-badge{align-self:flex-start;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;}
+  .decision-badge.explore{background:var(--cypress-soft);color:var(--cypress-ink);}
+  .decision-badge.not-fit{background:var(--danger-soft);color:var(--danger);}
   .love-notes{
     background:var(--blush-soft);border:1px dashed var(--blush);border-radius:var(--radius);
     padding:14px 16px 16px;margin-bottom:20px;
