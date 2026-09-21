@@ -2,21 +2,26 @@
 /* ---------------- EMAIL TEMPLATES ---------------- */
 const EMAIL_TEMPLATES = [
   {title:'Venue inquiry (villa / masseria)', to:'The venue coordinator', subject:'Wedding inquiry: [proposed date], approx. [guest count] guests',
-   body:`Hello [Venue name] team,
+   body:`Dear [Venue name] Team,
 
-We're planning a destination wedding on [proposed date] for around [guest count] guests, most traveling from Israel and France, and your property is on our shortlist. A few questions before we go further:
+My partner and I are currently planning our destination wedding for [proposed date] for approximately [guest count] guests, and your property is at the top of our shortlist. We would love to learn more about the possibility of hosting our celebration at [Venue name].
 
-- Is the property available, in full or in part, for [number] nights around that date?
-- How many guests can the on-site rooms sleep, and is a full-property exclusive rental an option?
-- Is there a space suited to an outdoor wedding ceremony under a chuppah (an open canopy structure), plus an indoor backup in case of weather?
-- Are outside caterers permitted? Our catering needs to be fully kosher, supervised by a mashgiach with their own kitchen setup. Could you tell us about kitchen access and any restrictions?
-- Is a pool or outdoor space available for a private group day the day after the wedding?
-- What's included in the venue rate, and what's your deposit and cancellation policy?
+We have a few specific questions regarding your venue and hosting capabilities:
 
-We'd love to see photos of the ceremony and reception spaces, and to set up a call if that's easier. Thank you!
+- Availability: Is the property available for a [number]-night buyout around [proposed date]?
+- Capacity: What is the maximum guest capacity you can host for the ceremony and dinner?
+- Accommodations: Could you confirm if the on-site suites are included with a full property buyout? Additionally, are there recommended hotels or accommodations nearby for any remaining guests?
+- Ceremony & Weather Contingency: Do you have an outdoor space suitable for a wedding ceremony under a chuppah (an open canopy structure)? Could you also clarify if an indoor backup space is included for the ceremony and the party in case of inclement weather?
+- Catering: To respect our religious requirements, we will need to bring in a certified external kosher caterer. Do you allow external caterers, and what are your guidelines regarding kitchen access or setup space for outside catering teams?
+- Partying & Music Policy: Could you please share your policies regarding music, noise restrictions, and end times for parties?
+- Day-After Amenities: Is the pool or other outdoor space available for guests to relax the day after the wedding and during the whole stay?
+
+Could you please share your availability for [proposed date], your wedding brochure, and your pricing packages for exclusive buyouts?
+
+We look forward to hearing from you.
 
 Warm regards,
-[Your names]`},
+Yuval and Yohan`},
   {title:'Kosher caterer inquiry', to:'The catering company', subject:'Kosher catering inquiry: destination wedding, [region], [proposed date]',
    body:`Hello [Caterer name],
 
