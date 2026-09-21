@@ -1334,7 +1334,10 @@ function renderVenueContacts(){
   const wrap = document.getElementById('venueContactsGrid'); if(!wrap) return;
   wrap.innerHTML='';
   if(!state.venueContacts.length){ wrap.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">No replies logged yet. When a venue answers you, click "+ Add a reply" and paste in the details.</p>'; return; }
-  state.venueContacts.forEach(v=>{
+  const decisionFilter = document.getElementById('vcDecisionFilter')?.value||'';
+  const filtered = state.venueContacts.filter(v=> !decisionFilter || (v.decision||'')===(decisionFilter==='none'?'':decisionFilter));
+  if(!filtered.length){ wrap.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">No replies match this filter.</p>'; return; }
+  filtered.forEach(v=>{
     const decision = v.decision||'';
     const card = document.createElement('div'); card.className='card venue-contact-card decision-'+(decision||'none');
     card.dataset.contactId = v.id;
@@ -1375,11 +1378,14 @@ function renderVenueContacts(){
   });
 }
 renderVenueContacts();
+document.getElementById('vcDecisionFilter')?.addEventListener('input', renderVenueContacts);
 /* Jumps to the Replies tab and scrolls/highlights one specific reply card,
    used by the venue card's "View reply" button and right after saving a new
    reply, so logging one and then finding it again is a single click. */
 function jumpToVenueReply(contactId){
   showTab('venuereplies');
+  const filterEl = document.getElementById('vcDecisionFilter');
+  if(filterEl && filterEl.value){ filterEl.value=''; renderVenueContacts(); }
   setTimeout(()=>{
     const card = document.querySelector('.venue-contact-card[data-contact-id="'+contactId+'"]');
     if(!card) return;

@@ -669,6 +669,8 @@
   .venue-hero .price{position:relative;z-index:3;}
   .venue-discovery{display:grid;grid-template-columns:1.15fr .8fr .65fr .8fr .8fr;gap:8px;margin:0 0 8px;}
   .venue-discovery input,.venue-discovery select{width:100%;}
+  .venue-discovery-replies{display:flex;grid-template-columns:none;margin:0 0 16px;}
+  .venue-discovery-replies select{width:auto;min-width:200px;}
   .venue-capacity-note{margin:0 0 20px;color:var(--ink-faint);font-size:11.5px;line-height:1.5;}
   .discovery-note{margin:0 0 18px;padding:12px 14px;border:1px dashed var(--line);border-radius:var(--radius);background:var(--surface-2);color:var(--ink-soft);font-size:12.5px;line-height:1.55;}
   .venue-card .venue-image-credit{font-size:10px;color:var(--ink-faint);}
