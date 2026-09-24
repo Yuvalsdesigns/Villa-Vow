@@ -250,7 +250,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 "use strict";
 
 let db = null, dbReady=false, syncUnavailable=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[] };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], customVenues:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -652,6 +652,11 @@ async function initDb(){
     unsub.push(db.collection('customStyles').orderBy('createdAt','desc').onSnapshot(snap=>{
       state.customStyles = snap.docs.map(d=>({id:d.id, ...d.data()}));
       if(typeof renderStyleSections==='function') renderStyleSections();
+    }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('customVenues').orderBy('createdAt','desc').onSnapshot(snap=>{
+      state.customVenues = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(typeof renderVenueFilters==='function') renderVenueFilters();
+      renderVenues();
     }, err=>setSync(false,'sync error')));
   }catch(e){ syncUnavailable=true; setSync(false,'no live sync, changes stay on this device only'); renderAll(); }
 }

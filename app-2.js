@@ -747,10 +747,11 @@ function extractVenueCapacity(v){
   m=text.match(/sleeps?\s*(\d+)/i); if(m) return parseInt(m[1],10);
   return null;
 }
+function allVenuesList(){ return VENUES.concat(state.customVenues||[]); }
 function renderVenueFilters(){
   const regionSel=document.getElementById('venueRegionFilter');
   if(!regionSel) return;
-  const regions=[...new Set(VENUES.map(v=>v.region.split(',')[0]))].sort();
+  const regions=[...new Set(allVenuesList().map(v=>v.region.split(',')[0]))].sort();
   regionSel.innerHTML='<option value="">All regions</option>'+regions.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
 }
 function renderVenues(){
@@ -761,7 +762,7 @@ function renderVenues(){
   const contactedFilter=document.getElementById('venueContactedFilter')?.value||'';
   const shortlistedFilter=document.getElementById('venueShortlistedFilter')?.value||'';
   grid.innerHTML='';
-  const filtered=VENUES.filter(v=>{
+  const filtered=allVenuesList().filter(v=>{
     const hay=[v.name,v.region,v.desc,...(v.facts||[])].join(' ').toLowerCase();
     const capacity=extractVenueCapacity(v);
     const shortlisted=!!(state.venues[v.id]||{}).favorited;
@@ -791,6 +792,7 @@ function renderVenues(){
       + '<span class="venue-image-label"></span>'
       + '<span class="price">'+esc(v.price)+'</span>'
       + (v.badge? '<span class="price" style="margin-left:6px;background:rgba(0,0,0,.4)">'+esc(v.badge)+'</span>' : '')
+      + (v.isCustom ? '<button class="icon-btn edit-custom-venue" title="Edit this venue" style="position:absolute;top:8px;right:38px;">'+svg(ICON.pencil)+'</button><button class="icon-btn del-custom-venue" title="Delete this venue" style="position:absolute;top:8px;right:8px;">'+svg(ICON.trash)+'</button>' : '')
       + '</div>'
       + '<div class="venue-body">'
       + '<div><h3>'+esc(v.name)+'</h3><div class="region">'+esc(v.region)+'</div></div>'
@@ -813,6 +815,15 @@ function renderVenues(){
     const logReplyBtn = card.querySelector('.log-reply-link');
     if(logReplyBtn) logReplyBtn.addEventListener('click', ()=> openVenueContactModal(null, v));
     card.querySelector('.ask-venue').addEventListener('click', ()=> askPlannerAbout('What should we know about planning a kosher, chuppah wedding in '+v.name+' ('+v.region+') specifically? We are considering it for our shortlist.'));
+    if(v.isCustom){
+      card.querySelector('.edit-custom-venue').addEventListener('click', ()=> openCustomVenueModal(v));
+      card.querySelector('.del-custom-venue').addEventListener('click', ()=>{
+        confirmAction('Delete "'+v.name+'" from your venues list?', ()=>{
+          if(dbReady) db.collection('customVenues').doc(v.id).delete().catch(err=> console.error(err));
+          else { state.customVenues = state.customVenues.filter(x=>x.id!==v.id); renderVenueFilters(); renderVenues(); }
+        });
+      });
+    }
     grid.appendChild(card);
   });
 }
@@ -823,6 +834,128 @@ function setVenueFav(id, data){
   if(dbReady) db.collection('venueFavorites').doc(id).set(state.venues[id]);
   else renderVenues();
 }
+
+/* ---------------- CUSTOM VENUES (added by the couple) ---------------- */
+let editingCustomVenueId = null;
+function ensureCustomVenueModal(){
+  let m = document.getElementById('customVenueModal');
+  if(m) return m;
+  m = document.createElement('div'); m.id='customVenueModal'; m.className='modal-backdrop';
+  m.innerHTML = '<div class="modal">'
+    + '<button class="close-x" id="cvModalClose">'+svg(ICON.x)+'</button>'
+    + '<h3 id="cvModalTitle">Add a venue</h3>'
+    + '<label class="field">Venue name<input type="text" id="cvName" placeholder="e.g. Villa Something"></label>'
+    + '<label class="field">Region / location<input type="text" id="cvRegion" placeholder="e.g. Lake Como, Italy"></label>'
+    + '<label class="field">Price<input type="text" id="cvPrice" placeholder="e.g. €€€ or TBD: inquire"></label>'
+    + '<label class="field">Guest capacity (optional)<input type="number" min="0" id="cvCapacity" placeholder="e.g. 80"></label>'
+    + '<label class="field">Description<textarea id="cvDesc" rows="3" placeholder="What makes this one worth considering?"></textarea></label>'
+    + '<label class="field">Venue website (optional)<input type="url" id="cvWebsite" placeholder="https://…"></label>'
+    + '<label class="field">Photo URL<input type="url" id="cvImage" placeholder="Paste a direct picture link, or fetch one from the website above"></label>'
+    + '<button class="btn small ghost" id="cvFetchPhoto" type="button" style="align-self:flex-start;">Fetch photo from website</button>'
+    + '<div id="cvPreviewWrap" style="display:none;"><img id="cvPreview" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;"></div>'
+    + '<p class="warn" id="cvWarn" style="display:none;"></p>'
+    + '<div class="modal-foot"><button class="btn danger-outline" id="cvDelete" style="display:none;margin-right:auto;">Delete</button><button class="btn" id="cvCancel">Cancel</button><button class="btn primary" id="cvSave">Save</button></div>'
+    + '</div>';
+  document.body.appendChild(m);
+  const close = ()=> m.classList.remove('open');
+  m.querySelector('#cvModalClose').addEventListener('click', close);
+  m.addEventListener('click', e=>{ if(e.target===m) close(); });
+  m.querySelector('#cvCancel').addEventListener('click', close);
+  m.querySelector('#cvImage').addEventListener('input', updateCustomVenuePreview);
+  m.querySelector('#cvFetchPhoto').addEventListener('click', fetchCustomVenuePhoto);
+  m.querySelector('#cvSave').addEventListener('click', saveCustomVenue);
+  m.querySelector('#cvDelete').addEventListener('click', ()=>{
+    if(!editingCustomVenueId) return;
+    const id = editingCustomVenueId;
+    confirmAction('Delete this venue?', ()=>{
+      if(dbReady) db.collection('customVenues').doc(id).delete().catch(err=> console.error(err));
+      else { state.customVenues = state.customVenues.filter(x=>x.id!==id); renderVenueFilters(); renderVenues(); }
+      close();
+    });
+  });
+  return m;
+}
+function updateCustomVenuePreview(){
+  const m = document.getElementById('customVenueModal');
+  const url = m.querySelector('#cvImage').value.trim();
+  const wrap = m.querySelector('#cvPreviewWrap');
+  if(url){ m.querySelector('#cvPreview').src = url; wrap.style.display='block'; }
+  else wrap.style.display='none';
+}
+/* Reuses the same Worker og:image lookup already built for Wedding d.i.y
+   link previews (fetchLinkPreviewThumbnail, defined in app-3.js), rather
+   than a second copy of the same fetch logic. Falls back to telling the
+   user to paste a direct picture link instead if the page has no usable
+   preview image, or the fetch itself fails. */
+function fetchCustomVenuePhoto(){
+  const m = document.getElementById('customVenueModal');
+  const website = m.querySelector('#cvWebsite').value.trim();
+  const warn = m.querySelector('#cvWarn'); warn.style.display='none';
+  if(!website){ warn.textContent="Paste the venue's website link above first."; warn.style.display='block'; return; }
+  const btn = m.querySelector('#cvFetchPhoto');
+  btn.disabled = true; btn.textContent='Fetching…';
+  fetchLinkPreviewThumbnail(website,
+    (thumbUrl)=>{
+      btn.disabled = false; btn.textContent='Fetch photo from website';
+      m.querySelector('#cvImage').value = thumbUrl;
+      updateCustomVenuePreview();
+    },
+    (err)=>{
+      btn.disabled = false; btn.textContent='Fetch photo from website';
+      warn.textContent = err+' You can still paste a direct picture link into the Photo URL field instead.';
+      warn.style.display='block';
+    }
+  );
+}
+function openCustomVenueModal(existing){
+  editingCustomVenueId = existing ? existing.id : null;
+  const m = ensureCustomVenueModal();
+  m.querySelector('#cvModalTitle').textContent = existing ? 'Edit venue' : 'Add a venue';
+  m.querySelector('#cvName').value = existing ? (existing.name||'') : '';
+  m.querySelector('#cvRegion').value = existing ? (existing.region||'') : '';
+  m.querySelector('#cvPrice').value = existing ? (existing.price||'') : '';
+  m.querySelector('#cvCapacity').value = existing && existing.capacity ? existing.capacity : '';
+  m.querySelector('#cvDesc').value = existing ? (existing.desc||'') : '';
+  m.querySelector('#cvWebsite').value = existing && existing.sources && existing.sources[0] ? (existing.sources[0][1]||'') : '';
+  m.querySelector('#cvImage').value = existing ? (existing.image||'') : '';
+  updateCustomVenuePreview();
+  m.querySelector('#cvWarn').style.display='none';
+  m.querySelector('#cvDelete').style.display = existing ? 'inline-flex' : 'none';
+  m.classList.add('open');
+}
+function saveCustomVenue(){
+  const m = document.getElementById('customVenueModal');
+  const warn = m.querySelector('#cvWarn');
+  const name = m.querySelector('#cvName').value.trim();
+  const region = m.querySelector('#cvRegion').value.trim();
+  if(!name || !region){ warn.textContent='Give the venue a name and a region/location.'; warn.style.display='block'; return; }
+  const capacity = parseInt(m.querySelector('#cvCapacity').value,10);
+  const hasCapacity = Number.isFinite(capacity) && capacity>0;
+  const website = m.querySelector('#cvWebsite').value.trim();
+  const data = {
+    name, region,
+    price: m.querySelector('#cvPrice').value.trim() || 'TBD: inquire',
+    desc: m.querySelector('#cvDesc').value.trim(),
+    image: m.querySelector('#cvImage').value.trim(),
+    capacity: hasCapacity ? capacity : null,
+    facts: hasCapacity ? ['Wedding day up to '+capacity+' guests'] : [],
+    sources: website ? [['Venue website', website]] : [],
+    badge: 'Your addition',
+    grad: ['#DCE8E2','#4A6C7A'],
+    isCustom: true,
+  };
+  if(editingCustomVenueId){
+    const id = editingCustomVenueId;
+    if(dbReady) db.collection('customVenues').doc(id).update(data).catch(err=>{ console.error(err); warn.textContent='Could not save changes.'; warn.style.display='block'; });
+    else { const existing = state.customVenues.find(x=>x.id===id); if(existing) Object.assign(existing, data); renderVenueFilters(); renderVenues(); }
+  } else {
+    data.createdAt = Date.now();
+    if(dbReady) db.collection('customVenues').add(data).catch(err=>{ console.error(err); warn.textContent='Could not save this venue.'; warn.style.display='block'; });
+    else { localAdd(state.customVenues, data); renderVenueFilters(); renderVenues(); }
+  }
+  m.classList.remove('open');
+}
+document.getElementById('addCustomVenueBtn')?.addEventListener('click', ()=> openCustomVenueModal(null));
 
 
 "use strict";
