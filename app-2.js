@@ -840,8 +840,11 @@ function setVenueFav(id, data){
    dumped there as a wall of raw text. */
 const CUSTOM_VENUE_EXTRA_FIELDS = [
   ['availability', 'Availability', 'e.g. Confirmed available, needs 50% deposit to hold'],
+  ['accommodations', 'Accommodations (on-site + nearby)', 'e.g. 12 suites included, hotel block nearby for the rest'],
   ['ceremonySpace', 'Ceremony space + rain backup', 'e.g. Terrace ceremony, indoor barn as backup'],
   ['kosherCatering', 'Outside kosher catering allowed?', 'e.g. Yes, kitchen access confirmed'],
+  ['partyMusicPolicy', 'Partying & music policy', 'e.g. Music until midnight, outdoor speakers ok'],
+  ['dayAfterAmenities', 'Day-after amenities', 'e.g. Pool and gardens open to guests the next day'],
   ['depositPolicy', 'Deposit / cancellation policy', 'e.g. 30% deposit, refundable until 60 days out'],
 ];
 let editingCustomVenueId = null;
@@ -934,11 +937,12 @@ function setCustomVenueExtractStatus(msg, isError){
   el.textContent = msg || '';
 }
 /* Pulls the actual data points out of a PDF or fetched page (guest
-   capacity, price, availability, ceremony space, kosher catering, deposit
-   policy), the same way venue replies already do, rather than dumping the
-   whole raw text somewhere to read later. Every field only fills in when
-   still empty, so nothing typed by hand gets overwritten, and a second
-   PDF/link can still fill in whatever the first one missed. */
+   capacity, price, availability, accommodations, ceremony space, kosher
+   catering, party/music policy, day-after amenities, deposit policy), the
+   same way venue replies already do, rather than dumping the whole raw
+   text somewhere to read later. Every field only fills in when still
+   empty, so nothing typed by hand gets overwritten, and a second PDF/link
+   can still fill in whatever the first one missed. */
 function applyGuessesToCustomVenue(text){
   const m = document.getElementById('customVenueModal');
   const setIfEmpty = (id, val)=>{ if(!val) return; const el = m.querySelector('#'+id); if(el && !el.value.trim()) el.value = val; };
@@ -948,15 +952,20 @@ function applyGuessesToCustomVenue(text){
   const descEl = m.querySelector('#cvDesc');
   if(!descEl.value.trim()){ const s = guessSummaryFromText(text); if(s) descEl.value = s; }
   setIfEmpty('cv_availability', guessAvailabilityFromText(text));
+  setIfEmpty('cv_accommodations', guessAccommodationFromText(text));
   setIfEmpty('cv_ceremonySpace', guessCeremonyFromText(text));
   setIfEmpty('cv_kosherCatering', guessKosherFromText(text));
+  setIfEmpty('cv_partyMusicPolicy', guessPartyMusicFromText(text));
+  setIfEmpty('cv_dayAfterAmenities', guessDayAfterFromText(text));
   setIfEmpty('cv_depositPolicy', guessDepositFromText(text));
 }
 async function handleCustomVenuePdf(file){
   setCustomVenueExtractStatus('Reading the PDF…');
   try{
-    const text = await extractPdfText(file);
-    if(!text){ setCustomVenueExtractStatus("Couldn't find any text in that PDF (it might be a scanned image), fill the fields in manually instead.", true); return; }
+    const {text, title} = await extractPdfText(file);
+    if(!text){ setCustomVenueExtractStatus("Couldn't find any text in that PDF, it's likely a scanned/image-only brochure with no real text layer (common for a designed PDF), which this can't read text from. Fill the fields in manually instead.", true); return; }
+    const nameEl = document.getElementById('customVenueModal').querySelector('#cvName');
+    if(!nameEl.value.trim() && title) nameEl.value = title;
     applyGuessesToCustomVenue(text);
     setCustomVenueExtractStatus('Pulled text from the PDF and filled in what it could find, worth double-checking.');
   }catch(err){
@@ -975,8 +984,10 @@ function fetchCustomVenueText(){
   btn.disabled = true; btn.textContent='Fetching…';
   setCustomVenueExtractStatus('Fetching that page…');
   fetchPageText(website,
-    (text)=>{
+    (text, title)=>{
       btn.disabled = false; btn.textContent='Fetch details from website';
+      const nameEl = m.querySelector('#cvName');
+      if(!nameEl.value.trim()){ const guessed = guessNameFromTitle(title); if(guessed) nameEl.value = guessed; }
       applyGuessesToCustomVenue(text);
       setCustomVenueExtractStatus('Pulled text from the page and filled in what it could find, worth double-checking.');
     },
@@ -1385,12 +1396,24 @@ function ensurePdfWorker(){
 /* Extracts plain text from an uploaded PDF entirely client-side via pdf.js,
    no server round-trip needed, so a brochure's own wording can feed the
    same keyword auto-fill already used for pasted email replies. Reads at
-   most the first 12 pages, plenty for a brochure, to keep this fast. */
+   most the first 12 pages, plenty for a brochure, to keep this fast. Also
+   returns the PDF's own metadata title when it has one (most brochures
+   exported from a design tool do), a much more reliable venue-name guess
+   than trying to spot one in the extracted text itself. Text can come
+   back empty for a scanned/image brochure with no real text layer at
+   all, pdf.js can only read text that's actually stored as text, not
+   OCR a picture of text, callers need to handle that case explicitly. */
 async function extractPdfText(file){
   if(typeof pdfjsLib==='undefined') throw new Error('PDF reader did not load. Check your internet connection and try again.');
   ensurePdfWorker();
   const buf = await file.arrayBuffer();
   const doc = await pdfjsLib.getDocument({data: buf}).promise;
+  let title = null;
+  try{
+    const meta = await doc.getMetadata();
+    const infoTitle = meta && meta.info && meta.info.Title;
+    if(infoTitle && infoTitle.trim() && !/^untitled$/i.test(infoTitle.trim())) title = infoTitle.trim();
+  }catch(e){ /* metadata is optional, a missing/unreadable title just means no guess */ }
   const maxPages = Math.min(doc.numPages, 12);
   let text = '';
   for(let i=1;i<=maxPages;i++){
@@ -1398,7 +1421,7 @@ async function extractPdfText(file){
     const content = await page.getTextContent();
     text += content.items.map(it=>it.str).join(' ') + '\n\n';
   }
-  return text.trim();
+  return { text: text.trim(), title };
 }
 /* These guesses are shared: venue replies scan pasted email text for them
    already, custom venues (and the curated list's own capacity chip, via
@@ -1455,8 +1478,11 @@ const VENUE_CONTACT_FIELDS = [
   ['maxGuests', 'Max guests / sleeping capacity', 'e.g. 45 guests, 20 sleep on-site'],
   ['pricePerNight', 'Price (per night or full quote)', 'e.g. €3,500/night or €18,000 for 3 nights'],
   ['availability', 'Availability for your date', 'e.g. Confirmed available, needs 50% deposit to hold'],
+  ['accommodations', 'Accommodations (on-site + nearby)', 'e.g. 12 suites included, hotel block nearby for the rest'],
   ['ceremonySpace', 'Ceremony space + rain backup', 'e.g. Terrace ceremony, indoor barn as backup'],
   ['kosherCatering', 'Outside kosher catering allowed?', 'e.g. Yes, kitchen access confirmed'],
+  ['partyMusicPolicy', 'Partying & music policy', 'e.g. Music until midnight, outdoor speakers ok'],
+  ['dayAfterAmenities', 'Day-after amenities', 'e.g. Pool and gardens open to guests the next day'],
   ['depositPolicy', 'Deposit / cancellation policy', 'e.g. 30% deposit, refundable until 60 days out'],
 ];
 let pendingVenueContactThumb = '', editingVenueContactId = null, pendingVenueContactVenueId = '';
@@ -1566,6 +1592,37 @@ function guessDepositFromText(text){
   const m = text.match(/[^.?!\n]*(?:deposit|cancellation|acompte|d[ée]p[ôo]t|arrhes|annulation)[^.?!\n]*[.?!]?/i);
   return m ? m[0].trim() : null;
 }
+/* "Accommodates" is ambiguous, it's used both for guest capacity
+   ("accommodates 90 guests") and for on-site lodging ("accommodates
+   overnight guests in 12 suites"), so specific lodging words are tried
+   first; only falling back to the bare "accommodat-" root when the
+   sentence isn't just a restatement of guest capacity. */
+function guessAccommodationFromText(text){
+  const lodging = text.match(/[^.?!\n]*(?:on-site (?:rooms?|suites?)|suites? (?:are |is )?included|sleeps?\s|en-suite|h[ée]bergement|chambre)[^.?!\n]*[.?!]?/i);
+  if(lodging) return lodging[0].trim();
+  const m = text.match(/[^.?!\n]*accommodat(?:es|ing|ion)?[^.?!\n]*[.?!]?/i);
+  if(m && !/accommodat\w*\s+(?:up to\s*)?\d+\s*(?:guests|people|pax|persons)/i.test(m[0])) return m[0].trim();
+  return null;
+}
+function guessPartyMusicFromText(text){
+  const m = text.match(/[^.?!\n]*(?:music|noise|curfew|sound (?:system|limit)|until (?:midnight|1\s?am|2\s?am|11\s?pm|10\s?pm)|musique|bruit)[^.?!\n]*[.?!]?/i);
+  return m ? m[0].trim() : null;
+}
+function guessDayAfterFromText(text){
+  const m = text.match(/[^.?!\n]*(?:day.after|next day|pool day|brunch|lendemain|piscine)[^.?!\n]*[.?!]?/i);
+  return m ? m[0].trim() : null;
+}
+/* Page <title> tags and PDF metadata titles are rarely a clean venue name
+   on their own, real sites often chain a tagline and the brand name with
+   a pipe or dash ("Luxury Resort on Lake Orta | La Darbia"). Taking the
+   last segment favors the brand name in that common pattern; when there's
+   no separator at all, the raw title is still a reasonable guess. */
+function guessNameFromTitle(title){
+  if(!title) return null;
+  const parts = title.split(/\s*[|–-]\s*/).map(p=>p.trim()).filter(Boolean);
+  const candidate = parts.length>1 ? parts[parts.length-1] : parts[0];
+  return candidate ? candidate.slice(0,80) : null;
+}
 /* Best-effort keyword/regex guesses from the pasted reply, only fills fields
    that are still empty, always needs a human double-check. Pass silent=true
    when this runs automatically right after a PDF/link import, so it doesn't
@@ -1583,8 +1640,11 @@ function autoFillVenueContact(silent){
   setIfEmpty('maxGuests', guessGuestCountFromText(text));
   setIfEmpty('pricePerNight', guessPriceFromText(text));
   setIfEmpty('availability', guessAvailabilityFromText(text));
+  setIfEmpty('accommodations', guessAccommodationFromText(text));
   setIfEmpty('kosherCatering', guessKosherFromText(text));
   setIfEmpty('ceremonySpace', guessCeremonyFromText(text));
+  setIfEmpty('partyMusicPolicy', guessPartyMusicFromText(text));
+  setIfEmpty('dayAfterAmenities', guessDayAfterFromText(text));
   setIfEmpty('depositPolicy', guessDepositFromText(text));
 
   if(!silent) alert("Filled in what it could find by scanning for keywords, this is just a rough guess so please check every field against their actual reply.");
@@ -1603,8 +1663,10 @@ async function handleVenueContactPdf(file){
   const m = document.getElementById('venueContactModal');
   setVenueContactExtractStatus('Reading the PDF…');
   try{
-    const text = await extractPdfText(file);
-    if(!text){ setVenueContactExtractStatus("Couldn't find any text in that PDF (it might be a scanned image), paste details in manually instead.", true); return; }
+    const {text, title} = await extractPdfText(file);
+    if(!text){ setVenueContactExtractStatus("Couldn't find any text in that PDF, it's likely a scanned/image-only brochure with no real text layer (common for a designed PDF), which this can't read text from. Paste details in manually instead.", true); return; }
+    const nameEl = m.querySelector('#vcName');
+    if(!nameEl.value.trim() && title) nameEl.value = title;
     const existing = m.querySelector('#vcRawReply').value.trim();
     m.querySelector('#vcRawReply').value = existing ? existing+'\n\n'+text : text;
     autoFillVenueContact(true);
@@ -1626,8 +1688,10 @@ function fetchVenueContactLinkText(){
   btn.disabled = true; btn.textContent='Fetching…';
   setVenueContactExtractStatus('Fetching that page…');
   fetchPageText(url,
-    (text)=>{
+    (text, title)=>{
       btn.disabled = false; btn.textContent='Fetch text from this link';
+      const nameEl = m.querySelector('#vcName');
+      if(!nameEl.value.trim()){ const guessed = guessNameFromTitle(title); if(guessed) nameEl.value = guessed; }
       const existing = m.querySelector('#vcRawReply').value.trim();
       m.querySelector('#vcRawReply').value = existing ? existing+'\n\n'+text : text;
       autoFillVenueContact(true);
