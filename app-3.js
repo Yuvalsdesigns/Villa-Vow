@@ -242,6 +242,42 @@ async function fetchLinkPreviewThumbnail(url, onSuccess, onError){
     onSuccess(data.thumbnailUrl, data.title||'');
   }catch(e){ console.error('[DIY thumb] unexpected error', e); onError('Request failed: '+(e&&e.message||e)); }
 }
+/* Same Worker fetch as fetchLinkPreviewThumbnail above, but asks for the
+   page's rough plain text instead of its preview image, action
+   resolvePageText, so a venue's brochure/listing page can feed the same
+   keyword auto-fill already used for pasted email replies and PDFs.
+   Needs the Worker's cloudflare-worker/index.js redeployed (paste + Deploy
+   in the Cloudflare dashboard) before this action exists server-side. */
+async function fetchPageText(url, onSuccess, onError){
+  try{
+    const user = window.firebase && firebase.auth && firebase.auth().currentUser;
+    if(!user || !window.VV_WORKER_URL){ onError('Sign in first, then try again.'); return; }
+    const idToken = await user.getIdToken();
+    let resp;
+    try{
+      resp = await fetch(window.VV_WORKER_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
+        body: JSON.stringify({action:'resolvePageText', url})
+      });
+    }catch(networkErr){
+      console.error('[page text] network/fetch error (likely CORS or offline)', networkErr);
+      onError('Could not reach the server (network or CORS error). Check your internet connection and try again.');
+      return;
+    }
+    let data; try{ data = await resp.json(); }catch(e){ data = null; }
+    if(!resp.ok || !data || !data.text){
+      const serverMsg = data && data.error;
+      if(serverMsg === 'messages array is required'){
+        onError("The Cloudflare Worker is still running the old code, it doesn't know about page-text fetching yet. Paste the latest cloudflare-worker/index.js into the Cloudflare dashboard and redeploy it, then try this button again.");
+        return;
+      }
+      onError(serverMsg || 'Could not find any readable text on that page.');
+      return;
+    }
+    onSuccess(data.text, data.title||'');
+  }catch(e){ console.error('[page text] unexpected error', e); onError('Request failed: '+(e&&e.message||e)); }
+}
 let pendingDiyThumb = '';
 function readDiyThumb(file){
   if(!file || !/^image\//.test(file.type)) return;

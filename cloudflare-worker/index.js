@@ -382,6 +382,60 @@ function extractPreview(html, baseUrl) {
   return { title: title ? title.trim() : '', thumbnailUrl: absoluteImage };
 }
 
+/* Crude tag-stripping to get a rough plain-text version of a page, for
+   feeding a venue's own brochure/listing page into the same keyword
+   auto-fill used for pasted PDF/email text. No real HTML parser in a
+   Worker, so this is good enough for pulling a price or guest count out
+   of body copy, not meant to reproduce the page's layout or reading
+   order perfectly. Capped at 20,000 characters, plenty for this. */
+function htmlToRoughText(html) {
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<(br|p|div|li|h[1-6]|tr)[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n+/g, '\n\n')
+    .trim();
+  return text.slice(0, 20000);
+}
+async function handleResolvePageText(rawUrl) {
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return json({ error: 'Invalid URL' }, 400);
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return json({ error: 'Only http(s) links are supported' }, 400);
+  }
+  let lastStatus = null;
+  for (const userAgent of LINK_PREVIEW_USER_AGENTS) {
+    let result;
+    try {
+      result = await fetchHtml(url, userAgent);
+    } catch (err) {
+      return json({ error: 'Could not fetch that page', debug: String(err && err.message || err) }, 502);
+    }
+    if (!result.ok) {
+      lastStatus = result.status;
+      continue;
+    }
+    const text = htmlToRoughText(result.html);
+    if (text) {
+      const titleTag = result.html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      return json({ url: url.toString(), title: titleTag ? titleTag[1].trim() : '', text });
+    }
+  }
+  if (lastStatus) return json({ error: 'Could not fetch that page', status: lastStatus }, 502);
+  return json({ error: 'No readable text found on that page' }, 404);
+}
+
 async function handleResolveLinkPreview(rawUrl) {
   let url;
   try {
@@ -456,6 +510,9 @@ export default {
     }
     if (body && body.action === 'resolveLinkPreview') {
       return handleResolveLinkPreview(body.url);
+    }
+    if (body && body.action === 'resolvePageText') {
+      return handleResolvePageText(body.url);
     }
 
     const messages = body && body.messages;

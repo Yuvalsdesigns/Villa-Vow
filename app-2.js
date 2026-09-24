@@ -800,6 +800,7 @@ function renderVenues(){
       + '<p>'+esc(v.desc)+'</p>'
       + '<div class="venue-facts">'+(capacity!==null?'<span class="fact fact-capacity">~'+capacity+' guests</span>':'')+(v.facts||[]).map(f=>'<span class="fact">'+esc(f)+'</span>').join('')+'</div>'
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'+(v.sources||[]).map(s=>'<a class="src-link" target="_blank" rel="noopener" href="'+esc(s[1])+'">'+esc(s[0])+' ↗</a>').join('')+'</div>'
+      + (v.isCustom && v.brochureNotes ? '<details class="venue-contact-raw"><summary>Show brochure notes</summary><p>'+esc(v.brochureNotes)+'</p></details>' : '')
       + '<div class="venue-image-credit">'+(v.image ? 'Venue / wedding source image' : 'Destination visual reference, verify the exact property photo before publishing')+'</div>'
       + '<div class="venue-note"><textarea placeholder="Notes on '+esc(v.name)+'…">'+esc(fav.note||'')+'</textarea></div>'
       + '<div class="venue-foot"><button class="heart'+(fav.favorited?' on':'')+'">'+svg(ICON.heart)+'</button><span style="font-size:11.5px;color:var(--ink-faint)">'+(fav.favorited?'Shortlisted':'Tap to shortlist')+'</span>'
@@ -851,8 +852,15 @@ function ensureCustomVenueModal(){
     + '<label class="field">Description<textarea id="cvDesc" rows="3" placeholder="What makes this one worth considering?"></textarea></label>'
     + '<label class="field">Venue website (optional)<input type="url" id="cvWebsite" placeholder="https://…"></label>'
     + '<label class="field">Photo URL<input type="url" id="cvImage" placeholder="Paste a direct picture link, or fetch one from the website above"></label>'
-    + '<button class="btn small ghost" id="cvFetchPhoto" type="button" style="align-self:flex-start;">Fetch photo from website</button>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<button class="btn small ghost" id="cvFetchPhoto" type="button">Fetch photo from website</button>'
+      + '<button class="btn small ghost" id="cvFetchText" type="button">Fetch details from website</button>'
+      + '<button class="btn small ghost" id="cvPdfBtn" type="button">Attach a PDF brochure</button>'
+    + '</div>'
+    + '<input type="file" id="cvPdfInput" accept="application/pdf" style="display:none;">'
+    + '<p id="cvExtractStatus" style="display:none;font-size:12px;color:var(--ink-soft);"></p>'
     + '<div id="cvPreviewWrap" style="display:none;"><img id="cvPreview" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;"></div>'
+    + '<label class="field">Brochure notes (optional, full text for reference)<textarea id="cvBrochureNotes" rows="4" placeholder="Auto-filled from a PDF or fetched link, or paste your own notes"></textarea></label>'
     + '<p class="warn" id="cvWarn" style="display:none;"></p>'
     + '<div class="modal-foot"><button class="btn danger-outline" id="cvDelete" style="display:none;margin-right:auto;">Delete</button><button class="btn" id="cvCancel">Cancel</button><button class="btn primary" id="cvSave">Save</button></div>'
     + '</div>';
@@ -863,6 +871,9 @@ function ensureCustomVenueModal(){
   m.querySelector('#cvCancel').addEventListener('click', close);
   m.querySelector('#cvImage').addEventListener('input', updateCustomVenuePreview);
   m.querySelector('#cvFetchPhoto').addEventListener('click', fetchCustomVenuePhoto);
+  m.querySelector('#cvFetchText').addEventListener('click', fetchCustomVenueText);
+  m.querySelector('#cvPdfBtn').addEventListener('click', ()=> m.querySelector('#cvPdfInput').click());
+  m.querySelector('#cvPdfInput').addEventListener('change', ()=>{ const f=m.querySelector('#cvPdfInput').files[0]; if(f) handleCustomVenuePdf(f); });
   m.querySelector('#cvSave').addEventListener('click', saveCustomVenue);
   m.querySelector('#cvDelete').addEventListener('click', ()=>{
     if(!editingCustomVenueId) return;
@@ -907,6 +918,64 @@ function fetchCustomVenuePhoto(){
     }
   );
 }
+function setCustomVenueExtractStatus(msg, isError){
+  const el = document.getElementById('customVenueModal')?.querySelector('#cvExtractStatus');
+  if(!el) return;
+  el.style.display = msg ? 'block' : 'none';
+  el.style.color = isError ? 'var(--danger)' : 'var(--ink-soft)';
+  el.textContent = msg || '';
+}
+/* Only fills Price/Guest capacity/Description when they're still empty,
+   same "never overwrite what's already there" rule the venue-reply
+   auto-fill follows, then always appends the full text to Brochure notes
+   so nothing pulled from the PDF or page is lost even where the guesses
+   miss. */
+function applyGuessesToCustomVenue(text){
+  const m = document.getElementById('customVenueModal');
+  const capacityEl = m.querySelector('#cvCapacity');
+  if(!capacityEl.value.trim()){ const n = guessGuestCountNumber(text); if(n) capacityEl.value = n; }
+  const priceEl = m.querySelector('#cvPrice');
+  if(!priceEl.value.trim()){ const p = guessPriceFromText(text); if(p) priceEl.value = p; }
+  const descEl = m.querySelector('#cvDesc');
+  if(!descEl.value.trim()){ const s = guessSummaryFromText(text); if(s) descEl.value = s; }
+  const notesEl = m.querySelector('#cvBrochureNotes');
+  const existingNotes = notesEl.value.trim();
+  notesEl.value = existingNotes ? existingNotes+'\n\n'+text : text;
+}
+async function handleCustomVenuePdf(file){
+  setCustomVenueExtractStatus('Reading the PDF…');
+  try{
+    const text = await extractPdfText(file);
+    if(!text){ setCustomVenueExtractStatus("Couldn't find any text in that PDF (it might be a scanned image), fill the fields in manually instead.", true); return; }
+    applyGuessesToCustomVenue(text);
+    setCustomVenueExtractStatus('Pulled text from the PDF and filled in what it could find, worth double-checking.');
+  }catch(err){
+    console.error(err);
+    setCustomVenueExtractStatus('Could not read that PDF: '+(err && err.message || err), true);
+  }
+}
+/* Same Worker page-text lookup used by the venue-reply modal
+   (fetchPageText, defined in app-3.js), reused here rather than a second
+   copy of the same fetch logic. */
+function fetchCustomVenueText(){
+  const m = document.getElementById('customVenueModal');
+  const website = m.querySelector('#cvWebsite').value.trim();
+  if(!website){ setCustomVenueExtractStatus("Paste the venue's website link above first.", true); return; }
+  const btn = m.querySelector('#cvFetchText');
+  btn.disabled = true; btn.textContent='Fetching…';
+  setCustomVenueExtractStatus('Fetching that page…');
+  fetchPageText(website,
+    (text)=>{
+      btn.disabled = false; btn.textContent='Fetch details from website';
+      applyGuessesToCustomVenue(text);
+      setCustomVenueExtractStatus('Pulled text from the page and filled in what it could find, worth double-checking.');
+    },
+    (err)=>{
+      btn.disabled = false; btn.textContent='Fetch details from website';
+      setCustomVenueExtractStatus(err, true);
+    }
+  );
+}
 function openCustomVenueModal(existing){
   editingCustomVenueId = existing ? existing.id : null;
   const m = ensureCustomVenueModal();
@@ -918,6 +987,9 @@ function openCustomVenueModal(existing){
   m.querySelector('#cvDesc').value = existing ? (existing.desc||'') : '';
   m.querySelector('#cvWebsite').value = existing && existing.sources && existing.sources[0] ? (existing.sources[0][1]||'') : '';
   m.querySelector('#cvImage').value = existing ? (existing.image||'') : '';
+  m.querySelector('#cvBrochureNotes').value = existing ? (existing.brochureNotes||'') : '';
+  m.querySelector('#cvPdfInput').value = '';
+  setCustomVenueExtractStatus('');
   updateCustomVenuePreview();
   m.querySelector('#cvWarn').style.display='none';
   m.querySelector('#cvDelete').style.display = existing ? 'inline-flex' : 'none';
@@ -937,6 +1009,7 @@ function saveCustomVenue(){
     price: m.querySelector('#cvPrice').value.trim() || 'TBD: inquire',
     desc: m.querySelector('#cvDesc').value.trim(),
     image: m.querySelector('#cvImage').value.trim(),
+    brochureNotes: m.querySelector('#cvBrochureNotes').value.trim(),
     capacity: hasCapacity ? capacity : null,
     facts: hasCapacity ? ['Wedding day up to '+capacity+' guests'] : [],
     sources: website ? [['Venue website', website]] : [],
@@ -1290,6 +1363,62 @@ function saveCustomStyle(){
 
 renderStyleSections();
 
+/* ---------------- PDF / LINK TEXT EXTRACTION (shared by venue replies and custom venues) ---------------- */
+let pdfjsWorkerConfigured = false;
+function ensurePdfWorker(){
+  if(pdfjsWorkerConfigured || typeof pdfjsLib==='undefined') return;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.worker.min.js';
+  pdfjsWorkerConfigured = true;
+}
+/* Extracts plain text from an uploaded PDF entirely client-side via pdf.js,
+   no server round-trip needed, so a brochure's own wording can feed the
+   same keyword auto-fill already used for pasted email replies. Reads at
+   most the first 12 pages, plenty for a brochure, to keep this fast. */
+async function extractPdfText(file){
+  if(typeof pdfjsLib==='undefined') throw new Error('PDF reader did not load. Check your internet connection and try again.');
+  ensurePdfWorker();
+  const buf = await file.arrayBuffer();
+  const doc = await pdfjsLib.getDocument({data: buf}).promise;
+  const maxPages = Math.min(doc.numPages, 12);
+  let text = '';
+  for(let i=1;i<=maxPages;i++){
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it=>it.str).join(' ') + '\n\n';
+  }
+  return text.trim();
+}
+/* These two guesses are shared: venue replies scan pasted email text for
+   them already, custom venues can use the exact same patterns against a
+   brochure PDF or a fetched webpage, no need for separate logic. */
+function guessGuestCountFromText(text){
+  const m = text.match(/(\d{1,4}\+?\s*(?:guests|people|pax|persons|personnes|invit[ée]s|convives))/i);
+  return m ? m[0] : null;
+}
+function guessPriceFromText(text){
+  const CURRENCY_AMOUNT = '(?:[€$£]\\s?\\d[\\d,.]*|\\d[\\d,.]*\\s?(?:€|eur\\.?|euros?|usd|gbp)\\b)';
+  const dayNight = text.match(new RegExp(CURRENCY_AMOUNT+'\\s*\\/?\\s*(?:per\\s*)?(?:day|night)\\b', 'i'));
+  const any = text.match(new RegExp(CURRENCY_AMOUNT, 'i'));
+  const m = dayNight || any;
+  return m ? m[0] : null;
+}
+/* Best-effort first sentence, or a flat truncation if no clean sentence
+   boundary shows up in that range. pdf.js doesn't preserve paragraph
+   breaks within a page, so this can't rely on blank-line splitting the
+   way a pasted, human-formatted email can. */
+function guessSummaryFromText(text){
+  const clean = text.replace(/\s+/g,' ').trim();
+  const m = clean.match(/^.{40,500}?[.!?](?=\s|$)/);
+  return m ? m[0].trim() : clean.slice(0,300);
+}
+function guessGuestCountNumber(text){
+  const phrase = guessGuestCountFromText(text);
+  if(!phrase) return null;
+  const digits = phrase.match(/\d+/);
+  const n = digits ? parseInt(digits[0],10) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
 /* ---------------- VENUES YOU'VE CONTACTED ---------------- */
 const VENUE_CONTACT_FIELDS = [
   ['maxGuests', 'Max guests / sleeping capacity', 'e.g. 45 guests, 20 sleep on-site'],
@@ -1317,6 +1446,13 @@ function ensureVenueContactModal(){
     + '<input type="file" id="vcFileInput" accept="image/*" style="display:none;">'
     + '<div id="vcPreviewWrap" style="display:none;"><img id="vcPreview" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;"></div>'
     + VENUE_CONTACT_FIELDS.map(([key,label,placeholder])=> '<label class="field">'+esc(label)+'<input type="text" id="vc_'+key+'" placeholder="'+esc(placeholder)+'"></label>').join('')
+    + '<label class="field">Brochure or listing link (optional)<input type="url" id="vcSourceLink" placeholder="https://…"></label>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<button class="btn small ghost" id="vcFetchLinkText" type="button">Fetch text from this link</button>'
+      + '<button class="btn small ghost" id="vcPdfBtn" type="button">Attach a PDF brochure</button>'
+    + '</div>'
+    + '<input type="file" id="vcPdfInput" accept="application/pdf" style="display:none;">'
+    + '<p id="vcExtractStatus" style="display:none;font-size:12px;color:var(--ink-soft);"></p>'
     + '<label class="field">Their full reply (paste it here for reference)<textarea id="vcRawReply" rows="5" placeholder="Paste their email reply…"></textarea></label>'
     + '<button class="btn small ghost" id="vcAutoFill" type="button" style="align-self:flex-start;">Try auto-fill from this text</button>'
     + '<label class="field">Your notes<textarea id="vcNotes" rows="2" placeholder="Your own thoughts on this one"></textarea></label>'
@@ -1339,7 +1475,10 @@ function ensureVenueContactModal(){
     });
   });
   m.querySelector('#vcSave').addEventListener('click', saveVenueContact);
-  m.querySelector('#vcAutoFill').addEventListener('click', autoFillVenueContact);
+  m.querySelector('#vcAutoFill').addEventListener('click', ()=> autoFillVenueContact());
+  m.querySelector('#vcPdfBtn').addEventListener('click', ()=> m.querySelector('#vcPdfInput').click());
+  m.querySelector('#vcPdfInput').addEventListener('change', ()=>{ const f=m.querySelector('#vcPdfInput').files[0]; if(f) handleVenueContactPdf(f); });
+  m.querySelector('#vcFetchLinkText').addEventListener('click', fetchVenueContactLinkText);
   m.querySelector('#vcDelete').addEventListener('click', ()=>{
     if(!editingVenueContactId) return;
     const id = editingVenueContactId;
@@ -1360,41 +1499,35 @@ function openVenueContactModal(existing, prefillVenue){
   m.querySelector('#vcName').value = existing ? (existing.name||'') : (prefillVenue ? prefillVenue.name : '');
   m.querySelector('#vcDecision').value = existing ? (existing.decision||'') : '';
   VENUE_CONTACT_FIELDS.forEach(([key])=>{ m.querySelector('#vc_'+key).value = existing ? (existing[key]||'') : ''; });
+  m.querySelector('#vcSourceLink').value = existing ? (existing.sourceLink||'') : '';
   m.querySelector('#vcRawReply').value = existing ? (existing.rawReply||'') : '';
   m.querySelector('#vcNotes').value = existing ? (existing.notes||'') : '';
   const previewWrap = m.querySelector('#vcPreviewWrap');
   if(pendingVenueContactThumb){ m.querySelector('#vcPreview').src = pendingVenueContactThumb; previewWrap.style.display='block'; }
   else previewWrap.style.display='none';
   m.querySelector('#vcFileInput').value='';
+  m.querySelector('#vcPdfInput').value='';
+  setVenueContactExtractStatus('');
   m.querySelector('#vcWarn').style.display='none';
   m.querySelector('#vcDelete').style.display = existing ? 'inline-flex' : 'none';
   m.classList.add('open');
 }
 /* Best-effort keyword/regex guesses from the pasted reply, only fills fields
-   that are still empty, always needs a human double-check. */
-function autoFillVenueContact(){
+   that are still empty, always needs a human double-check. Pass silent=true
+   when this runs automatically right after a PDF/link import, so it doesn't
+   also pop the manual-button's confirmation alert. */
+function autoFillVenueContact(silent){
   const m = document.getElementById('venueContactModal');
   const text = m.querySelector('#vcRawReply').value;
-  if(!text.trim()){ alert('Paste their reply into the box above first, then try auto-fill.'); return; }
+  if(!text.trim()){ if(!silent) alert('Paste their reply into the box above first, then try auto-fill.'); return; }
   const setIfEmpty = (key, val)=>{ if(!val) return; const el = m.querySelector('#vc_'+key); if(el && !el.value.trim()) el.value = val.trim(); };
 
   /* Venue replies come in whatever language the venue does, French shows
      up often enough (guests, vendors) that these keyword checks match
      both languages rather than silently returning nothing on a French
      reply, like Villa Porta's did before this. */
-  const guestsMatch = text.match(/(\d{1,4}\+?\s*(?:guests|people|pax|persons|personnes|invit[ée]s|convives))/i);
-  setIfEmpty('maxGuests', guestsMatch && guestsMatch[0]);
-
-  /* Currency amounts show up as a symbol ("€3,500") or, just as often in
-     real replies, spelled out ("3.500 eur"), so match either. Prefer an
-     amount tagged "day"/"night" (an accommodation rate) over a bare
-     amount, since a per-person catering price is usually mentioned
-     separately and isn't what this field is asking for. */
-  const CURRENCY_AMOUNT = '(?:[€$£]\\s?\\d[\\d,.]*|\\d[\\d,.]*\\s?(?:€|eur\\.?|euros?|usd|gbp)\\b)';
-  const priceDayNightMatch = text.match(new RegExp(CURRENCY_AMOUNT+'\\s*\\/?\\s*(?:per\\s*)?(?:day|night)\\b', 'i'));
-  const priceAnyMatch = text.match(new RegExp(CURRENCY_AMOUNT, 'i'));
-  const priceMatch = priceDayNightMatch || priceAnyMatch;
-  setIfEmpty('pricePerNight', priceMatch && priceMatch[0]);
+  setIfEmpty('maxGuests', guessGuestCountFromText(text));
+  setIfEmpty('pricePerNight', guessPriceFromText(text));
 
   /* [^.?!\n]*KEYWORD[^.?!\n]*[.?!]? grabs the clause around a keyword.
      The trailing punctuation is optional (not required) since bulleted
@@ -1413,7 +1546,57 @@ function autoFillVenueContact(){
   const depositSentence = text.match(/[^.?!\n]*(?:deposit|cancellation|acompte|d[ée]p[ôo]t|arrhes|annulation)[^.?!\n]*[.?!]?/i);
   setIfEmpty('depositPolicy', depositSentence && depositSentence[0].trim());
 
-  alert("Filled in what it could find by scanning for keywords, this is just a rough guess so please check every field against their actual reply.");
+  if(!silent) alert("Filled in what it could find by scanning for keywords, this is just a rough guess so please check every field against their actual reply.");
+}
+function setVenueContactExtractStatus(msg, isError){
+  const el = document.getElementById('venueContactModal')?.querySelector('#vcExtractStatus');
+  if(!el) return;
+  el.style.display = msg ? 'block' : 'none';
+  el.style.color = isError ? 'var(--danger)' : 'var(--ink-soft)';
+  el.textContent = msg || '';
+}
+/* Reads the PDF entirely client-side, drops its text into the same "their
+   full reply" box the auto-fill scan already reads, then runs that scan
+   right away so a brochure updates the fields without an extra click. */
+async function handleVenueContactPdf(file){
+  const m = document.getElementById('venueContactModal');
+  setVenueContactExtractStatus('Reading the PDF…');
+  try{
+    const text = await extractPdfText(file);
+    if(!text){ setVenueContactExtractStatus("Couldn't find any text in that PDF (it might be a scanned image), paste details in manually instead.", true); return; }
+    const existing = m.querySelector('#vcRawReply').value.trim();
+    m.querySelector('#vcRawReply').value = existing ? existing+'\n\n'+text : text;
+    autoFillVenueContact(true);
+    setVenueContactExtractStatus('Pulled text from the PDF and auto-filled what it could find above, worth double-checking.');
+  }catch(err){
+    console.error(err);
+    setVenueContactExtractStatus('Could not read that PDF: '+(err && err.message || err), true);
+  }
+}
+/* Reuses the Worker's page-text lookup (resolvePageText, same idea as the
+   og:image lookup already built for link previews) so a venue's own
+   brochure/listing page can feed the auto-fill scan too, not just a PDF
+   or pasted text. */
+function fetchVenueContactLinkText(){
+  const m = document.getElementById('venueContactModal');
+  const url = m.querySelector('#vcSourceLink').value.trim();
+  if(!url){ setVenueContactExtractStatus('Paste a link above first.', true); return; }
+  const btn = m.querySelector('#vcFetchLinkText');
+  btn.disabled = true; btn.textContent='Fetching…';
+  setVenueContactExtractStatus('Fetching that page…');
+  fetchPageText(url,
+    (text)=>{
+      btn.disabled = false; btn.textContent='Fetch text from this link';
+      const existing = m.querySelector('#vcRawReply').value.trim();
+      m.querySelector('#vcRawReply').value = existing ? existing+'\n\n'+text : text;
+      autoFillVenueContact(true);
+      setVenueContactExtractStatus('Pulled text from the page and auto-filled what it could find above, worth double-checking.');
+    },
+    (err)=>{
+      btn.disabled = false; btn.textContent='Fetch text from this link';
+      setVenueContactExtractStatus(err, true);
+    }
+  );
 }
 function readVenueContactThumb(file){
   const m = document.getElementById('venueContactModal');
@@ -1441,7 +1624,7 @@ function saveVenueContact(){
   const warn = m.querySelector('#vcWarn');
   const name = m.querySelector('#vcName').value.trim();
   if(!name){ warn.textContent='Give the venue a name.'; warn.style.display='block'; return; }
-  const data = {name, thumbnail: pendingVenueContactThumb, venueId: pendingVenueContactVenueId, decision: m.querySelector('#vcDecision').value, rawReply: m.querySelector('#vcRawReply').value.trim(), notes: m.querySelector('#vcNotes').value.trim()};
+  const data = {name, thumbnail: pendingVenueContactThumb, venueId: pendingVenueContactVenueId, decision: m.querySelector('#vcDecision').value, sourceLink: m.querySelector('#vcSourceLink').value.trim(), rawReply: m.querySelector('#vcRawReply').value.trim(), notes: m.querySelector('#vcNotes').value.trim()};
   VENUE_CONTACT_FIELDS.forEach(([key])=>{ data[key] = m.querySelector('#vc_'+key).value.trim(); });
   if(editingVenueContactId){
     const id = editingVenueContactId;
