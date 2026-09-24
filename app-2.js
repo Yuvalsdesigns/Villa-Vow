@@ -793,7 +793,11 @@ function renderVenues(){
       + '<p>'+esc(v.desc)+'</p>'
       + '<div class="venue-facts">'+(capacity!==null?'<span class="fact fact-capacity">~'+capacity+' guests</span>':'')+(v.facts||[]).map(f=>'<span class="fact">'+esc(f)+'</span>').join('')+'</div>'
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'+(v.sources||[]).map(s=>'<a class="src-link" target="_blank" rel="noopener" href="'+esc(s[1])+'">'+esc(s[0])+' ↗</a>').join('')+'</div>'
-      + (v.isCustom && v.brochureNotes ? '<details class="venue-contact-raw"><summary>Show brochure notes</summary><p>'+esc(v.brochureNotes)+'</p></details>' : '')
+      + (v.isCustom ? (()=>{
+          const bullets = CUSTOM_VENUE_EXTRA_FIELDS.filter(([key])=> (v[key]||'').trim()).map(([key,label])=> '<li><b>'+esc(label)+':</b> '+esc(v[key])+'</li>').join('');
+          return bullets ? '<ul class="venue-contact-bullets">'+bullets+'</ul>' : '';
+        })() : '')
+      + (v.isCustom && v.brochureNotes ? '<p class="venue-contact-notes"><b>Notes:</b> '+esc(v.brochureNotes)+'</p>' : '')
       + '<div class="venue-image-credit">'+(v.image ? 'Venue / wedding source image' : 'Destination visual reference, verify the exact property photo before publishing')+'</div>'
       + '<div class="venue-note"><textarea placeholder="Notes on '+esc(v.name)+'…">'+esc(fav.note||'')+'</textarea></div>'
       + '<div class="venue-foot"><button class="heart'+(fav.favorited?' on':'')+'">'+svg(ICON.heart)+'</button><span style="font-size:11.5px;color:var(--ink-faint)">'+(fav.favorited?'Shortlisted':'Tap to shortlist')+'</span>'
@@ -830,6 +834,16 @@ function setVenueFav(id, data){
 }
 
 /* ---------------- CUSTOM VENUES (added by the couple) ---------------- */
+/* Same shape as VENUE_CONTACT_FIELDS below, minus max guests/price, which
+   already have their own dedicated Guest capacity/Price fields on a
+   venue. Extracted straight out of a PDF or fetched link, not just
+   dumped there as a wall of raw text. */
+const CUSTOM_VENUE_EXTRA_FIELDS = [
+  ['availability', 'Availability', 'e.g. Confirmed available, needs 50% deposit to hold'],
+  ['ceremonySpace', 'Ceremony space + rain backup', 'e.g. Terrace ceremony, indoor barn as backup'],
+  ['kosherCatering', 'Outside kosher catering allowed?', 'e.g. Yes, kitchen access confirmed'],
+  ['depositPolicy', 'Deposit / cancellation policy', 'e.g. 30% deposit, refundable until 60 days out'],
+];
 let editingCustomVenueId = null;
 function ensureCustomVenueModal(){
   let m = document.getElementById('customVenueModal');
@@ -853,7 +867,8 @@ function ensureCustomVenueModal(){
     + '<input type="file" id="cvPdfInput" accept="application/pdf" style="display:none;">'
     + '<p id="cvExtractStatus" style="display:none;font-size:12px;color:var(--ink-soft);"></p>'
     + '<div id="cvPreviewWrap" style="display:none;"><img id="cvPreview" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;"></div>'
-    + '<label class="field">Brochure notes (optional, full text for reference)<textarea id="cvBrochureNotes" rows="4" placeholder="Auto-filled from a PDF or fetched link, or paste your own notes"></textarea></label>'
+    + CUSTOM_VENUE_EXTRA_FIELDS.map(([key,label,placeholder])=> '<label class="field">'+esc(label)+'<input type="text" id="cv_'+key+'" placeholder="'+esc(placeholder)+'"></label>').join('')
+    + '<label class="field">Your own notes (optional)<textarea id="cvBrochureNotes" rows="2" placeholder="Anything else worth remembering that isn\'t captured above"></textarea></label>'
     + '<p class="warn" id="cvWarn" style="display:none;"></p>'
     + '<div class="modal-foot"><button class="btn danger-outline" id="cvDelete" style="display:none;margin-right:auto;">Delete</button><button class="btn" id="cvCancel">Cancel</button><button class="btn primary" id="cvSave">Save</button></div>'
     + '</div>';
@@ -918,22 +933,24 @@ function setCustomVenueExtractStatus(msg, isError){
   el.style.color = isError ? 'var(--danger)' : 'var(--ink-soft)';
   el.textContent = msg || '';
 }
-/* Only fills Price/Guest capacity/Description when they're still empty,
-   same "never overwrite what's already there" rule the venue-reply
-   auto-fill follows, then always appends the full text to Brochure notes
-   so nothing pulled from the PDF or page is lost even where the guesses
-   miss. */
+/* Pulls the actual data points out of a PDF or fetched page (guest
+   capacity, price, availability, ceremony space, kosher catering, deposit
+   policy), the same way venue replies already do, rather than dumping the
+   whole raw text somewhere to read later. Every field only fills in when
+   still empty, so nothing typed by hand gets overwritten, and a second
+   PDF/link can still fill in whatever the first one missed. */
 function applyGuessesToCustomVenue(text){
   const m = document.getElementById('customVenueModal');
+  const setIfEmpty = (id, val)=>{ if(!val) return; const el = m.querySelector('#'+id); if(el && !el.value.trim()) el.value = val; };
   const capacityEl = m.querySelector('#cvCapacity');
   if(!capacityEl.value.trim()){ const n = guessGuestCountNumber(text); if(n) capacityEl.value = n; }
-  const priceEl = m.querySelector('#cvPrice');
-  if(!priceEl.value.trim()){ const p = guessPriceFromText(text); if(p) priceEl.value = p; }
+  setIfEmpty('cvPrice', guessPriceFromText(text));
   const descEl = m.querySelector('#cvDesc');
   if(!descEl.value.trim()){ const s = guessSummaryFromText(text); if(s) descEl.value = s; }
-  const notesEl = m.querySelector('#cvBrochureNotes');
-  const existingNotes = notesEl.value.trim();
-  notesEl.value = existingNotes ? existingNotes+'\n\n'+text : text;
+  setIfEmpty('cv_availability', guessAvailabilityFromText(text));
+  setIfEmpty('cv_ceremonySpace', guessCeremonyFromText(text));
+  setIfEmpty('cv_kosherCatering', guessKosherFromText(text));
+  setIfEmpty('cv_depositPolicy', guessDepositFromText(text));
 }
 async function handleCustomVenuePdf(file){
   setCustomVenueExtractStatus('Reading the PDF…');
@@ -980,6 +997,7 @@ function openCustomVenueModal(existing){
   m.querySelector('#cvDesc').value = existing ? (existing.desc||'') : '';
   m.querySelector('#cvWebsite').value = existing && existing.sources && existing.sources[0] ? (existing.sources[0][1]||'') : '';
   m.querySelector('#cvImage').value = existing ? (existing.image||'') : '';
+  CUSTOM_VENUE_EXTRA_FIELDS.forEach(([key])=>{ m.querySelector('#cv_'+key).value = existing ? (existing[key]||'') : ''; });
   m.querySelector('#cvBrochureNotes').value = existing ? (existing.brochureNotes||'') : '';
   m.querySelector('#cvPdfInput').value = '';
   setCustomVenueExtractStatus('');
@@ -1010,6 +1028,7 @@ function saveCustomVenue(){
     grad: ['#DCE8E2','#4A6C7A'],
     isCustom: true,
   };
+  CUSTOM_VENUE_EXTRA_FIELDS.forEach(([key])=>{ data[key] = m.querySelector('#cv_'+key).value.trim(); });
   if(editingCustomVenueId){
     const id = editingCustomVenueId;
     if(dbReady) db.collection('customVenues').doc(id).update(data).catch(err=>{ console.error(err); warn.textContent='Could not save changes.'; warn.style.display='block'; });
@@ -1524,6 +1543,29 @@ function openVenueContactModal(existing, prefillVenue){
   m.querySelector('#vcDelete').style.display = existing ? 'inline-flex' : 'none';
   m.classList.add('open');
 }
+/* [^.?!\n]*KEYWORD[^.?!\n]*[.?!]? grabs the clause around a keyword. The
+   trailing punctuation is optional (not required) since bulleted lines in
+   a pasted email, PDF or fetched page often end at a newline with no
+   period. Shared by venue replies and custom venues, both pull the same
+   kind of fact out of the same kind of source text. */
+function guessAvailabilityFromText(text){
+  const negativeAvail = /not available|fully booked|no longer available|already booked|indisponible|complet|plus disponible/i.test(text);
+  const availSentence = text.match(/[^.?!\n]*(?:availab|disponib)[^.?!\n]*[.?!]?/i);
+  if(negativeAvail) return (availSentence && availSentence[0].trim()) || 'Sounds not available, check their reply';
+  return availSentence ? availSentence[0].trim() : null;
+}
+function guessKosherFromText(text){
+  const m = text.match(/[^.?!\n]*(?:kosher|casher)[^.?!\n]*[.?!]?/i);
+  return m ? m[0].trim() : null;
+}
+function guessCeremonyFromText(text){
+  const m = text.match(/[^.?!\n]*(?:ceremony|chuppah|rain|indoor backup|c[ée]r[ée]monie|ext[ée]rieur)[^.?!\n]*[.?!]?/i);
+  return m ? m[0].trim() : null;
+}
+function guessDepositFromText(text){
+  const m = text.match(/[^.?!\n]*(?:deposit|cancellation|acompte|d[ée]p[ôo]t|arrhes|annulation)[^.?!\n]*[.?!]?/i);
+  return m ? m[0].trim() : null;
+}
 /* Best-effort keyword/regex guesses from the pasted reply, only fills fields
    that are still empty, always needs a human double-check. Pass silent=true
    when this runs automatically right after a PDF/link import, so it doesn't
@@ -1540,23 +1582,10 @@ function autoFillVenueContact(silent){
      reply, like Villa Porta's did before this. */
   setIfEmpty('maxGuests', guessGuestCountFromText(text));
   setIfEmpty('pricePerNight', guessPriceFromText(text));
-
-  /* [^.?!\n]*KEYWORD[^.?!\n]*[.?!]? grabs the clause around a keyword.
-     The trailing punctuation is optional (not required) since bulleted
-     lines in a pasted email often end at a newline with no period. */
-  const negativeAvail = /not available|fully booked|no longer available|already booked|indisponible|complet|plus disponible/i.test(text);
-  const availSentence = text.match(/[^.?!\n]*(?:availab|disponib)[^.?!\n]*[.?!]?/i);
-  if(negativeAvail) setIfEmpty('availability', (availSentence && availSentence[0].trim()) || 'Sounds not available, check their reply');
-  else if(availSentence) setIfEmpty('availability', availSentence[0].trim());
-
-  const kosherSentence = text.match(/[^.?!\n]*(?:kosher|casher)[^.?!\n]*[.?!]?/i);
-  setIfEmpty('kosherCatering', kosherSentence && kosherSentence[0].trim());
-
-  const ceremonySentence = text.match(/[^.?!\n]*(?:ceremony|chuppah|rain|indoor backup|c[ée]r[ée]monie|ext[ée]rieur)[^.?!\n]*[.?!]?/i);
-  setIfEmpty('ceremonySpace', ceremonySentence && ceremonySentence[0].trim());
-
-  const depositSentence = text.match(/[^.?!\n]*(?:deposit|cancellation|acompte|d[ée]p[ôo]t|arrhes|annulation)[^.?!\n]*[.?!]?/i);
-  setIfEmpty('depositPolicy', depositSentence && depositSentence[0].trim());
+  setIfEmpty('availability', guessAvailabilityFromText(text));
+  setIfEmpty('kosherCatering', guessKosherFromText(text));
+  setIfEmpty('ceremonySpace', guessCeremonyFromText(text));
+  setIfEmpty('depositPolicy', guessDepositFromText(text));
 
   if(!silent) alert("Filled in what it could find by scanning for keywords, this is just a rough guess so please check every field against their actual reply.");
 }
