@@ -942,13 +942,22 @@ function setCustomVenueExtractStatus(msg, isError){
    same way venue replies already do, rather than dumping the whole raw
    text somewhere to read later. Every field only fills in when still
    empty, so nothing typed by hand gets overwritten, and a second PDF/link
-   can still fill in whatever the first one missed. */
+   can still fill in whatever the first one missed. Returns how many
+   fields it actually filled, so the caller can tell "found the page but
+   none of it matched anything" apart from a real success, two very
+   different situations that used to show the same cheerful message. */
 function applyGuessesToCustomVenue(text){
   const m = document.getElementById('customVenueModal');
-  const setIfEmpty = (id, val)=>{ if(!val) return; const el = m.querySelector('#'+id); if(el && !el.value.trim()) el.value = val; };
+  let filled = 0;
+  const setIfEmpty = (id, val)=>{ if(!val) return; const el = m.querySelector('#'+id); if(el && !el.value.trim()){ el.value = val; filled++; } };
   const capacityEl = m.querySelector('#cvCapacity');
-  if(!capacityEl.value.trim()){ const n = guessGuestCountNumber(text); if(n) capacityEl.value = n; }
+  if(!capacityEl.value.trim()){ const n = guessGuestCountNumber(text); if(n){ capacityEl.value = n; filled++; } }
   setIfEmpty('cvPrice', guessPriceFromText(text));
+  /* Description isn't counted toward "filled": guessSummaryFromText just
+     grabs the first sentence and near-always succeeds even on totally
+     generic marketing copy, so counting it would mask the case where none
+     of the actual factual fields (price, capacity, kosher, etc) matched
+     anything, exactly the situation someone needs to be told about. */
   const descEl = m.querySelector('#cvDesc');
   if(!descEl.value.trim()){ const s = guessSummaryFromText(text); if(s) descEl.value = s; }
   setIfEmpty('cv_availability', guessAvailabilityFromText(text));
@@ -958,6 +967,22 @@ function applyGuessesToCustomVenue(text){
   setIfEmpty('cv_partyMusicPolicy', guessPartyMusicFromText(text));
   setIfEmpty('cv_dayAfterAmenities', guessDayAfterFromText(text));
   setIfEmpty('cv_depositPolicy', guessDepositFromText(text));
+  return filled;
+}
+/* "Found the page/PDF fine but none of the keyword patterns matched
+   anything in it" used to show the exact same cheerful "filled in what
+   it could find" message as an actual success, with the raw text
+   discarded either way, so there was no way to tell the two apart or see
+   why. Now a zero-field result puts the full text into Brochure notes
+   so nothing found is lost, and says plainly that nothing auto-matched. */
+function reportCustomVenueExtraction(filled, text, sourceLabel){
+  if(filled > 0){
+    setCustomVenueExtractStatus('Filled in '+filled+' field'+(filled===1?'':'s')+' from the '+sourceLabel+', worth double-checking.');
+    return;
+  }
+  const notesEl = document.getElementById('customVenueModal').querySelector('#cvBrochureNotes');
+  if(!notesEl.value.trim()) notesEl.value = text;
+  setCustomVenueExtractStatus("Read the "+sourceLabel+" fine, but none of its wording matched a field automatically. The full text is in “Your own notes” below so you can pull details from it by hand.", true);
 }
 async function handleCustomVenuePdf(file){
   setCustomVenueExtractStatus('Reading the PDF…');
@@ -966,8 +991,8 @@ async function handleCustomVenuePdf(file){
     if(!text){ setCustomVenueExtractStatus("Couldn't find any text in that PDF, it's likely a scanned/image-only brochure with no real text layer (common for a designed PDF), which this can't read text from. Fill the fields in manually instead.", true); return; }
     const nameEl = document.getElementById('customVenueModal').querySelector('#cvName');
     if(!nameEl.value.trim() && title) nameEl.value = title;
-    applyGuessesToCustomVenue(text);
-    setCustomVenueExtractStatus('Pulled text from the PDF and filled in what it could find, worth double-checking.');
+    const filled = applyGuessesToCustomVenue(text);
+    reportCustomVenueExtraction(filled, text, 'PDF');
   }catch(err){
     console.error(err);
     setCustomVenueExtractStatus('Could not read that PDF: '+(err && err.message || err), true);
@@ -988,8 +1013,8 @@ function fetchCustomVenueText(){
       btn.disabled = false; btn.textContent='Fetch details from website';
       const nameEl = m.querySelector('#cvName');
       if(!nameEl.value.trim()){ const guessed = guessNameFromTitle(title); if(guessed) nameEl.value = guessed; }
-      applyGuessesToCustomVenue(text);
-      setCustomVenueExtractStatus('Pulled text from the page and filled in what it could find, worth double-checking.');
+      const filled = applyGuessesToCustomVenue(text);
+      reportCustomVenueExtraction(filled, text, 'page');
     },
     (err)=>{
       btn.disabled = false; btn.textContent='Fetch details from website';
@@ -1630,8 +1655,9 @@ function guessNameFromTitle(title){
 function autoFillVenueContact(silent){
   const m = document.getElementById('venueContactModal');
   const text = m.querySelector('#vcRawReply').value;
-  if(!text.trim()){ if(!silent) alert('Paste their reply into the box above first, then try auto-fill.'); return; }
-  const setIfEmpty = (key, val)=>{ if(!val) return; const el = m.querySelector('#vc_'+key); if(el && !el.value.trim()) el.value = val.trim(); };
+  if(!text.trim()){ if(!silent) alert('Paste their reply into the box above first, then try auto-fill.'); return 0; }
+  let filled = 0;
+  const setIfEmpty = (key, val)=>{ if(!val) return; const el = m.querySelector('#vc_'+key); if(el && !el.value.trim()){ el.value = val.trim(); filled++; } };
 
   /* Venue replies come in whatever language the venue does, French shows
      up often enough (guests, vendors) that these keyword checks match
@@ -1647,7 +1673,11 @@ function autoFillVenueContact(silent){
   setIfEmpty('dayAfterAmenities', guessDayAfterFromText(text));
   setIfEmpty('depositPolicy', guessDepositFromText(text));
 
-  if(!silent) alert("Filled in what it could find by scanning for keywords, this is just a rough guess so please check every field against their actual reply.");
+  if(!silent){
+    if(filled>0) alert('Filled in '+filled+' field'+(filled===1?'':'s')+' by scanning for keywords, this is just a rough guess so please check every field against their actual reply.');
+    else alert("Scanned the text but none of it matched a field automatically. Their reply is still saved above, you'll need to fill the fields in by hand.");
+  }
+  return filled;
 }
 function setVenueContactExtractStatus(msg, isError){
   const el = document.getElementById('venueContactModal')?.querySelector('#vcExtractStatus');
@@ -1669,8 +1699,10 @@ async function handleVenueContactPdf(file){
     if(!nameEl.value.trim() && title) nameEl.value = title;
     const existing = m.querySelector('#vcRawReply').value.trim();
     m.querySelector('#vcRawReply').value = existing ? existing+'\n\n'+text : text;
-    autoFillVenueContact(true);
-    setVenueContactExtractStatus('Pulled text from the PDF and auto-filled what it could find above, worth double-checking.');
+    const filled = autoFillVenueContact(true);
+    setVenueContactExtractStatus(filled>0
+      ? 'Filled in '+filled+' field'+(filled===1?'':'s')+' from the PDF, worth double-checking.'
+      : "Pulled the PDF's text into “their full reply” above, but none of it matched a field automatically, worth reading it and filling those in by hand.");
   }catch(err){
     console.error(err);
     setVenueContactExtractStatus('Could not read that PDF: '+(err && err.message || err), true);
@@ -1694,8 +1726,10 @@ function fetchVenueContactLinkText(){
       if(!nameEl.value.trim()){ const guessed = guessNameFromTitle(title); if(guessed) nameEl.value = guessed; }
       const existing = m.querySelector('#vcRawReply').value.trim();
       m.querySelector('#vcRawReply').value = existing ? existing+'\n\n'+text : text;
-      autoFillVenueContact(true);
-      setVenueContactExtractStatus('Pulled text from the page and auto-filled what it could find above, worth double-checking.');
+      const filled = autoFillVenueContact(true);
+      setVenueContactExtractStatus(filled>0
+        ? 'Filled in '+filled+' field'+(filled===1?'':'s')+' from the page, worth double-checking.'
+        : "Pulled the page's text into “their full reply” above, but none of it matched a field automatically, worth reading it and filling those in by hand.");
     },
     (err)=>{
       btn.disabled = false; btn.textContent='Fetch text from this link';
