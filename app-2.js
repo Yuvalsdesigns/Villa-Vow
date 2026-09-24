@@ -738,14 +738,7 @@ const VENUES = [...VENUES_PART_1,...VENUES_PART_2,...VENUES_PART_3,...VENUES_PAR
    nothing usable is there so those venues aren't wrongly filtered out. */
 function extractVenueCapacity(v){
   const text=[v.desc,...(v.facts||[])].join(' ');
-  let m=text.match(/wedding day up to (\d+)/i); if(m) return parseInt(m[1],10);
-  m=text.match(/(?:event )?capacity (?:of |up to |: )?(\d+)/i); if(m) return parseInt(m[1],10);
-  m=text.match(/(\d+)\s*[–-]\s*(\d+)\s*guests/i); if(m) return parseInt(m[2],10);
-  m=text.match(/up to (\d+)\s*guests/i); if(m) return parseInt(m[1],10);
-  m=text.match(/(\d+)\+?\s*guests/i); if(m) return parseInt(m[1],10);
-  m=text.match(/sleeping (\d+)/i); if(m) return parseInt(m[1],10);
-  m=text.match(/sleeps?\s*(\d+)/i); if(m) return parseInt(m[1],10);
-  return null;
+  return guessGuestCountNumber(text);
 }
 function allVenuesList(){ return VENUES.concat(state.customVenues||[]); }
 function renderVenueFilters(){
@@ -1388,18 +1381,44 @@ async function extractPdfText(file){
   }
   return text.trim();
 }
-/* These two guesses are shared: venue replies scan pasted email text for
-   them already, custom venues can use the exact same patterns against a
-   brochure PDF or a fetched webpage, no need for separate logic. */
-function guessGuestCountFromText(text){
-  const m = text.match(/(\d{1,4}\+?\s*(?:guests|people|pax|persons|personnes|invit[ée]s|convives))/i);
-  return m ? m[0] : null;
+/* These guesses are shared: venue replies scan pasted email text for them
+   already, custom venues (and the curated list's own capacity chip, via
+   extractVenueCapacity above) use the exact same patterns against a
+   brochure PDF or a fetched webpage, no need for separate logic.
+   guessGuestCountNumber is deliberately broad: real venue-website copy
+   phrases a guest count many different ways ("sleeps 40", "capacity 120",
+   "accommodates up to 60", "hosts 80 people", "for 45 pax"), a single
+   narrow pattern like "N guests" alone was matching only description-style
+   text and missing the actual number on a real page. */
+function guessGuestCountNumber(text){
+  let m=text.match(/wedding day up to (\d+)/i); if(m) return parseInt(m[1],10);
+  m=text.match(/(?:event )?capacity (?:of |up to |: )?(\d+)/i); if(m) return parseInt(m[1],10);
+  m=text.match(/(\d+)\s*[–-]\s*(\d+)\s*(?:guests|people|pax|persons)/i); if(m) return parseInt(m[2],10);
+  m=text.match(/up to (\d+)\s*(?:guests|people|pax|persons)/i); if(m) return parseInt(m[1],10);
+  m=text.match(/accommodat(?:es|ing)?\s*(?:up to\s*)?(\d+)/i); if(m) return parseInt(m[1],10);
+  m=text.match(/hosts?\s*(?:up to\s*)?(\d+)\s*(?:guests|people)/i); if(m) return parseInt(m[1],10);
+  m=text.match(/(?:max(?:imum)?\.?\s*(?:of\s*)?)(\d+)\s*(?:guests|people|pax|persons)?/i); if(m) return parseInt(m[1],10);
+  m=text.match(/(\d+)\+?\s*(?:guests|people|pax|persons|personnes|invit[ée]s|convives)/i); if(m) return parseInt(m[1],10);
+  m=text.match(/sleeping (\d+)/i); if(m) return parseInt(m[1],10);
+  m=text.match(/sleeps?\s*(?:up to\s*)?(\d+)/i); if(m) return parseInt(m[1],10);
+  return null;
 }
+function guessGuestCountFromText(text){
+  const n = guessGuestCountNumber(text);
+  return n ? n+' guests' : null;
+}
+/* Currency amounts show up as a symbol ("€3,500"), spelled out ("3.500
+   eur"), or lead in with "from"/"starting at" on a listing page, so match
+   all three shapes. Prefer an amount tagged "day"/"night" (an
+   accommodation rate) over a bare amount, since a per-person catering
+   price is usually mentioned separately and isn't what this field asks
+   for. */
 function guessPriceFromText(text){
   const CURRENCY_AMOUNT = '(?:[€$£]\\s?\\d[\\d,.]*|\\d[\\d,.]*\\s?(?:€|eur\\.?|euros?|usd|gbp)\\b)';
   const dayNight = text.match(new RegExp(CURRENCY_AMOUNT+'\\s*\\/?\\s*(?:per\\s*)?(?:day|night)\\b', 'i'));
+  const fromPhrase = text.match(new RegExp('(?:from|starting (?:at|from))\\s*'+CURRENCY_AMOUNT, 'i'));
   const any = text.match(new RegExp(CURRENCY_AMOUNT, 'i'));
-  const m = dayNight || any;
+  const m = dayNight || fromPhrase || any;
   return m ? m[0] : null;
 }
 /* Best-effort first sentence, or a flat truncation if no clean sentence
@@ -1410,13 +1429,6 @@ function guessSummaryFromText(text){
   const clean = text.replace(/\s+/g,' ').trim();
   const m = clean.match(/^.{40,500}?[.!?](?=\s|$)/);
   return m ? m[0].trim() : clean.slice(0,300);
-}
-function guessGuestCountNumber(text){
-  const phrase = guessGuestCountFromText(text);
-  if(!phrase) return null;
-  const digits = phrase.match(/\d+/);
-  const n = digits ? parseInt(digits[0],10) : NaN;
-  return Number.isFinite(n) ? n : null;
 }
 
 /* ---------------- VENUES YOU'VE CONTACTED ---------------- */
