@@ -744,7 +744,7 @@ function allVenuesList(){ return VENUES.concat(state.customVenues||[]); }
 function renderVenueFilters(){
   const regionSel=document.getElementById('venueRegionFilter');
   if(!regionSel) return;
-  const regions=[...new Set(allVenuesList().map(v=>v.region.split(',')[0]))].sort();
+  const regions=[...new Set(allVenuesList().map(v=>(v.region||'').split(',')[0]).filter(Boolean))].sort();
   regionSel.innerHTML='<option value="">All regions</option>'+regions.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
 }
 function renderVenues(){
@@ -760,7 +760,7 @@ function renderVenues(){
     const capacity=extractVenueCapacity(v);
     const shortlisted=!!(state.venues[v.id]||{}).favorited;
     const contacted=!!(state.venues[v.id]||{}).contacted;
-    return (!q || hay.includes(q)) && (!region || v.region.toLowerCase().startsWith(region))
+    return (!q || hay.includes(q)) && (!region || (v.region||'').toLowerCase().startsWith(region))
       && (!minGuests || capacity===null || capacity>=minGuests)
       && (!contactedFilter || (contactedFilter==='contacted' ? contacted : !contacted))
       && (!shortlistedFilter || (shortlistedFilter==='shortlisted' ? shortlisted : !shortlisted));
@@ -788,7 +788,7 @@ function renderVenues(){
       + (v.isCustom ? '<button class="icon-btn edit-custom-venue" title="Edit this venue" style="position:absolute;top:8px;right:38px;">'+svg(ICON.pencil)+'</button><button class="icon-btn del-custom-venue" title="Delete this venue" style="position:absolute;top:8px;right:8px;">'+svg(ICON.trash)+'</button>' : '')
       + '</div>'
       + '<div class="venue-body">'
-      + '<div><h3>'+esc(v.name)+'</h3><div class="region">'+esc(v.region)+'</div></div>'
+      + '<div><h3>'+esc(v.name)+'</h3>'+(v.region ? '<div class="region">'+esc(v.region)+'</div>' : '')+'</div>'
       + (linkedReply && linkedReply.decision ? '<span class="decision-badge '+linkedReply.decision+'">'+(linkedReply.decision==='explore'?'Explore more':'Not a fit')+'</span>' : '')
       + '<p>'+esc(v.desc)+'</p>'
       + '<div class="venue-facts">'+(capacity!==null?'<span class="fact fact-capacity">~'+capacity+' guests</span>':'')+(v.facts||[]).map(f=>'<span class="fact">'+esc(f)+'</span>').join('')+'</div>'
@@ -856,7 +856,7 @@ function ensureCustomVenueModal(){
     + '<button class="close-x" id="cvModalClose">'+svg(ICON.x)+'</button>'
     + '<h3 id="cvModalTitle">Add a venue</h3>'
     + '<label class="field">Venue name<input type="text" id="cvName" placeholder="e.g. Villa Something"></label>'
-    + '<label class="field">Region / location<input type="text" id="cvRegion" placeholder="e.g. Lake Como, Italy"></label>'
+    + '<label class="field">Region / location (optional)<input type="text" id="cvRegion" placeholder="e.g. Lake Como, Italy, leave blank if unsure"></label>'
     + '<label class="field">Price<input type="text" id="cvPrice" placeholder="e.g. €€€ or TBD: inquire"></label>'
     + '<label class="field">Guest capacity (optional)<input type="number" min="0" id="cvCapacity" placeholder="e.g. 80"></label>'
     + '<label class="field">Description<textarea id="cvDesc" rows="3" placeholder="What makes this one worth considering?"></textarea></label>'
@@ -1047,7 +1047,7 @@ function saveCustomVenue(){
   const warn = m.querySelector('#cvWarn');
   const name = m.querySelector('#cvName').value.trim();
   const region = m.querySelector('#cvRegion').value.trim();
-  if(!name || !region){ warn.textContent='Give the venue a name and a region/location.'; warn.style.display='block'; return; }
+  if(!name){ warn.textContent='Give the venue a name.'; warn.style.display='block'; return; }
   const capacity = parseInt(m.querySelector('#cvCapacity').value,10);
   const hasCapacity = Number.isFinite(capacity) && capacity>0;
   const website = m.querySelector('#cvWebsite').value.trim();
