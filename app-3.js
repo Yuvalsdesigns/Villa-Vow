@@ -2,19 +2,25 @@
 /* ---------------- EMAIL TEMPLATES ---------------- */
 const EMAIL_TEMPLATES = [
   {title:'Venue inquiry (villa / masseria)', to:'The venue coordinator', subject:'Wedding inquiry: [proposed date], approx. [guest count] guests',
-   body:`Dear [Venue name] Team,
+   body:`Dear [Venue name] team,
 
 My partner and I are currently planning our destination wedding for [proposed date] for approximately [guest count] guests, and your property is at the top of our shortlist. We would love to learn more about the possibility of hosting our celebration at [Venue name].
 
 We have a few specific questions regarding your venue and hosting capabilities:
 
-- Availability: Is the property available for a [number]-night buyout around [proposed date]?
-- Capacity: What is the maximum guest capacity you can host for the ceremony and dinner?
-- Accommodations: Could you confirm if the on-site suites are included with a full property buyout? Additionally, are there recommended hotels or accommodations nearby for any remaining guests?
-- Ceremony & Weather Contingency: Do you have an outdoor space suitable for a wedding ceremony under a chuppah (an open canopy structure)? Could you also clarify if an indoor backup space is included for the ceremony and the party in case of inclement weather?
-- Catering: To respect our religious requirements, we will need to bring in a certified external kosher caterer. Do you allow external caterers, and what are your guidelines regarding kitchen access or setup space for outside catering teams?
-- Partying & Music Policy: Could you please share your policies regarding music, noise restrictions, and end times for parties?
-- Day-After Amenities: Is the pool or other outdoor space available for guests to relax the day after the wedding and during the whole stay?
+**Availability:** Is the property available for a 2-day event around [proposed date]? We would specifically prefer [first choice dates] or [second choice dates]. We would like to host a casual dinner for the first night, and have the wedding the next day.
+
+**Capacity:** What is the maximum guest capacity you can host for the ceremony and dinner?
+
+**Ceremony & Weather Contingency:** Do you have an outdoor space suitable for a wedding ceremony under a chuppah (an open canopy structure)? Could you also confirm if an indoor backup space is included for the ceremony and the party in case of bad weather?
+
+**Accommodations:** Could you clarify if there are on-site rooms which can sleep all our guests for the [number] nights at the dates indicated above? Otherwise, are there recommended hotels or accommodations nearby?
+
+**Catering:** To respect our religious requirements, we will need to bring in a certified external kosher caterer for the wedding dinner. Do you allow external caterers, and what are your guidelines regarding kitchen access or setup space for outside catering teams?
+
+**Partying & Music Policy:** Could you please share your policies regarding music, noise restrictions, and end times for parties?
+
+**Day-After Amenities:** Is there a pool, and are all outdoor spaces available for guests to relax the day after the wedding and during the whole stay?
 
 Could you please share your availability for [proposed date], your wedding brochure, and your pricing packages for exclusive buyouts?
 
@@ -181,6 +187,13 @@ function renderGiftIdeas(){
     wrap.appendChild(section);
   });
 }
+/* Templates mark a label bold with **like this**. A plain textarea can't
+   render that, and copying real bold (not literal asterisks) into an
+   email client needs an actual text/html clipboard flavor alongside the
+   plain-text one, so the body is shown as read-only rendered HTML rather
+   than a textarea. */
+function mdBoldToHtml(raw){ return esc(raw).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); }
+function mdBoldStrip(raw){ return raw.replace(/\*\*(.+?)\*\*/g, '$1'); }
 function renderEmails(){
   const wrap = document.getElementById('emailCards'); if(!wrap) return;
   wrap.innerHTML='';
@@ -189,11 +202,27 @@ function renderEmails(){
     card.innerHTML = '<div class="email-head"><h4>'+t.title+'</h4><button class="btn small" data-i="'+i+'">Copy</button></div>'
       + '<div class="to">To: '+esc(t.to)+'</div>'
       + '<div class="subject">Subject: <b>'+esc(t.subject)+'</b></div>'
-      + '<textarea readonly rows="10">'+esc(t.body)+'</textarea>';
+      + '<div class="email-body-view">'+mdBoldToHtml(t.body)+'</div>';
+    const bodyEl = card.querySelector('.email-body-view');
     card.querySelector('button').addEventListener('click', async ()=>{
       const btn = card.querySelector('button');
-      try{ await navigator.clipboard.writeText('Subject: '+t.subject+'\n\n'+t.body); btn.textContent='Copied'; }
-      catch(e){ card.querySelector('textarea').select(); btn.textContent='Select & copy manually'; }
+      const plainText = 'Subject: '+t.subject+'\n\n'+mdBoldStrip(t.body);
+      const html = 'Subject: <b>'+esc(t.subject)+'</b><br><br>'+mdBoldToHtml(t.body).replace(/\n/g,'<br>');
+      try{
+        if(window.ClipboardItem){
+          await navigator.clipboard.write([new ClipboardItem({
+            'text/plain': new Blob([plainText], {type:'text/plain'}),
+            'text/html': new Blob([html], {type:'text/html'})
+          })]);
+        }else{
+          await navigator.clipboard.writeText(plainText);
+        }
+        btn.textContent='Copied';
+      }catch(e){
+        const range = document.createRange(); range.selectNodeContents(bodyEl);
+        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+        btn.textContent='Select & copy manually';
+      }
       setTimeout(()=> btn.textContent='Copy', 1800);
     });
     wrap.appendChild(card);
