@@ -29,6 +29,8 @@
     --shadow-md:0 12px 32px -14px rgba(69,58,54,.22);
     --radius:14px;
     --radius-sm:9px;
+    --font-primary:'Bodoni Moda', Georgia, 'Times New Roman', serif;
+    --font-script:'Bickham Script Pro', cursive;
     color-scheme:light;
   }
   /* Deliberately single-theme: this page always renders the light,
@@ -37,10 +39,62 @@
      minor botanical note), regardless of the viewer's system or app
      dark-mode setting. */
 
+  /* Bodoni Moda ships as two variable fonts (roman + italic), each
+     covering the full 400-900 weight range in one file, so every
+     weight the design needs loads without adding separate static
+     files per weight. */
   @font-face{
-    font-family:'Armelie';
-    src:url('fonts/Armelie-Regular.otf') format('opentype');
+    font-family:'Bodoni Moda';
+    src:url('fonts/BodoniModa-Variable.ttf') format('truetype');
+    font-weight:400 900;
+    font-style:normal;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Bodoni Moda';
+    src:url('fonts/BodoniModa-Italic-Variable.ttf') format('truetype');
+    font-weight:400 900;
+    font-style:italic;
+    font-display:swap;
+  }
+  /* Bodoni Moda's own euro-sign glyph renders as an unmarked "C" (no
+     crossbar), so for that one character only, borrow a proper euro glyph
+     from a local system serif instead. If none of these are installed the
+     browser just falls through to the next family in --font-primary. */
+  @font-face{
+    font-family:'Bodoni Moda';
+    src:local('Georgia'), local('Times New Roman'), local('Liberation Serif'), local('DejaVu Serif'), local('Noto Serif');
+    font-weight:400 900;
+    font-style:normal;
+    unicode-range:U+20AC;
+  }
+  @font-face{
+    font-family:'Bodoni Moda';
+    src:local('Georgia Italic'), local('Times New Roman Italic'), local('Liberation Serif Italic'), local('DejaVu Serif Italic'), local('Noto Serif Italic');
+    font-weight:400 900;
+    font-style:italic;
+    unicode-range:U+20AC;
+  }
+  /* Bickham Script Pro has no variable font, only these three static
+     weights, used sparingly as a calligraphic accent (see --font-script). */
+  @font-face{
+    font-family:'Bickham Script Pro';
+    src:url('fonts/BickhamScriptPro-Regular.ttf') format('truetype');
     font-weight:400;
+    font-style:normal;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Bickham Script Pro';
+    src:url('fonts/BickhamScriptPro-Semibold.ttf') format('truetype');
+    font-weight:600;
+    font-style:normal;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Bickham Script Pro';
+    src:url('fonts/BickhamScriptPro-Bold.ttf') format('truetype');
+    font-weight:700;
     font-style:normal;
     font-display:swap;
   }
@@ -50,12 +104,13 @@
     margin:0;
     background:var(--bg);
     color:var(--ink);
-    font-family:'Karla',system-ui,sans-serif;
+    font-family:var(--font-primary);
+    line-height:1.5;
     -webkit-font-smoothing:antialiased;
   }
   h1,h2,h3,h4{
-    font-family:'Fraunces',Georgia,serif;
-    font-weight:600;
+    font-family:var(--font-primary);
+    font-weight:400;
     text-wrap:balance;
     margin:0;
     color:var(--ink);
@@ -64,9 +119,9 @@
   a{color:var(--wine);}
   button{font-family:inherit;}
   ::selection{background:var(--brass-soft);}
-  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums;}
+  .mono{font-family:var(--font-primary); font-variant-numeric:tabular-nums;}
   .eyebrow{
-    font-family:'IBM Plex Mono',monospace;
+    font-family:var(--font-primary);
     font-size:11px;
     letter-spacing:.11em;
     text-transform:uppercase;
@@ -80,7 +135,7 @@
 
   /* ---------- Header ---------- */
   .sidebar{
-    background:rgba(251,243,236,.92);
+    background:rgba(255,251,249,.92);
     backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     border-right:none;
     border-bottom:1px solid var(--line);
@@ -97,18 +152,17 @@
   .brand{
     display:flex;
     align-items:center;
-    gap:10px;
+    gap:16px;
     padding:0;
     flex:none;
   }
   .brand-mark{
-    width:34px;height:34px;min-width:34px;min-height:34px;max-width:34px;max-height:34px;border-radius:50%;
-    background:var(--surface) url('brand-mark.png?v=20260912-21') center/cover no-repeat;
+    width:58px;height:58px;min-width:58px;min-height:58px;max-width:58px;max-height:58px;border-radius:50%;
+    background:var(--surface) url('brand-mark.png?v=20260925-1') center/cover no-repeat;
     flex:none;
   }
-  .brand-text h1{font-family:'Armelie','Fraunces',Georgia,serif;font-size:22px;line-height:1.1;font-style:normal;font-weight:400;color:var(--ink);white-space:nowrap;}
-  .brand-text h1 .brand-vow{margin-left:-0.65em;}
-  .brand-text > span{display:block;margin-top:2px;font-size:10px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;letter-spacing:.03em;white-space:nowrap;text-align:center;}
+  .brand-text h1{font-family:var(--font-script);font-size:64px;line-height:1.1;font-style:normal;font-weight:400;color:var(--ink);white-space:nowrap;}
+  .brand-text > span{display:block;margin-top:-14px;font-size:10px;color:var(--ink-faint);font-family:var(--font-primary);letter-spacing:.03em;white-space:nowrap;text-align:center;}
 
   /* The strip scrolls horizontally (trackpad/shift-scroll work natively)
      instead of hiding overflow tabs behind a "More" dropdown, so the header
@@ -148,7 +202,7 @@
   .tab-btn.active.tabtint-cypress{background:var(--cypress);}
   .tab-btn.active.tabtint-brass{background:var(--brass);}
   .tab-btn .count{
-    margin-left:2px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    margin-left:2px;font-family:var(--font-primary);font-size:10.5px;
     background:rgba(0,0,0,.08);padding:1px 6px;border-radius:20px;
   }
   .tab-btn.active .count{background:rgba(255,255,255,.22);}
@@ -214,7 +268,7 @@
   #view-todo.active, #view-considerations.active, #view-travelguide.active, #view-start.active{max-width:1400px;}
   main:has(#view-todo.active), main:has(#view-considerations.active), main:has(#view-travelguide.active), main:has(#view-start.active){max-width:1440px;}
   .view-head{margin-bottom:26px;}
-  .view-head h2{font-family:'Armelie','Fraunces',Georgia,serif;font-size:40px;margin-bottom:8px;font-style:normal;font-weight:400;}
+  .view-head h2{font-family:var(--font-script);font-size:68px;margin-bottom:8px;font-style:normal;font-weight:400;}
   .view-head p{color:var(--ink-soft);font-size:14.5px;max-width:640px;line-height:1.55;}
 
   .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:28px;}
@@ -222,7 +276,7 @@
     background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
     padding:14px 16px;box-shadow:var(--shadow-sm);
   }
-  .stat-tile .n{font-family:'Fraunces',serif;font-size:26px;font-weight:600;}
+  .stat-tile .n{font-family:var(--font-primary);font-size:26px;font-weight:600;}
   .stat-tile .l{font-size:12px;color:var(--ink-soft);margin-top:2px;}
   .stat-tile.accent{background:var(--wine);color:#fff;}
   .stat-tile.accent .l{color:rgba(255,255,255,.75);}
@@ -239,11 +293,11 @@
   }
 
   /* Start here */
-  .start-subhead{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;font-weight:500;margin:0 0 10px;}
+  .start-subhead{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-family:var(--font-primary);font-weight:500;margin:0 0 10px;}
   .steps{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface);}
   .step{display:grid;grid-template-columns:40px 1fr;gap:14px;padding:16px 18px;border-bottom:1px solid var(--line-soft);}
   .step:last-child{border-bottom:none;}
-  .step .num{font-family:'Fraunces',serif;font-weight:600;font-size:18px;color:var(--wine);}
+  .step .num{font-family:var(--font-primary);font-weight:600;font-size:18px;color:var(--wine);}
   .steps-parallel .num{color:var(--cypress-ink);}
   .step h4{font-size:15.5px;margin-bottom:3px;}
   .step p{font-size:13.5px;color:var(--ink-soft);line-height:1.5;}
@@ -257,7 +311,7 @@
     transition:transform .12s, box-shadow .12s;
   }
   .jump-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
-  .jump-card .tag{font-size:11px;color:var(--brass);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;}
+  .jump-card .tag{font-size:11px;color:var(--brass);font-family:var(--font-primary);text-transform:uppercase;letter-spacing:.06em;}
   .jump-card h4{margin:5px 0 5px;font-size:15.5px;}
   .jump-card p{font-size:13px;color:var(--ink-soft);line-height:1.45;}
 
@@ -285,7 +339,7 @@
   input:focus,textarea:focus,select:focus,button:focus-visible{
     outline:2px solid var(--brass);outline-offset:1px;
   }
-  textarea{resize:vertical;min-height:60px;font-family:'Karla',sans-serif;}
+  textarea{resize:vertical;min-height:60px;font-family:var(--font-primary);}
   label.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-soft);}
 
 
@@ -294,7 +348,7 @@
   .group{margin-bottom:26px;}
   .group-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;}
   .group-head h3{font-size:16.5px;}
-  .group-head .sub{font-size:11.5px;font-family:'IBM Plex Mono',monospace;padding:2px 9px;border-radius:20px;background:var(--surface-2);color:var(--ink-soft);}
+  .group-head .sub{font-size:11.5px;font-family:var(--font-primary);padding:2px 9px;border-radius:20px;background:var(--surface-2);color:var(--ink-soft);}
   .group-head .sub.tint-cypress{background:var(--cypress-soft);color:var(--cypress-ink);}
   .group-head .sub.tint-wine{background:var(--wine-soft);color:var(--wine-ink);}
   .group-head .sub.tint-brass{background:var(--brass-soft);color:var(--brass);}
@@ -334,7 +388,7 @@
   .budget-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
   .budget-table th{
     text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
-    color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;font-weight:500;
+    color:var(--ink-faint);font-family:var(--font-primary);font-weight:500;
     padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);
   }
   /* table-layout:fixed with column widths taken from these header cells,
@@ -361,7 +415,7 @@
   .budget-table tr:last-child td{border-bottom:none;}
   .budget-table input{border:1px solid transparent;background:transparent;padding:4px 6px;}
   .budget-table input:hover{border-color:var(--line);}
-  .budget-table .num-cell input{text-align:right;font-family:'IBM Plex Mono',monospace;}
+  .budget-table .num-cell input{text-align:right;font-family:var(--font-primary);}
   .budget-table .notes-input{
     display:block;width:100%;box-sizing:border-box;border:1px solid transparent;background:transparent;
     padding:4px 6px;font:inherit;color:inherit;resize:vertical;overflow:hidden;line-height:1.4;min-height:26px;
@@ -377,12 +431,12 @@
   .venue-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column;}
   .venue-hero{height:108px;position:relative;display:flex;align-items:flex-end;padding:12px 14px;color:#fff;}
   .venue-hero svg{position:absolute;inset:0;width:100%;height:100%;}
-  .venue-hero .price{position:relative;font-family:'IBM Plex Mono',monospace;font-size:12px;background:rgba(0,0,0,.28);padding:2px 8px;border-radius:20px;}
+  .venue-hero .price{position:relative;font-family:var(--font-primary);font-size:12px;background:rgba(0,0,0,.28);padding:2px 8px;border-radius:20px;}
   .venue-hero .edit-custom-venue,.venue-hero .del-custom-venue{z-index:3;background:rgba(0,0,0,.4);color:#fff;border-radius:50%;width:26px;height:26px;align-items:center;justify-content:center;padding:0;}
   .venue-hero .edit-custom-venue:hover,.venue-hero .del-custom-venue:hover{background:rgba(0,0,0,.65);color:#fff;}
   .venue-body{padding:16px;display:flex;flex-direction:column;gap:10px;flex:1;}
   .venue-body h3{font-size:18px;}
-  .venue-body .region{font-size:12px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;}
+  .venue-body .region{font-size:12px;color:var(--ink-faint);font-family:var(--font-primary);font-style:italic;}
   .venue-body p{font-size:13.5px;line-height:1.55;color:var(--ink-soft);}
   .venue-facts{display:flex;flex-wrap:wrap;gap:6px;}
   .fact{font-size:11.5px;background:var(--surface-2);border:1px solid var(--line);padding:3px 8px;border-radius:20px;color:var(--ink-soft);}
@@ -405,7 +459,7 @@
   }
   .style-icon{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
   .style-icon svg{width:30px;height:30px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  .style-card h5{font-size:13.5px;font-weight:700;font-family:'Karla',sans-serif;margin:0;}
+  .style-card h5{font-size:13.5px;font-weight:700;font-family:var(--font-primary);margin:0;}
   .style-card p{font-size:11.5px;color:var(--ink-soft);line-height:1.4;min-height:30px;}
   .tint-cypress{background:var(--cypress-soft);color:var(--cypress-ink);}
   .tint-wine{background:var(--wine-soft);color:var(--wine);}
@@ -427,10 +481,10 @@
   }
   .email-card .email-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;}
   .email-card h4{font-size:15.5px;}
-  .email-card .to{font-size:11.5px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;margin-bottom:10px;}
+  .email-card .to{font-size:11.5px;color:var(--ink-faint);font-family:var(--font-primary);margin-bottom:10px;}
   .email-card .subject{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;}
   .email-card .subject b{color:var(--ink);font-weight:600;}
-  .email-card textarea{font-family:'Karla',sans-serif;font-size:13px;line-height:1.55;min-height:170px;}
+  .email-card textarea{font-family:var(--font-primary);font-size:13px;line-height:1.55;min-height:170px;}
   .note-box{
     background:var(--surface-2);border:1px dashed var(--line);border-radius:var(--radius);
     padding:14px 16px;font-size:13px;color:var(--ink-soft);line-height:1.6;margin-bottom:20px;
@@ -492,7 +546,7 @@
   .love-note.editing{padding-right:12px;}
   .love-note p{font-size:13px;color:var(--ink);line-height:1.5;}
   .love-note .note-edit-input{width:100%;font-size:13px;line-height:1.5;min-height:0;resize:vertical;}
-  .love-note .meta{font-size:10.5px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;margin-top:4px;}
+  .love-note .meta{font-size:10.5px;color:var(--ink-faint);font-family:var(--font-primary);font-style:italic;margin-top:4px;}
   .love-note-actions{position:absolute;top:8px;right:8px;display:flex;gap:2px;}
   .love-note.editing .love-note-actions{position:static;justify-content:flex-end;margin-top:6px;}
   .love-note-actions button{
@@ -511,7 +565,7 @@
   .beauty-timeline{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface);}
   .beauty-row{display:grid;grid-template-columns:132px 1fr;align-items:start;gap:18px;padding:14px 16px;border-bottom:1px solid var(--line-soft);}
   .beauty-row:last-child{border-bottom:none;}
-  .beauty-row .when{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--brass);line-height:1.4;padding-top:2px;}
+  .beauty-row .when{font-family:var(--font-primary);font-style:italic;font-size:12px;color:var(--brass);line-height:1.4;padding-top:2px;}
   .beauty-row h5{font-size:14px;margin:0 0 2px;line-height:1.3;}
   .beauty-row p{font-size:13px;color:var(--ink-soft);line-height:1.5;}
 
@@ -543,7 +597,7 @@
   }
   .pin img{display:block;width:100%;}
   .pin .pin-body{padding:10px 12px 12px;}
-  .pin .pin-tag{font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-family:'IBM Plex Mono',monospace;color:var(--brass);}
+  .pin .pin-tag{font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-family:var(--font-primary);color:var(--brass);}
   .pin h5{font-size:13.5px;margin:4px 0 2px;}
   .pin-title-input{display:block;width:100%;box-sizing:border-box;font-size:13.5px;font-weight:700;font-family:inherit;color:inherit;margin:4px 0 2px;padding:1px 3px;border:1px solid transparent;background:transparent;border-radius:5px;}
   .pin-title-input:hover,.pin-title-input:focus{border-color:var(--line);background:var(--surface-2);outline:none;}
@@ -603,7 +657,7 @@
     display:flex;align-items:center;gap:9px;
     background:var(--wine);color:#fff;border:none;border-radius:30px;
     padding:13px 18px 13px 15px;box-shadow:var(--shadow-md);cursor:pointer;
-    font-size:14px;font-weight:700;font-family:'Karla',sans-serif;
+    font-size:14px;font-weight:700;font-family:var(--font-primary);
   }
   .planner-fab svg{width:19px;height:19px;stroke:#fff;flex:none;}
   .planner-fab .dot{position:absolute;top:8px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--brass);display:none;}
@@ -682,10 +736,10 @@
   .style-visual-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;}
   .style-visual-card img{width:100%;height:150px;object-fit:cover;display:block;}
   .style-visual-card .body{padding:11px 12px;display:flex;flex-direction:column;gap:6px;}
-  .style-visual-card h4{font-family:'Fraunces',serif;font-size:15px;}
+  .style-visual-card h4{font-family:var(--font-primary);font-size:15px;}
   .style-visual-card p{font-size:11.5px;color:var(--ink-soft);line-height:1.4;}
   .style-card .style-img{width:100%;height:170px;object-fit:cover;object-position:center;border-radius:10px;margin:-2px 0 2px;background:var(--surface-2);}
-  .style-card .style-photo-source{font-size:9.5px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;}
+  .style-card .style-photo-source{font-size:9.5px;color:var(--ink-faint);font-family:var(--font-primary);text-transform:uppercase;letter-spacing:.05em;}
   .style-card .style-img{height:170px;}
   .pin-pinterest{padding:0;background:var(--surface);min-height:180px;display:flex;align-items:center;justify-content:center;}
   .pin-pinterest blockquote{margin:0 !important;width:100% !important;}
@@ -715,7 +769,7 @@
   .pinterest-board-shelf:empty{display:none;}
   .pinterest-board-item{overflow:hidden;border-radius:var(--radius);border:1px solid var(--line);}
   .pinterest-board-head{display:flex;align-items:center;gap:6px;background:var(--surface-2);padding:6px 6px 6px 12px;}
-  .board-title-input{flex:1;min-width:0;border:none;background:transparent;font:700 13px 'Karla',sans-serif;color:var(--wine);padding:8px 6px;border-radius:8px;}
+  .board-title-input{flex:1;min-width:0;border:none;background:transparent;font:700 13px var(--font-primary);color:var(--wine);padding:8px 6px;border-radius:8px;}
   .board-title-input:focus{outline:none;background:var(--surface);box-shadow:0 0 0 2px var(--line);}
   .board-title-input::placeholder{color:var(--ink-faint);font-weight:600;}
   .board-head-actions{display:flex;gap:4px;flex:none;}
@@ -742,14 +796,14 @@
      so the box around it should match that exactly, a wider box here
      would just recreate the same empty-space problem one level out. */
   .pinterest-board-embed-wrap:has(a[data-pin-do]){max-width:1100px;}
-  .board-url-input{width:100%;box-sizing:border-box;border:none;background:transparent;font:12px 'IBM Plex Mono',monospace;color:var(--ink-soft);padding:5px 6px;border-radius:8px;}
+  .board-url-input{width:100%;box-sizing:border-box;border:none;background:transparent;font:12px var(--font-primary);color:var(--ink-soft);padding:5px 6px;border-radius:8px;}
   .board-url-input:focus{outline:none;background:var(--surface);box-shadow:0 0 0 2px var(--line);color:var(--ink);}
   .board-url-input::placeholder{color:var(--ink-faint);}
   .pinterest-section-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:4px;padding:4px;}
   .pinterest-section-thumb{display:block;aspect-ratio:1/1;overflow:hidden;border-radius:6px;}
   .pinterest-section-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
   .pinterest-section-gallery-small{grid-template-columns:repeat(2,1fr);height:100%;}
-  .pinterest-section-status{padding:22px 14px;text-align:center;font:12px 'Karla',sans-serif;color:var(--ink-soft);}
+  .pinterest-section-status{padding:22px 14px;text-align:center;font:12px var(--font-primary);color:var(--ink-soft);}
   .pinterest-section-error{color:#b3372f;}
   .pinterest-section-error a,.section-retry{color:inherit;text-decoration:underline;}
   .section-retry{background:none;border:none;padding:0;font:inherit;cursor:pointer;}
@@ -783,9 +837,9 @@
   .side-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;}
   .side-head.mine{background:var(--wine-soft);}
   .side-head.partner{background:var(--cypress-soft);}
-  .side-label{font-family:'Fraunces',serif;font-size:18px;font-weight:600;background:transparent;border:1px solid transparent;border-radius:6px;padding:2px 6px;flex:1;min-width:0;}
+  .side-label{font-family:var(--font-primary);font-size:18px;font-weight:600;background:transparent;border:1px solid transparent;border-radius:6px;padding:2px 6px;flex:1;min-width:0;}
   .side-label:hover, .side-label:focus{border-color:var(--line);background:var(--surface);}
-  .side-count{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);background:rgba(255,255,255,.5);padding:2px 9px;border-radius:20px;flex:none;}
+  .side-count{font-family:var(--font-primary);font-size:11.5px;color:var(--ink-soft);background:rgba(255,255,255,.5);padding:2px 9px;border-radius:20px;flex:none;}
   .side-mini{padding:10px 18px;font-size:11.5px;color:var(--ink-soft);border-bottom:1px solid var(--line-soft);display:flex;flex-wrap:wrap;gap:10px;}
   .side-mini b{color:var(--ink);}
   .guest-list{display:flex;flex-direction:column;min-height:40px;}
@@ -806,7 +860,7 @@
   .stepper button{width:19px;height:19px;border-radius:50%;border:none;background:var(--surface);color:var(--ink);font-size:13px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
   .stepper button:hover:not(:disabled){background:var(--brass-soft);color:var(--brass);}
   .stepper button:disabled{opacity:.35;cursor:not-allowed;}
-  .stepper .val{font-family:'IBM Plex Mono',monospace;font-size:11.5px;min-width:16px;text-align:center;color:var(--ink-soft);}
+  .stepper .val{font-family:var(--font-primary);font-size:11.5px;min-width:16px;text-align:center;color:var(--ink-soft);}
   .stepper .val.tbd{color:var(--wine);font-weight:700;}
   select.rsvp.small{font-size:10px;padding:3px 6px;}
   .grip{cursor:grab;color:var(--ink-faint);flex:none;touch-action:none;}
@@ -843,11 +897,11 @@
   .row-detail .dietary-field{flex:1 1 160px;}
   .row-detail .table-field{flex:1 1 120px;}
   .row-detail .notes-field{flex:1 1 100%;}
-  .row-detail textarea{min-height:44px;resize:vertical;font-family:'Karla',sans-serif;}
+  .row-detail textarea{min-height:44px;resize:vertical;font-family:var(--font-primary);}
   .empty-side{padding:26px 18px;text-align:center;color:var(--ink-faint);font-size:12.5px;}
   .paste-toggle{padding:0 14px 12px;background:var(--surface-2);}
   .btn.link-btn{background:none;border:none;color:var(--wine);padding:0;font-weight:600;text-decoration:underline;text-underline-offset:2px;}
   .paste-panel{padding:12px 14px 14px;background:var(--surface-2);border-top:1px solid var(--line-soft);display:flex;flex-direction:column;gap:8px;}
-  .paste-panel textarea{width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;resize:vertical;}
+  .paste-panel textarea{width:100%;font-family:var(--font-primary);font-size:12px;resize:vertical;}
   .paste-hint{font-size:11px;color:var(--ink-soft);line-height:1.5;}
   .paste-actions{display:flex;justify-content:flex-end;gap:8px;}

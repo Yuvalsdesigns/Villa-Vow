@@ -173,7 +173,7 @@ function renderGiftIdeas(){
     const grid = document.createElement('div'); grid.className='style-grid';
     g.ideas.forEach(idea=>{
       const card = document.createElement('div'); card.className='style-card';
-      card.innerHTML = '<span class="tint-'+g.tint+'" style="display:inline-block;font-size:10.5px;font-family:\'IBM Plex Mono\',monospace;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:20px;margin-bottom:6px;">'+howLabel[idea.how]+'</span>'
+      card.innerHTML = '<span class="tint-'+g.tint+'" style="display:inline-block;font-size:10.5px;font-family:var(--font-primary);text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:20px;margin-bottom:6px;">'+howLabel[idea.how]+'</span>'
         + '<h5>'+esc(idea.title)+'</h5><p>'+esc(idea.note)+'</p>';
       grid.appendChild(card);
     });
