@@ -1091,8 +1091,19 @@ function saveCustomVenue(){
   function withTimeout(promise){
     return Promise.race([
       promise,
-      new Promise((_,reject)=> setTimeout(()=> reject(new Error('timed out, check your internet connection')), 12000))
+      new Promise((_,reject)=> setTimeout(()=> reject(new Error('timed out after 8s, check your internet connection')), 8000))
     ]);
+  }
+  // dbReady only ever gets set once, at page load, and never gets reset.
+  // If your sign-in session has since expired or dropped (a tab left open
+  // for hours/days), dbReady still reports true while the real connection
+  // underneath it is dead, which is exactly what leaves a write hanging.
+  // Check the actual live auth state right before attempting the write,
+  // instead of trusting that stale flag.
+  const signedOutButFlaggedReady = dbReady && window.firebase && firebase.auth && !firebase.auth().currentUser;
+  if(signedOutButFlaggedReady){
+    saveFailed(new Error("you're signed out, sign in again (top-right corner) and retry"));
+    return;
   }
   if(editingCustomVenueId){
     const id = editingCustomVenueId;
