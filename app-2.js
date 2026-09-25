@@ -1067,32 +1067,47 @@ function saveCustomVenue(){
   CUSTOM_VENUE_EXTRA_FIELDS.forEach(([key])=>{ data[key] = m.querySelector('#cv_'+key).value.trim(); });
   warn.style.display='none';
   const saveBtn = m.querySelector('#cvSave');
-  const cancelBtn = m.querySelector('#cvCancel');
-  saveBtn.disabled = true; cancelBtn.disabled = true; saveBtn.textContent='Saving…';
-  function done(){ saveBtn.disabled=false; cancelBtn.disabled=false; saveBtn.textContent='Save'; }
-  function saveFailed(err){
-    console.error(err);
-    warn.textContent = 'Could not save: '+(err && err.message ? err.message : 'unknown error')+'. The venue was NOT saved, try again.';
-    warn.style.display='block';
-    done();
+  saveBtn.disabled = true; saveBtn.textContent='Saving…';
+  // Cancel is deliberately never disabled: a hung write must not be able
+  // to trap someone inside this modal with no way out.
+  let settled = false;
+  function saveSucceeded(){
+    if(settled) return; settled = true;
+    saveBtn.disabled=false; saveBtn.textContent='Save';
+    m.classList.remove('open');
   }
-  // The modal only closes once the write actually succeeds, not the moment
-  // Save is clicked, so a failed write (permissions, offline, etc.) shows
-  // its error instead of silently closing as if it had worked.
+  function saveFailed(err){
+    if(settled) return; settled = true;
+    console.error(err);
+    saveBtn.disabled=false; saveBtn.textContent='Save';
+    warn.textContent = 'Could not save: '+(err && err.message ? err.message : 'unknown error')+'. The venue was NOT saved here, try again, or check your connection.';
+    warn.style.display='block';
+  }
+  // A write to a Firestore instance with no real network path (offline,
+  // blocked, stale connection) can sit forever without ever resolving OR
+  // rejecting, which is what left the button stuck on "Saving..." with no
+  // way out. Race it against a timeout so it always settles one way or
+  // the other.
+  function withTimeout(promise){
+    return Promise.race([
+      promise,
+      new Promise((_,reject)=> setTimeout(()=> reject(new Error('timed out, check your internet connection')), 12000))
+    ]);
+  }
   if(editingCustomVenueId){
     const id = editingCustomVenueId;
     if(dbReady){
-      db.collection('customVenues').doc(id).update(data).then(()=>{ done(); m.classList.remove('open'); }).catch(saveFailed);
+      withTimeout(db.collection('customVenues').doc(id).update(data)).then(saveSucceeded).catch(saveFailed);
     } else {
       const existing = state.customVenues.find(x=>x.id===id); if(existing) Object.assign(existing, data);
-      renderVenueFilters(); renderVenues(); done(); m.classList.remove('open');
+      renderVenueFilters(); renderVenues(); saveSucceeded();
     }
   } else {
     data.createdAt = Date.now();
     if(dbReady){
-      db.collection('customVenues').add(data).then(()=>{ done(); m.classList.remove('open'); }).catch(saveFailed);
+      withTimeout(db.collection('customVenues').add(data)).then(saveSucceeded).catch(saveFailed);
     } else {
-      localAdd(state.customVenues, data); renderVenueFilters(); renderVenues(); done(); m.classList.remove('open');
+      localAdd(state.customVenues, data); renderVenueFilters(); renderVenues(); saveSucceeded();
     }
   }
 }
