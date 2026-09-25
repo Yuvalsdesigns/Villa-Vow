@@ -792,7 +792,7 @@ function renderVenues(){
       + (linkedReply && linkedReply.decision ? '<span class="decision-badge '+linkedReply.decision+'">'+(linkedReply.decision==='explore'?'Explore more':'Not a fit')+'</span>' : '')
       + '<p>'+esc(v.desc)+'</p>'
       + '<div class="venue-facts">'+(capacity!==null?'<span class="fact fact-capacity">~'+capacity+' guests</span>':'')+(v.facts||[]).map(f=>'<span class="fact">'+esc(f)+'</span>').join('')+'</div>'
-      + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'+(v.sources||[]).map(s=>'<a class="src-link" target="_blank" rel="noopener" href="'+esc(s[1])+'">'+esc(s[0])+' ↗</a>').join('')+'</div>'
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'+(v.sources||[]).map(s=>{const label=Array.isArray(s)?s[0]:s.label;const url=Array.isArray(s)?s[1]:s.url;return '<a class="src-link" target="_blank" rel="noopener" href="'+esc(url)+'">'+esc(label)+' ↗</a>';}).join('')+'</div>'
       + (v.isCustom ? (()=>{
           const bullets = CUSTOM_VENUE_EXTRA_FIELDS.filter(([key])=> (v[key]||'').trim()).map(([key,label])=> '<li><b>'+esc(label)+':</b> '+esc(v[key])+'</li>').join('');
           return bullets ? '<ul class="venue-contact-bullets">'+bullets+'</ul>' : '';
@@ -1031,7 +1031,10 @@ function openCustomVenueModal(existing){
   m.querySelector('#cvPrice').value = existing ? (existing.price||'') : '';
   m.querySelector('#cvCapacity').value = existing && existing.capacity ? existing.capacity : '';
   m.querySelector('#cvDesc').value = existing ? (existing.desc||'') : '';
-  m.querySelector('#cvWebsite').value = existing && existing.sources && existing.sources[0] ? (existing.sources[0][1]||'') : '';
+  {
+    const src0 = existing && existing.sources && existing.sources[0];
+    m.querySelector('#cvWebsite').value = src0 ? (Array.isArray(src0) ? (src0[1]||'') : (src0.url||'')) : '';
+  }
   m.querySelector('#cvImage').value = existing ? (existing.image||'') : '';
   CUSTOM_VENUE_EXTRA_FIELDS.forEach(([key])=>{ m.querySelector('#cv_'+key).value = existing ? (existing[key]||'') : ''; });
   m.querySelector('#cvBrochureNotes').value = existing ? (existing.brochureNotes||'') : '';
@@ -1059,7 +1062,7 @@ function saveCustomVenue(){
     brochureNotes: m.querySelector('#cvBrochureNotes').value.trim(),
     capacity: hasCapacity ? capacity : null,
     facts: hasCapacity ? ['Wedding day up to '+capacity+' guests'] : [],
-    sources: website ? [['Venue website', website]] : [],
+    sources: website ? [{label:'Venue website', url:website}] : [],
     badge: 'Your addition',
     grad: ['#DCE8E2','#4A6C7A'],
     isCustom: true,
