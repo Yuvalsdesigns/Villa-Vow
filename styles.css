@@ -161,7 +161,7 @@
     background:var(--surface) url('brand-mark.png?v=20260912-21') center/cover no-repeat;
     flex:none;
   }
-  .brand-text h1{font-family:var(--font-primary);font-size:22px;line-height:1.1;font-style:normal;font-weight:400;color:var(--ink);white-space:nowrap;}
+  .brand-text h1{font-family:var(--font-script);font-size:30px;line-height:1.1;font-style:normal;font-weight:400;color:var(--ink);white-space:nowrap;}
   .brand-text > span{display:block;margin-top:2px;font-size:10px;color:var(--ink-faint);font-family:var(--font-primary);letter-spacing:.03em;white-space:nowrap;text-align:center;}
 
   /* The strip scrolls horizontally (trackpad/shift-scroll work natively)
@@ -268,7 +268,7 @@
   #view-todo.active, #view-considerations.active, #view-travelguide.active, #view-start.active{max-width:1400px;}
   main:has(#view-todo.active), main:has(#view-considerations.active), main:has(#view-travelguide.active), main:has(#view-start.active){max-width:1440px;}
   .view-head{margin-bottom:26px;}
-  .view-head h2{font-family:var(--font-primary);font-size:40px;margin-bottom:8px;font-style:normal;font-weight:400;}
+  .view-head h2{font-family:var(--font-script);font-size:52px;margin-bottom:8px;font-style:normal;font-weight:400;}
   .view-head p{color:var(--ink-soft);font-size:14.5px;max-width:640px;line-height:1.55;}
 
   .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:28px;}
