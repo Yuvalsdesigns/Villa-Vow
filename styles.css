@@ -161,7 +161,7 @@
     background:var(--surface) url('brand-mark.png?v=20260912-21') center/cover no-repeat;
     flex:none;
   }
-  .brand-text h1{font-family:var(--font-script);font-size:34px;line-height:1.1;font-style:normal;font-weight:400;color:var(--ink);white-space:nowrap;}
+  .brand-text h1{font-family:var(--font-script);font-size:46px;line-height:1.1;font-style:normal;font-weight:400;color:var(--ink);white-space:nowrap;}
   .brand-text > span{display:block;margin-top:2px;font-size:10px;color:var(--ink-faint);font-family:var(--font-primary);letter-spacing:.03em;white-space:nowrap;text-align:center;}
 
   /* The strip scrolls horizontally (trackpad/shift-scroll work natively)
