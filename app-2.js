@@ -1065,16 +1065,36 @@ function saveCustomVenue(){
     isCustom: true,
   };
   CUSTOM_VENUE_EXTRA_FIELDS.forEach(([key])=>{ data[key] = m.querySelector('#cv_'+key).value.trim(); });
+  warn.style.display='none';
+  const saveBtn = m.querySelector('#cvSave');
+  const cancelBtn = m.querySelector('#cvCancel');
+  saveBtn.disabled = true; cancelBtn.disabled = true; saveBtn.textContent='Saving…';
+  function done(){ saveBtn.disabled=false; cancelBtn.disabled=false; saveBtn.textContent='Save'; }
+  function saveFailed(err){
+    console.error(err);
+    warn.textContent = 'Could not save: '+(err && err.message ? err.message : 'unknown error')+'. The venue was NOT saved, try again.';
+    warn.style.display='block';
+    done();
+  }
+  // The modal only closes once the write actually succeeds, not the moment
+  // Save is clicked, so a failed write (permissions, offline, etc.) shows
+  // its error instead of silently closing as if it had worked.
   if(editingCustomVenueId){
     const id = editingCustomVenueId;
-    if(dbReady) db.collection('customVenues').doc(id).update(data).catch(err=>{ console.error(err); warn.textContent='Could not save changes.'; warn.style.display='block'; });
-    else { const existing = state.customVenues.find(x=>x.id===id); if(existing) Object.assign(existing, data); renderVenueFilters(); renderVenues(); }
+    if(dbReady){
+      db.collection('customVenues').doc(id).update(data).then(()=>{ done(); m.classList.remove('open'); }).catch(saveFailed);
+    } else {
+      const existing = state.customVenues.find(x=>x.id===id); if(existing) Object.assign(existing, data);
+      renderVenueFilters(); renderVenues(); done(); m.classList.remove('open');
+    }
   } else {
     data.createdAt = Date.now();
-    if(dbReady) db.collection('customVenues').add(data).catch(err=>{ console.error(err); warn.textContent='Could not save this venue.'; warn.style.display='block'; });
-    else { localAdd(state.customVenues, data); renderVenueFilters(); renderVenues(); }
+    if(dbReady){
+      db.collection('customVenues').add(data).then(()=>{ done(); m.classList.remove('open'); }).catch(saveFailed);
+    } else {
+      localAdd(state.customVenues, data); renderVenueFilters(); renderVenues(); done(); m.classList.remove('open');
+    }
   }
-  m.classList.remove('open');
 }
 document.getElementById('addCustomVenueBtn')?.addEventListener('click', ()=> openCustomVenueModal(null));
 
