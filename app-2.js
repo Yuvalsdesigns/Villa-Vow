@@ -861,7 +861,9 @@ function ensureCustomVenueModal(){
     + '<label class="field">Guest capacity (optional)<input type="number" min="0" id="cvCapacity" placeholder="e.g. 80"></label>'
     + '<label class="field">Description<textarea id="cvDesc" rows="3" placeholder="What makes this one worth considering?"></textarea></label>'
     + '<label class="field">Venue website (optional)<input type="url" id="cvWebsite" placeholder="https://…"></label>'
-    + '<label class="field">Photo URL<input type="url" id="cvImage" placeholder="Paste a direct picture link, or fetch one from the website above"></label>'
+    + '<label class="field">Photo URL<input type="url" id="cvImage" placeholder="Paste a direct picture link, or fetch/upload one below"></label>'
+    + '<div class="drop-zone" id="cvDropZone">Click to choose a photo, or drag one here</div>'
+    + '<input type="file" id="cvFileInput" accept="image/*" style="display:none;">'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
       + '<button class="btn small ghost" id="cvFetchPhoto" type="button">Fetch photo from website</button>'
       + '<button class="btn small ghost" id="cvFetchText" type="button">Fetch details from website</button>'
@@ -871,6 +873,8 @@ function ensureCustomVenueModal(){
     + '<p id="cvExtractStatus" style="display:none;font-size:12px;color:var(--ink-soft);"></p>'
     + '<div id="cvPreviewWrap" style="display:none;"><img id="cvPreview" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;"></div>'
     + CUSTOM_VENUE_EXTRA_FIELDS.map(([key,label,placeholder])=> '<label class="field">'+esc(label)+'<input type="text" id="cv_'+key+'" placeholder="'+esc(placeholder)+'"></label>').join('')
+    + '<label class="field">Paste any text about this venue (from an email, a page, anywhere)<textarea id="cvRawText" rows="5" placeholder="Paste anything you have about this venue…"></textarea></label>'
+    + '<button class="btn small ghost" id="cvAutoFill" type="button" style="align-self:flex-start;">Try auto-fill from this text</button>'
     + '<label class="field">Your own notes (optional)<textarea id="cvBrochureNotes" rows="2" placeholder="Anything else worth remembering that isn\'t captured above"></textarea></label>'
     + '<p class="warn" id="cvWarn" style="display:none;"></p>'
     + '<div class="modal-foot"><button class="btn danger-outline" id="cvDelete" style="display:none;margin-right:auto;">Delete</button><button class="btn" id="cvCancel">Cancel</button><button class="btn primary" id="cvSave">Save</button></div>'
@@ -885,6 +889,22 @@ function ensureCustomVenueModal(){
   m.querySelector('#cvFetchText').addEventListener('click', fetchCustomVenueText);
   m.querySelector('#cvPdfBtn').addEventListener('click', ()=> m.querySelector('#cvPdfInput').click());
   m.querySelector('#cvPdfInput').addEventListener('change', ()=>{ const f=m.querySelector('#cvPdfInput').files[0]; if(f) handleCustomVenuePdf(f); });
+  const cvDrop = m.querySelector('#cvDropZone'), cvFile = m.querySelector('#cvFileInput');
+  cvDrop.addEventListener('click', ()=> cvFile.click());
+  cvFile.addEventListener('change', ()=>{ if(cvFile.files[0]) readCustomVenuePhoto(cvFile.files[0]); });
+  ['dragover','dragleave','drop'].forEach(evt=>{
+    cvDrop.addEventListener(evt, e=>{
+      e.preventDefault();
+      cvDrop.classList.toggle('drag', evt==='dragover');
+      if(evt==='drop' && e.dataTransfer.files[0]) readCustomVenuePhoto(e.dataTransfer.files[0]);
+    });
+  });
+  m.querySelector('#cvAutoFill').addEventListener('click', ()=>{
+    const text = m.querySelector('#cvRawText').value;
+    if(!text.trim()){ alert('Paste some text about the venue into the box above first, then try auto-fill.'); return; }
+    const filled = applyGuessesToCustomVenue(text);
+    reportCustomVenueExtraction(filled, text, 'pasted text');
+  });
   m.querySelector('#cvSave').addEventListener('click', saveCustomVenue);
   m.querySelector('#cvDelete').addEventListener('click', ()=>{
     if(!editingCustomVenueId) return;
@@ -903,6 +923,30 @@ function updateCustomVenuePreview(){
   const wrap = m.querySelector('#cvPreviewWrap');
   if(url){ m.querySelector('#cvPreview').src = url; wrap.style.display='block'; }
   else wrap.style.display='none';
+}
+/* Same resize-then-compress-to-dataURL approach as venue replies'
+   readVenueContactThumb, but written straight into the existing Photo URL
+   field instead of a separate thumbnail field, custom venues only ever
+   had the one image slot to begin with. */
+function readCustomVenuePhoto(file){
+  const m = document.getElementById('customVenueModal');
+  const warn = m.querySelector('#cvWarn'); warn.style.display='none';
+  if(!file || !/^image\//.test(file.type)){ warn.textContent='Please choose an image.'; warn.style.display='block'; return; }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const max = 900, scale = Math.min(1, max/Math.max(img.width,img.height));
+      const canvas = document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      let q=.8, url=canvas.toDataURL('image/jpeg',q);
+      while(url.length>350000 && q>.4){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
+      m.querySelector('#cvImage').value = url;
+      updateCustomVenuePreview();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 /* Reuses the same Worker og:image lookup already built for Wedding d.i.y
    link previews (fetchLinkPreviewThumbnail, defined in app-3.js), rather
@@ -1038,7 +1082,9 @@ function openCustomVenueModal(existing){
   m.querySelector('#cvImage').value = existing ? (existing.image||'') : '';
   CUSTOM_VENUE_EXTRA_FIELDS.forEach(([key])=>{ m.querySelector('#cv_'+key).value = existing ? (existing[key]||'') : ''; });
   m.querySelector('#cvBrochureNotes').value = existing ? (existing.brochureNotes||'') : '';
+  m.querySelector('#cvRawText').value = '';
   m.querySelector('#cvPdfInput').value = '';
+  m.querySelector('#cvFileInput').value = '';
   setCustomVenueExtractStatus('');
   updateCustomVenuePreview();
   m.querySelector('#cvWarn').style.display='none';
