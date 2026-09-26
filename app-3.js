@@ -811,13 +811,24 @@ const SYSTEM_PROMPT = "You are the on-call wedding planner inside \"Villa and Vo
   + "You do NOT have live access to real vendor names, current prices, or availability in any specific town. Never invent a caterer, rabbi, planner or price. When that's what's being asked, say plainly that you don't have real vendor data and suggest exactly who to ask instead (the venue coordinator, a local kosher caterer, a Jewish destination-wedding planner). Use the live app data given to you to make answers specific to where they actually are in planning.";
 
 let sampleFn = null, plannerHistory = [];
+let plannerAuthRetryAttached = false;
 async function initPlanner(){
   try{
     if(!window.claude || !window.claude.use) return;
     sampleFn = await window.claude.use('sample');
   }catch(e){ sampleFn = null; }
-  if(!sampleFn){
-    document.getElementById('plannerFab').style.display = 'none';
+  document.getElementById('plannerFab').style.display = sampleFn ? '' : 'none';
+  // window.claude.use('sample') needs a signed-in Firebase user, and this
+  // only ran once, at page load. If sign-in was still resolving (a slower
+  // or first-time connection, more likely on mobile) or hadn't happened
+  // yet, the assistant button was hidden and stayed hidden even after
+  // actually signing in, with no visible error and no way to get it back
+  // short of a full page refresh, indistinguishable from "just doesn't
+  // work". Retry once sign-in actually completes, instead of only ever
+  // checking this one time.
+  if(!sampleFn && !plannerAuthRetryAttached && window.firebase && firebase.auth){
+    plannerAuthRetryAttached = true;
+    firebase.auth().onAuthStateChanged(user=>{ if(user) initPlanner(); });
   }
 }
 
