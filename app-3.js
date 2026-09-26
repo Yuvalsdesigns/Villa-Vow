@@ -659,7 +659,14 @@ function handleFile(file){
   const reader = new FileReader();
   reader.onload = e=>{
     img.onload = ()=>{
-      let quality = 0.72, maxW = 1000;
+      // Sized for a full-screen lightbox view, not just the small grid
+      // tile: a pin's photo is the same stored image either way, and the
+      // old 1000px/230KB cap (picked with only the tiny grid thumbnail in
+      // mind) looked visibly soft once stretched to fill a screen. 1600px
+      // and a much higher size ceiling still leaves plenty of headroom
+      // under Firestore's 1MiB-per-document limit (a pin's few other
+      // fields add only a few dozen bytes).
+      let quality = 0.82, maxW = 1600;
       const scale = Math.min(1, maxW/img.width);
       const w = Math.round(img.width*scale), h = Math.round(img.height*scale);
       const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
@@ -669,8 +676,8 @@ function handleFile(file){
         return url;
       }
       let url = tryQuality(quality);
-      while(url.length > 230000 && quality > 0.3){ quality -= 0.12; url = tryQuality(quality); }
-      if(url.length > 230000){
+      while(url.length > 700000 && quality > 0.3){ quality -= 0.1; url = tryQuality(quality); }
+      if(url.length > 700000){
         warn.textContent = 'This image is still too large after compression. Try a smaller or simpler photo.';
         warn.style.display='block';
         pendingDataUrl = null;

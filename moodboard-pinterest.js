@@ -145,14 +145,18 @@
     const reader=new FileReader();
     reader.onload=function(e){
       img.onload=function(){
-        let quality=0.72; const maxW=1000;
+        // Matches app-3.js's own handleFile sizing (see its comment): big
+        // enough to still look sharp in the full-screen lightbox, not just
+        // the small grid tile, while comfortably under Firestore's
+        // 1MiB-per-document limit.
+        let quality=0.82; const maxW=1600;
         const scale=Math.min(1,maxW/img.width);
         const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
         const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
         canvas.getContext('2d').drawImage(img,0,0,w,h);
         let url=canvas.toDataURL('image/jpeg',quality);
-        while(url.length>230000&&quality>0.3){ quality-=0.12; url=canvas.toDataURL('image/jpeg',quality); }
-        if(url.length>230000){ onTooLarge(); return; }
+        while(url.length>700000&&quality>0.3){ quality-=0.1; url=canvas.toDataURL('image/jpeg',quality); }
+        if(url.length>700000){ onTooLarge(); return; }
         onDone(url);
       };
       img.src=e.target.result;
