@@ -127,6 +127,7 @@ function showTab(id){
   if(id==='board' && typeof renderPinterestBoards==='function') renderPinterestBoards();
   if(id==='diy' && typeof renderDiyPinterestBoards==='function') renderDiyPinterestBoards();
   if((id==='todo' || id==='considerations' || id==='travelguide') && typeof resizeAllItemTextareas==='function') resizeAllItemTextareas();
+  if(id==='venues' && typeof onVenuesTabShown==='function') onVenuesTabShown();
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}
   setTimeout(updateTabsScrollArrow, 260);
 }
