@@ -76,27 +76,34 @@
     unicode-range:U+20AC;
   }
   /* Bickham Script Pro has no variable font, only these three static
-     weights, used sparingly as a calligraphic accent (see --font-script). */
+     weights, used sparingly as a calligraphic accent (see --font-script).
+     font-display:block (not swap) here on purpose: this face is only ever
+     used for the big "Villa and Vow" logo/heading text, where swap's
+     zero-length block period meant the fallback for the 'cursive' generic
+     family (often a plain default sans on many systems, not anything
+     script-like) flashed on screen for a moment on every single load
+     before the real font swapped in. A short invisible pause while the
+     (now preloaded) font arrives reads as far less jarring than that. */
   @font-face{
     font-family:'Bickham Script Pro';
     src:url('fonts/BickhamScriptPro-Regular.ttf') format('truetype');
     font-weight:400;
     font-style:normal;
-    font-display:swap;
+    font-display:block;
   }
   @font-face{
     font-family:'Bickham Script Pro';
     src:url('fonts/BickhamScriptPro-Semibold.ttf') format('truetype');
     font-weight:600;
     font-style:normal;
-    font-display:swap;
+    font-display:block;
   }
   @font-face{
     font-family:'Bickham Script Pro';
     src:url('fonts/BickhamScriptPro-Bold.ttf') format('truetype');
     font-weight:700;
     font-style:normal;
-    font-display:swap;
+    font-display:block;
   }
 
   *{box-sizing:border-box;}
