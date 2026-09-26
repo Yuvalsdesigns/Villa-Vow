@@ -946,16 +946,13 @@ function ensureCustomVenueModal(){
     + '<h3 id="cvModalTitle">Add a venue</h3>'
     + '<label class="field">Venue name<input type="text" id="cvName" placeholder="e.g. Villa Something"></label>'
     + '<label class="field">Region / location (optional)<input type="text" id="cvRegion" placeholder="e.g. Lake Como, Italy, leave blank if unsure"></label>'
-    + '<label class="field">Exact address (optional)<input type="text" id="cvAddress" placeholder="e.g. Via Roma 12, 50100 Firenze, Italy"></label>'
+    + '<label class="field">Exact address (optional, saved as-is - just for your reference, it has no effect on the map pin)<input type="text" id="cvAddress" placeholder="e.g. Via Roma 12, 50100 Firenze, Italy"></label>'
     + '<div class="field">'
       + '<label>Pin on the map (optional, needed for this venue to appear on the Venues map)</label>'
       + '<div id="cvLocationMap" class="cv-location-map"></div>'
-      + '<p class="cv-location-hint" id="cvLocationHint">Click the map to set this venue\'s location, or use the address above.</p>'
-      + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-        + '<button class="btn small ghost" id="cvFindOnMap" type="button">Find address on map</button>'
-        + '<button class="btn small ghost" id="cvClearLocation" type="button">Clear location</button>'
-      + '</div>'
-      + '<p class="cv-location-hint">Address not found above? Paste coordinates instead, e.g. right-click any spot on Google Maps and its lat/lng shows up ready to copy.</p>'
+      + '<p class="cv-location-hint" id="cvLocationHint">Click the map, or paste coordinates below, to set this venue\'s location.</p>'
+      + '<button class="btn small ghost" id="cvClearLocation" type="button">Clear location</button>'
+      + '<p class="cv-location-hint">Paste coordinates, e.g. right-click any spot on Google Maps and its lat/lng shows up ready to copy - this is the only thing that sets the pin, the address above is never looked up.</p>'
       + '<input type="text" id="cvCoords" placeholder="Paste coordinates, e.g. 45.9269944, 8.9155709">'
       + '<input type="hidden" id="cvLat">'
       + '<input type="hidden" id="cvLng">'
@@ -1013,7 +1010,6 @@ function ensureCustomVenueModal(){
     reportCustomVenueExtraction(filled, text, 'pasted text');
   });
   m.querySelector('#cvClearLocation').addEventListener('click', ()=> clearCvLocation());
-  m.querySelector('#cvFindOnMap').addEventListener('click', findCvLocationFromAddress);
   // Typing/pasting a single "lat, lng" pair directly (e.g. right-click a
   // spot on Google Maps and it hands you exactly that string) is the one
   // location method that never depends on any geocoding service finding a
@@ -1082,81 +1078,6 @@ function clearCvLocation(){
   m.querySelector('#cvCoords').value = '';
   if(cvLocationMarker){ cvLocationMarker.remove(); cvLocationMarker = null; }
   m.querySelector('#cvLocationHint').textContent = "Click the map to set this venue's location.";
-}
-/* Typing a real address into the "Exact address" field never placed a pin
-   on its own, that's a separate, easy-to-miss manual step (clicking the
-   little map), which is exactly how a venue could end up with a real
-   address and still never show on the Venues map. This calls the
-   Worker's geocodeAddress action (OpenStreetMap's free Nominatim
-   geocoder, no Google key, server-side since Nominatim's usage policy
-   wants a real identifying User-Agent a browser fetch can't set) to fill
-   the pin in automatically from the address text, while still leaving
-   the map fully clickable afterward to fine-tune or override it. */
-async function geocodeQuery(query, idToken){
-  const resp = await fetch(window.VV_WORKER_URL, {
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
-    body: JSON.stringify({action:'geocodeAddress', query}),
-  });
-  let data; try{ data = await resp.json(); }catch(e){ data = null; }
-  if(!resp.ok || !data || typeof data.lat!=='number'){
-    throw new Error((data && data.error) || 'Could not find that address on the map.');
-  }
-  return data;
-}
-function findCvLocationFromAddress(){
-  const m = document.getElementById('customVenueModal');
-  const warn = m.querySelector('#cvWarn'); warn.style.display='none';
-  const addressQuery = m.querySelector('#cvAddress').value.trim() || m.querySelector('#cvRegion').value.trim();
-  if(!addressQuery){ warn.textContent='Add an address (or at least a region) first.'; warn.style.display='block'; return; }
-  // A location that's already set here almost always means someone pasted
-  // exact coordinates straight from Google Maps (the reliable, precise
-  // path this whole address-lookup feature can't always match) - silently
-  // overwriting that with whatever this free geocoder guesses from the
-  // address text would be a straight downgrade, and it was happening with
-  // no warning at all. Ask first, same as any other action that would
-  // throw away something more precise the person already set on purpose.
-  const hasExistingLocation = m.querySelector('#cvLat').value.trim() && m.querySelector('#cvLng').value.trim();
-  if(hasExistingLocation){
-    confirmAction('This venue already has a location set (e.g. pasted coordinates). Looking up the address will replace it with the looked-up location instead - continue?', ()=> runFindCvLocationFromAddress(addressQuery));
-    return;
-  }
-  runFindCvLocationFromAddress(addressQuery);
-}
-async function runFindCvLocationFromAddress(addressQuery){
-  const m = document.getElementById('customVenueModal');
-  const warn = m.querySelector('#cvWarn'); warn.style.display='none';
-  const address = m.querySelector('#cvAddress').value.trim();
-  const name = m.querySelector('#cvName').value.trim();
-  const btn = m.querySelector('#cvFindOnMap');
-  btn.disabled = true; btn.textContent = 'Finding…';
-  try{
-    const user = window.firebase && firebase.auth && firebase.auth().currentUser;
-    if(!user || !window.VV_WORKER_URL) throw new Error("Sign in first, then try again.");
-    const idToken = await user.getIdToken();
-    let data;
-    try{
-      // The address alone, exactly as typed: OpenStreetMap's geocoder
-      // matches real addresses, not business names, and prepending the
-      // venue's own name (which it has no way to know) to the query was
-      // making otherwise-perfectly-good addresses fail to match anything.
-      data = await geocodeQuery(addressQuery, idToken);
-    }catch(firstErr){
-      // Only retry with the name folded in for the rarer case where the
-      // plain address is too vague on its own (e.g. just a region); skip
-      // it entirely if there's no separate address to fall back from, or
-      // the combined query is identical to what already failed.
-      const combinedQuery = [name, addressQuery].filter(Boolean).join(', ');
-      if(!address || combinedQuery===addressQuery) throw firstErr;
-      data = await geocodeQuery(combinedQuery, idToken);
-    }
-    setCvLocation(data.lat, data.lng);
-    if(cvLocationMap) cvLocationMap.setView([data.lat, data.lng], 14);
-  }catch(err){
-    warn.textContent = (err && err.message) || 'Could not find that address on the map.';
-    warn.style.display = 'block';
-  }
-  btn.disabled = false; btn.textContent = 'Find address on map';
 }
 /* Shared resize-then-compress-to-dataURL step, same approach as venue
    replies' readVenueContactThumb: shrink to 900px on the long edge, then
