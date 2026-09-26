@@ -61,7 +61,11 @@ function updateVenueMapMarkers(filteredVenues){
       existing.setLatLng([v.lat, v.lng]);
     } else {
       const marker = L.marker([v.lat, v.lng]).addTo(map);
-      marker.bindPopup('');
+      // A permanent name label next to every pin, since with 20+ identical
+      // default markers on the map there was otherwise no way to tell
+      // which one was which without clicking each one in turn.
+      marker.bindTooltip(esc(v.name), { permanent:true, direction:'top', offset:[0,-30], className:'venue-map-label' });
+      marker.bindPopup('', { minWidth: 220 });
       marker.on('popupopen', ()=>{
         const popupEl = marker.getPopup().getElement();
         const btn = popupEl && popupEl.querySelector('.venue-map-popup-link');
@@ -69,11 +73,17 @@ function updateVenueMapMarkers(filteredVenues){
       });
       venueMapMarkers[v.id] = marker;
     }
+    venueMapMarkers[v.id].setTooltipContent(esc(v.name));
     venueMapMarkers[v.id].setPopupContent(
-      '<b>'+esc(v.name)+'</b>'
-      + (v.region ? '<br>'+esc(v.region) : '')
-      + '<br><span class="price" style="background:none;padding:0;color:var(--ink-soft);">'+esc(v.price||'')+'</span>'
-      + '<br><button type="button" class="venue-map-popup-link">View in list ↓</button>'
+      '<div class="venue-map-popup">'
+      + '<img src="'+esc(venuePhotoUrl(v))+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+      + '<div class="venue-map-popup-body">'
+        + '<b>'+esc(v.name)+'</b>'
+        + (v.region ? '<span class="venue-map-popup-region">'+esc(v.region)+'</span>' : '')
+        + (v.price ? '<span class="venue-map-popup-price">'+esc(v.price)+'</span>' : '')
+        + '<button type="button" class="venue-map-popup-link">View in list ↓</button>'
+      + '</div>'
+      + '</div>'
     );
   });
 

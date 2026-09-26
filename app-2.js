@@ -809,6 +809,15 @@ function renderVenueFilters(){
   const regions=[...new Set(allVenuesList().map(v=>(v.region||'').split(',')[0]).filter(Boolean))].sort();
   regionSel.innerHTML='<option value="">All regions</option>'+regions.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
 }
+/* Shared between the venue-card grid and the map popups (venue-map.js), so
+   a venue's thumbnail is the same real photo (or the same regional
+   fallback) in both places. */
+function venuePhotoUrl(v){
+  return v.image || STYLE_PHOTOS[{
+    'tuscany':'venueTuscany','puglia':'venuePuglia','provence':'venueProvence','algarve':'venueAlgarve','dajas':'venueDouro',
+    'kotor':'venueAdriatic','villa-stari-mlin':'venueAdriatic','huma-kotor':'venueAdriatic','lake-orta':'venueLake','lake-iseo':'venueLake','villa-helene':'venueLake','royal-villa-4':'venueLake','lake-bracciano':'venueLake','rocca-romana':'venueLake','lake-bolsena':'venueLake','poderaccio-bolsena':'venueLake','cilento-castello':'venueSouthItaly','il-pilaccio':'venueSouthItaly','umbria-monastero':'venueUmbria','villa-poropati':'venueIstria','borgo-lapis':'venueIstria','procida':'venueProcida','lake-ohrid':'venueLake','albanian-riviera':'venueAdriatic','lake-bohinj':'venueAdriatic'
+  }[v.id] || 'venueLake'];
+}
 function renderVenues(){
   const grid = document.getElementById('venueGrid'); if(!grid) return;
   const q=(document.getElementById('venueSearch')?.value||'').trim().toLowerCase();
@@ -838,10 +847,7 @@ function renderVenues(){
     const capacity=extractVenueCapacity(v);
     const linkedReply = state.venueContacts.find(c=>c.venueId===v.id);
     const card = document.createElement('div'); card.className='venue-card'; card.dataset.venueId = v.id;
-    const venuePhoto = v.image || STYLE_PHOTOS[{
-      'tuscany':'venueTuscany','puglia':'venuePuglia','provence':'venueProvence','algarve':'venueAlgarve','dajas':'venueDouro',
-      'kotor':'venueAdriatic','villa-stari-mlin':'venueAdriatic','huma-kotor':'venueAdriatic','lake-orta':'venueLake','lake-iseo':'venueLake','villa-helene':'venueLake','royal-villa-4':'venueLake','lake-bracciano':'venueLake','rocca-romana':'venueLake','lake-bolsena':'venueLake','poderaccio-bolsena':'venueLake','cilento-castello':'venueSouthItaly','il-pilaccio':'venueSouthItaly','umbria-monastero':'venueUmbria','villa-poropati':'venueIstria','borgo-lapis':'venueIstria','procida':'venueProcida','lake-ohrid':'venueLake','albanian-riviera':'venueAdriatic','lake-bohinj':'venueAdriatic'
-    }[v.id] || 'venueLake'];
+    const venuePhoto = venuePhotoUrl(v);
     const heroClass='venue-hero has-image';
     const heroStyle='';
     card.innerHTML = '<div class="'+heroClass+'" style="'+heroStyle+'">'
