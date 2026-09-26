@@ -956,10 +956,9 @@ function ensureCustomVenueModal(){
         + '<button class="btn small ghost" id="cvClearLocation" type="button">Clear location</button>'
       + '</div>'
       + '<p class="cv-location-hint">Address not found above? Paste coordinates instead, e.g. right-click any spot on Google Maps and its lat/lng shows up ready to copy.</p>'
-      + '<div style="display:flex;gap:8px;">'
-        + '<input type="number" step="any" id="cvLat" placeholder="Latitude" style="flex:1;">'
-        + '<input type="number" step="any" id="cvLng" placeholder="Longitude" style="flex:1;">'
-      + '</div>'
+      + '<input type="text" id="cvCoords" placeholder="Paste coordinates, e.g. 45.9269944, 8.9155709">'
+      + '<input type="hidden" id="cvLat">'
+      + '<input type="hidden" id="cvLng">'
     + '</div>'
     + '<label class="field">Nearest airport (optional, for the map\'s distance/directions)'
       + '<input type="text" id="cvAirport" list="cvAirportOptions" placeholder="Start typing an airport name…">'
@@ -1015,37 +1014,19 @@ function ensureCustomVenueModal(){
   });
   m.querySelector('#cvClearLocation').addEventListener('click', ()=> clearCvLocation());
   m.querySelector('#cvFindOnMap').addEventListener('click', findCvLocationFromAddress);
-  // Typing/pasting coordinates directly (e.g. from a right-click on Google
-  // Maps) is the one method that never depends on any geocoding service
-  // finding a match, so it always works regardless of how obscure or
+  // Typing/pasting a single "lat, lng" pair directly (e.g. right-click a
+  // spot on Google Maps and it hands you exactly that string) is the one
+  // location method that never depends on any geocoding service finding a
+  // match, so it always works regardless of how obscure or
   // informally-addressed a venue is. Keeps the little map's pin in sync
-  // with whatever's typed here, same as clicking the map keeps these
-  // fields in sync the other way.
-  ['cvLat','cvLng'].forEach(id=>{
-    const field = m.querySelector('#'+id);
-    field.addEventListener('change', ()=>{
-      const lat = parseFloat(m.querySelector('#cvLat').value);
-      const lng = parseFloat(m.querySelector('#cvLng').value);
-      if(Number.isFinite(lat) && Number.isFinite(lng)){
-        setCvLocation(lat, lng);
-        if(cvLocationMap) cvLocationMap.setView([lat, lng], 14);
-      }
-    });
-    // Google Maps (and most map apps) hand you both numbers as one
-    // "lat, lng" pair, e.g. from a right-click, so pasting that whole
-    // thing into either box splits it into both rather than needing it
-    // typed in twice by hand.
-    field.addEventListener('paste', e=>{
-      const text = (e.clipboardData || window.clipboardData).getData('text');
-      const match = text.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
-      if(!match) return;
-      e.preventDefault();
-      const lat = parseFloat(match[1]), lng = parseFloat(match[2]);
-      m.querySelector('#cvLat').value = lat;
-      m.querySelector('#cvLng').value = lng;
-      setCvLocation(lat, lng);
-      if(cvLocationMap) cvLocationMap.setView([lat, lng], 14);
-    });
+  // with whatever's typed here, same as clicking the map keeps this field
+  // in sync the other way.
+  m.querySelector('#cvCoords').addEventListener('change', function(){
+    const match = this.value.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+    if(!match) return;
+    const lat = parseFloat(match[1]), lng = parseFloat(match[2]);
+    setCvLocation(lat, lng);
+    if(cvLocationMap) cvLocationMap.setView([lat, lng], 14);
   });
   m.querySelector('#cvSave').addEventListener('click', saveCustomVenue);
   m.querySelector('#cvDelete').addEventListener('click', ()=>{
@@ -1089,6 +1070,7 @@ function setCvLocation(lat, lng){
   const m = document.getElementById('customVenueModal');
   m.querySelector('#cvLat').value = lat;
   m.querySelector('#cvLng').value = lng;
+  m.querySelector('#cvCoords').value = lat+', '+lng;
   if(cvLocationMarker) cvLocationMarker.setLatLng([lat, lng]);
   else cvLocationMarker = L.marker([lat, lng]).addTo(cvLocationMap);
   m.querySelector('#cvLocationHint').textContent = 'Location set ('+lat.toFixed(4)+', '+lng.toFixed(4)+'). Click elsewhere on the map to move it.';
@@ -1097,6 +1079,7 @@ function clearCvLocation(){
   const m = document.getElementById('customVenueModal');
   m.querySelector('#cvLat').value = '';
   m.querySelector('#cvLng').value = '';
+  m.querySelector('#cvCoords').value = '';
   if(cvLocationMarker){ cvLocationMarker.remove(); cvLocationMarker = null; }
   m.querySelector('#cvLocationHint').textContent = "Click the map to set this venue's location.";
 }
@@ -1354,6 +1337,7 @@ function openCustomVenueModal(existing){
   editingVenueOriginalLng = existing && typeof existing.lng==='number' ? existing.lng : null;
   m.querySelector('#cvLat').value = editingVenueOriginalLat!=null ? editingVenueOriginalLat : '';
   m.querySelector('#cvLng').value = editingVenueOriginalLng!=null ? editingVenueOriginalLng : '';
+  m.querySelector('#cvCoords').value = (editingVenueOriginalLat!=null && editingVenueOriginalLng!=null) ? (editingVenueOriginalLat+', '+editingVenueOriginalLng) : '';
   {
     const existingAirport = existing && (existing.nearestAirport || (typeof VENUE_NEAREST_AIRPORT_CODE!=='undefined' && typeof airportByCode==='function' && airportByCode(VENUE_NEAREST_AIRPORT_CODE[existing.id])));
     editingVenueOriginalAirportLabel = existingAirport ? (existingAirport.code ? airportLabel(existingAirport) : existingAirport.name) : '';
