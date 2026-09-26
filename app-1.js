@@ -130,7 +130,16 @@ function showTab(id){
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}
   setTimeout(updateTabsScrollArrow, 260);
 }
-document.querySelectorAll('[data-jump]').forEach(el=>el.addEventListener('click', ()=>showTab(el.dataset.jump)));
+document.querySelectorAll('[data-jump]').forEach(el=>{
+  el.addEventListener('click', ()=>showTab(el.dataset.jump));
+  // Only the logo mark uses this on a plain div (role="button"), which
+  // needs Enter/Space wired up by hand, unlike a real <button>.
+  if(el.getAttribute('role')==='button'){
+    el.addEventListener('keydown', e=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); showTab(el.dataset.jump); }
+    });
+  }
+});
 let initialTab = 'start';
 try{
   const saved = localStorage.getItem('vv_active_tab');
