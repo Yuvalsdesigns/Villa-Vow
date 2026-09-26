@@ -2,6 +2,19 @@
 (function(){
   'use strict';
   const firebaseConfig={apiKey:'AIzaSyDnQSdLpgV1vgTRlcBjqIIwf7xHiSzea3Y',authDomain:'villa-vow.firebaseapp.com',projectId:'villa-vow',storageBucket:'villa-vow.firebasestorage.app',messagingSenderId:'65197840335',appId:'1:65197840335:web:360890c8235776ca19e4ba'};
+  /* Every one of the ensureXMigration() calls below is a one-time data
+     backfill: each does its own Firestore read of a "have I already run"
+     marker doc and returns immediately if it's there. They're all
+     historical and long since applied, but window.claude.use('db') was
+     re-running the entire chain, awaited one at a time, on every single
+     page load, which meant every refresh paid for a dozen-plus sequential
+     network round trips before ANY onSnapshot listener (todos, venues,
+     everything) even got registered, hence the site feeling slow to show
+     newly added data right after a refresh. Bump this whenever a new
+     ensureXMigration() call is added to the chain below, so it actually
+     runs at least once for everyone instead of being skipped forever. */
+  const MIGRATIONS_VERSION=1;
+  const MIGRATIONS_DONE_KEY='vvMigrationsVersion';
   let firebaseReady=null,auth=null,firestore=null;
   const PLANNER_WORKER_URL='https://villa-vow.yuvalsh99.workers.dev';
   window.VV_WORKER_URL=PLANNER_WORKER_URL;
@@ -148,7 +161,17 @@
   async function emailSignIn(){const email=document.getElementById('vvEmail').value.trim();const password=document.getElementById('vvPassword').value;if(!email||!password)return alert('Enter your email and password.');try{await auth.signInWithEmailAndPassword(email,password);location.reload();}catch(err){alert('Sign-in failed. Check the email/password, or make sure this account has been created in Firebase Authentication.');}}
   async function resetPassword(){const email=document.getElementById('vvEmail').value.trim();if(!email)return alert('Enter your email first, then click Forgot password.');try{await auth.sendPasswordResetEmail(email);alert('Password reset email sent.');}catch(err){alert('Could not send the reset email. Make sure the account exists.');}}
   const existingClaude=window.claude||{};const existingUse=typeof existingClaude.use==='function'?existingClaude.use.bind(existingClaude):null;window.claude=existingClaude;window.claude.use=async function(name){
-    if(name==='db'){try{const services=await ensureFirebase();if(!services.auth.currentUser)return null;await ensureWeddingSeed(services.firestore);await ensureRainPlanAndSurvivalKitMigration(services.firestore);await ensureParkingCheckMigration(services.firestore);await ensureBudgetGoalDefault(services.firestore);await ensureBudgetEstimatesMigration(services.firestore);await ensureBudgetCostCuttingNotesMigration(services.firestore);await ensureBudgetLeanIseoUpdateMigration(services.firestore);await ensureGuestAppMigration(services.firestore);await ensureGuestPlusConfirmedMigration(services.firestore);await ensureRsvpLikelihoodSplitMigration(services.firestore);await ensureCastrumVenueContactMigration(services.firestore);await ensureVillaPortaVenueContactMigration(services.firestore);await ensureVillaPortaBrochureMigration(services.firestore);await ensureVillaPortaBrochureSpacingFixMigration(services.firestore);await ensurePinterestLinkTypeMigration(services.firestore);await ensureTravelGuideSeedMigration(services.firestore);await ensureBeautyLineRestoreMigration(services.firestore);await ensureChecklistGapFillMigration(services.firestore);return services.firestore;}catch(err){console.error('Villa & Vow Firebase sync error:',err);return null;}}
+    if(name==='db'){try{
+      const services=await ensureFirebase();
+      if(!services.auth.currentUser)return null;
+      let migrationsAlreadyDone=false;
+      try{ migrationsAlreadyDone = localStorage.getItem(MIGRATIONS_DONE_KEY)===String(MIGRATIONS_VERSION); }catch(e){}
+      if(!migrationsAlreadyDone){
+        await ensureWeddingSeed(services.firestore);await ensureRainPlanAndSurvivalKitMigration(services.firestore);await ensureParkingCheckMigration(services.firestore);await ensureBudgetGoalDefault(services.firestore);await ensureBudgetEstimatesMigration(services.firestore);await ensureBudgetCostCuttingNotesMigration(services.firestore);await ensureBudgetLeanIseoUpdateMigration(services.firestore);await ensureGuestAppMigration(services.firestore);await ensureGuestPlusConfirmedMigration(services.firestore);await ensureRsvpLikelihoodSplitMigration(services.firestore);await ensureCastrumVenueContactMigration(services.firestore);await ensureVillaPortaVenueContactMigration(services.firestore);await ensureVillaPortaBrochureMigration(services.firestore);await ensureVillaPortaBrochureSpacingFixMigration(services.firestore);await ensurePinterestLinkTypeMigration(services.firestore);await ensureTravelGuideSeedMigration(services.firestore);await ensureBeautyLineRestoreMigration(services.firestore);await ensureChecklistGapFillMigration(services.firestore);
+        try{ localStorage.setItem(MIGRATIONS_DONE_KEY, String(MIGRATIONS_VERSION)); }catch(e){}
+      }
+      return services.firestore;
+    }catch(err){console.error('Villa & Vow Firebase sync error:',err);return null;}}
     if(name==='sample'){
       try{
         const services=await ensureFirebase();

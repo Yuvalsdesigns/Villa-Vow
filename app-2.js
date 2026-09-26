@@ -860,7 +860,7 @@ function ensureCustomVenueModal(){
     + '<label class="field">Price<input type="text" id="cvPrice" placeholder="e.g. €€€ or TBD: inquire"></label>'
     + '<label class="field">Guest capacity (optional)<input type="number" min="0" id="cvCapacity" placeholder="e.g. 80"></label>'
     + '<label class="field">Description<textarea id="cvDesc" rows="3" placeholder="What makes this one worth considering?"></textarea></label>'
-    + '<label class="field">Venue website (optional)<input type="url" id="cvWebsite" placeholder="https://…"></label>'
+    + '<label class="field">Venue website (optional)<input type="url" id="cvWebsite" placeholder="https://… (a direct photo link also works for the Fetch photo button below)"></label>'
     + '<label class="field">Photo URL<input type="url" id="cvImage" placeholder="Paste a direct picture link, or fetch/upload one below"></label>'
     + '<div class="drop-zone" id="cvDropZone">Click to choose a photo, or drag one here</div>'
     + '<input type="file" id="cvFileInput" accept="image/*" style="display:none;">'

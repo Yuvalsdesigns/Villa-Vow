@@ -396,6 +396,50 @@ async function fetchImageAsDataUri(imageUrl, refererUrl) {
   return 'data:' + contentType + ';base64,' + base64;
 }
 
+/* handleResolveLinkPreview used to assume whatever URL it was given was
+   always an HTML page with an og:image tag to dig out, which fails outright
+   for a direct picture link (an .html-shaped URL that's actually a photo,
+   like a venue's own hosted /photo.jpg). This checks the real content-type
+   on the first fetch, before deciding whether to read the response as HTML
+   (and hunt for a preview image in it) or just treat it as the photo
+   itself. Whichever it turns out to be, both paths still cap at
+   MAX_INLINE_IMAGE_BYTES and only accept a real image/* response. */
+async function fetchUrlSmart(url, userAgent) {
+  const resp = await fetch(url.toString(), {
+    redirect: 'follow',
+    method: 'GET',
+    headers: {
+      'User-Agent': userAgent,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/*,*/*;q=0.8',
+    },
+  });
+  if (!resp.ok) return { ok: false, status: resp.status };
+  const contentType = (resp.headers.get('content-type') || '').split(';')[0].trim();
+  if (contentType.startsWith('image/')) {
+    const declaredLength = Number(resp.headers.get('content-length') || 0);
+    if (declaredLength && declaredLength > MAX_INLINE_IMAGE_BYTES) return { ok: false, status: 413 };
+    let buffer;
+    try {
+      buffer = await resp.arrayBuffer();
+    } catch {
+      return { ok: false, status: 502 };
+    }
+    if (buffer.byteLength > MAX_INLINE_IMAGE_BYTES) return { ok: false, status: 413 };
+    const base64 = await arrayBufferToBase64(buffer);
+    return { ok: true, type: 'image', dataUri: 'data:' + contentType + ';base64,' + base64 };
+  }
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+  while (text.length < 250000) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    text += decoder.decode(value, { stream: true });
+  }
+  try { reader.cancel(); } catch {}
+  return { ok: true, type: 'html', html: text };
+}
+
 function extractPreview(html, baseUrl) {
   function metaContent(prop) {
     const escaped = prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -502,13 +546,18 @@ async function handleResolveLinkPreview(rawUrl) {
   for (const userAgent of LINK_PREVIEW_USER_AGENTS) {
     let result;
     try {
-      result = await fetchHtml(url, userAgent);
+      result = await fetchUrlSmart(url, userAgent);
     } catch (err) {
       return json({ error: 'Could not fetch that page', debug: String(err && err.message || err) }, 502);
     }
     if (!result.ok) {
       lastStatus = result.status;
       continue;
+    }
+    if (result.type === 'image') {
+      /* The pasted link was already a direct picture, not a page with a
+         preview tag to hunt for, so it's already been downloaded above. */
+      return json({ url: url.toString(), title: '', thumbnailUrl: result.dataUri, sourceImageUrl: url.toString(), inlined: true });
     }
     const preview = extractPreview(result.html, url);
     if (preview) {
