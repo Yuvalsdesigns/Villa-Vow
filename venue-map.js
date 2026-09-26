@@ -165,6 +165,37 @@ let venueMapBoundsFilterActive = false;
 let venueMapCurrentBounds = null;
 let venueMapEverFitted = false;
 
+/* A marker's own icon opening its bound popup on click is normal Leaflet
+   behavior, but its permanent name-label tooltip is a separate DOM element
+   layered on top of it, and relying on Leaflet's own "interactive tooltip"
+   internals to also forward a label click into a marker 'click' event
+   proved unreliable in practice. Wiring a plain, direct click listener onto
+   the real rendered elements themselves (both the marker's icon and its
+   tooltip's own element) sidesteps that entirely: no assumption about how
+   Leaflet forwards or delegates the event internally, just "this real DOM
+   node was clicked, open this popup". tooltipopen/add cover the marker's
+   icon or tooltip not existing yet at the moment bindTooltip/bindPopup is
+   called. */
+function wireMarkerOpensPopup(marker){
+  function attach(el){
+    if(!el || el.__vvPopupClickWired) return;
+    el.__vvPopupClickWired = true;
+    el.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      marker.openPopup();
+    });
+  }
+  attach(marker.getElement && marker.getElement());
+  const tooltip = marker.getTooltip && marker.getTooltip();
+  attach(tooltip && tooltip.getElement && tooltip.getElement());
+  marker.on('tooltipopen', function(){
+    const tt = marker.getTooltip && marker.getTooltip();
+    attach(tt && tt.getElement && tt.getElement());
+  });
+  marker.on('add', function(){ attach(marker.getElement && marker.getElement()); });
+}
+
 function ensureVenueMap(){
   if(venueMap) return venueMap;
   const el = document.getElementById('venueMap');
@@ -298,7 +329,7 @@ function applyVenueMapMarkers(filteredVenues){
       // popup as clicking the pin itself, not just the icon.
       marker.bindTooltip(esc(v.name), { permanent:true, direction:'top', offset:[0,-30], className:'venue-map-label', interactive:true });
       marker.bindPopup(popupContent, { minWidth:190, maxWidth:220, maxHeight:220, autoPanPadding:[20,20] });
-      marker.on('click', ()=> marker.openPopup());
+      wireMarkerOpensPopup(marker);
       venueMapMarkers[v.id] = marker;
     }
     venueMapSignatures[v.id] = signature;
@@ -367,7 +398,7 @@ function updateAirportMarkers(locatedVenues){
     const marker = L.marker([airport.lat, airport.lng], { icon: airportDivIcon() }).addTo(map);
     marker.bindTooltip(esc(airport.code || airport.name), { permanent:true, direction:'top', offset:[0,-16], className:'venue-map-label venue-map-airport-label', interactive:true });
     marker.bindPopup(buildAirportPopupContent(airport), { minWidth:170, maxWidth:210, maxHeight:160 });
-    marker.on('click', ()=> marker.openPopup());
+    wireMarkerOpensPopup(marker);
     venueMapAirportMarkers[key] = marker;
   });
 }
