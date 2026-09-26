@@ -59,6 +59,86 @@ const VENUE_NEAREST_AIRPORT = {
   'la-darbia': { code:'MXP', name:'Milan Malpensa Airport', lat:45.6306, lng:8.7281 },
 };
 
+/* A broader pick-list of major European/Mediterranean airports, for the
+   "Nearest airport" field on a custom venue (VENUE_NEAREST_AIRPORT above
+   only covers the 26 curated ones). Covers the countries this app's own
+   curated destinations already span, plus other common ones a venue you
+   add yourself might be near. Not exhaustive: the field also accepts any
+   free-typed name that isn't in this list, just without a distance or
+   directions link, since there'd be no coordinates to compute either
+   from. */
+const AIRPORTS = [
+  {code:'FCO',name:'Rome Fiumicino Airport',lat:41.8003,lng:12.2389},
+  {code:'CIA',name:'Rome Ciampino Airport',lat:41.7994,lng:12.5949},
+  {code:'MXP',name:'Milan Malpensa Airport',lat:45.6306,lng:8.7281},
+  {code:'LIN',name:'Milan Linate Airport',lat:45.4451,lng:9.2767},
+  {code:'BGY',name:'Milan Bergamo Airport',lat:45.6739,lng:9.7042},
+  {code:'VCE',name:'Venice Marco Polo Airport',lat:45.5053,lng:12.3519},
+  {code:'FLR',name:'Florence Airport',lat:43.8100,lng:11.2051},
+  {code:'PSA',name:'Pisa Airport',lat:43.6839,lng:10.3927},
+  {code:'BLQ',name:'Bologna Airport',lat:44.5354,lng:11.2887},
+  {code:'NAP',name:'Naples Capodichino Airport',lat:40.8860,lng:14.2908},
+  {code:'BRI',name:'Bari Karol Wojtyła Airport',lat:41.1389,lng:16.7606},
+  {code:'BDS',name:'Brindisi Airport',lat:40.6576,lng:17.9470},
+  {code:'CTA',name:'Catania Airport',lat:37.4668,lng:15.0664},
+  {code:'PMO',name:'Palermo Airport',lat:38.1760,lng:13.0910},
+  {code:'VRN',name:'Verona Airport',lat:45.3957,lng:10.8885},
+  {code:'TRN',name:'Turin Airport',lat:45.2008,lng:7.6497},
+  {code:'GOA',name:'Genoa Airport',lat:44.4133,lng:8.8375},
+  {code:'PEG',name:"Perugia San Francesco d'Assisi Airport",lat:43.0959,lng:12.5133},
+  {code:'OLB',name:'Olbia Airport',lat:40.8987,lng:9.5175},
+  {code:'CAG',name:'Cagliari Airport',lat:39.2515,lng:9.0543},
+  {code:'CDG',name:'Paris Charles de Gaulle Airport',lat:49.0097,lng:2.5479},
+  {code:'ORY',name:'Paris Orly Airport',lat:48.7233,lng:2.3794},
+  {code:'NCE',name:"Nice Côte d'Azur Airport",lat:43.6584,lng:7.2159},
+  {code:'MRS',name:'Marseille Provence Airport',lat:43.4393,lng:5.2214},
+  {code:'LYS',name:'Lyon Airport',lat:45.7256,lng:5.0811},
+  {code:'TLS',name:'Toulouse Airport',lat:43.6293,lng:1.3638},
+  {code:'BOD',name:'Bordeaux Airport',lat:44.8283,lng:-0.7156},
+  {code:'NTE',name:'Nantes Airport',lat:47.1532,lng:-1.6107},
+  {code:'MPL',name:'Montpellier Airport',lat:43.5762,lng:3.9630},
+  {code:'LIS',name:'Lisbon Airport',lat:38.7813,lng:-9.1359},
+  {code:'OPO',name:'Porto Airport',lat:41.2481,lng:-8.6814},
+  {code:'FAO',name:'Faro Airport',lat:37.0144,lng:-7.9659},
+  {code:'MAD',name:'Madrid Barajas Airport',lat:40.4936,lng:-3.5668},
+  {code:'BCN',name:'Barcelona Airport',lat:41.2974,lng:2.0833},
+  {code:'AGP',name:'Málaga Airport',lat:36.6749,lng:-4.4991},
+  {code:'PMI',name:'Palma de Mallorca Airport',lat:39.5517,lng:2.7388},
+  {code:'IBZ',name:'Ibiza Airport',lat:38.8729,lng:1.3731},
+  {code:'VLC',name:'Valencia Airport',lat:39.4893,lng:-0.4816},
+  {code:'SVQ',name:'Seville Airport',lat:37.4180,lng:-5.8931},
+  {code:'ATH',name:'Athens Airport',lat:37.9364,lng:23.9445},
+  {code:'JTR',name:'Santorini Airport',lat:36.3992,lng:25.4793},
+  {code:'JMK',name:'Mykonos Airport',lat:37.4351,lng:25.3481},
+  {code:'CHQ',name:'Chania Airport',lat:35.5317,lng:24.1497},
+  {code:'HER',name:'Heraklion Airport',lat:35.3397,lng:25.1803},
+  {code:'CFU',name:'Corfu Airport',lat:39.6019,lng:19.9117},
+  {code:'RHO',name:'Rhodes Airport',lat:36.4054,lng:28.0862},
+  {code:'ZAG',name:'Zagreb Airport',lat:45.7429,lng:16.0688},
+  {code:'SPU',name:'Split Airport',lat:43.5389,lng:16.2980},
+  {code:'DBV',name:'Dubrovnik Airport',lat:42.5614,lng:18.2682},
+  {code:'PUY',name:'Pula Airport',lat:44.8935,lng:13.9222},
+  {code:'ZAD',name:'Zadar Airport',lat:44.1083,lng:15.3467},
+  {code:'TGD',name:'Podgorica Airport',lat:42.3594,lng:19.2519},
+  {code:'TIV',name:'Tivat Airport',lat:42.4047,lng:18.7233},
+  {code:'LJU',name:'Ljubljana Airport',lat:46.2237,lng:14.4576},
+  {code:'TIA',name:'Tirana International Airport',lat:41.4147,lng:19.7206},
+  {code:'OHD',name:'Ohrid St. Paul the Apostle Airport',lat:41.1800,lng:20.7423},
+  {code:'SKP',name:'Skopje Airport',lat:41.9616,lng:21.6214},
+  {code:'GVA',name:'Geneva Airport',lat:46.2381,lng:6.1090},
+  {code:'ZRH',name:'Zurich Airport',lat:47.4647,lng:8.5492},
+  {code:'VIE',name:'Vienna Airport',lat:48.1103,lng:16.5697},
+  {code:'SZG',name:'Salzburg Airport',lat:47.7933,lng:13.0043},
+  {code:'MUC',name:'Munich Airport',lat:48.3538,lng:11.7861},
+  {code:'FRA',name:'Frankfurt Airport',lat:50.0379,lng:8.5622},
+  {code:'BER',name:'Berlin Brandenburg Airport',lat:52.3667,lng:13.5033},
+  {code:'MLA',name:'Malta International Airport',lat:35.8575,lng:14.4775},
+  {code:'LCA',name:'Larnaca Airport',lat:34.8751,lng:33.6249},
+  {code:'PFO',name:'Paphos Airport',lat:34.7180,lng:32.4857},
+];
+function airportLabel(a){ return a.name+' ('+a.code+')'; }
+function findAirportByLabel(label){ return AIRPORTS.find(a=> airportLabel(a)===label); }
+
 function haversineKm(lat1, lng1, lat2, lng2){
   const R = 6371;
   const toRad = d=> d*Math.PI/180;
@@ -102,8 +182,15 @@ function buildVenuePopupContent(v){
   el.className = 'venue-map-popup';
 
   const capacity = typeof extractVenueCapacity==='function' ? extractVenueCapacity(v) : null;
-  const airport = VENUE_NEAREST_AIRPORT[v.id];
-  const distanceKm = airport ? Math.round(haversineKm(v.lat, v.lng, airport.lat, airport.lng)) : null;
+  // Curated venues get their airport from the hand-picked table above; a
+  // custom venue carries its own (picked from the Add/Edit modal's
+  // "Nearest airport" field), which also lets a curated venue's assignment
+  // be corrected, or explicitly cleared (an own nearestAirport key set to
+  // null, hence the hasOwnProperty check rather than v.nearestAirport ||
+  // the table, which could never let a clear actually take effect).
+  const airport = v.hasOwnProperty('nearestAirport') ? v.nearestAirport : VENUE_NEAREST_AIRPORT[v.id];
+  const airportHasCoords = airport && typeof airport.lat==='number' && typeof airport.lng==='number';
+  const distanceKm = airportHasCoords ? Math.round(haversineKm(v.lat, v.lng, airport.lat, airport.lng)) : null;
 
   const bullets = (typeof CUSTOM_VENUE_EXTRA_FIELDS!=='undefined' ? CUSTOM_VENUE_EXTRA_FIELDS : [])
     .filter(([key])=> (v[key]||'').trim())
@@ -118,10 +205,10 @@ function buildVenuePopupContent(v){
       + '<span class="venue-map-popup-line">'+esc(v.price||'')+(capacity!==null ? ' · ~'+capacity+' guests' : '')+'</span>'
       + (v.facts&&v.facts.length ? '<div class="venue-map-popup-facts">'+v.facts.map(f=>'<span class="fact">'+esc(f)+'</span>').join('')+'</div>' : '')
       + (bullets ? '<ul class="venue-contact-bullets">'+bullets+'</ul>' : '')
-      + (airport ?
-          '<span class="venue-map-popup-line">~'+distanceKm+' km from '+esc(airport.name)+' ('+esc(airport.code)+')</span>'
-          + '<a class="venue-map-popup-link" href="'+esc(googleMapsDirectionsUrl(v.lat, v.lng, airport.lat, airport.lng))+'" target="_blank" rel="noopener">Get directions to '+esc(airport.code)+' ↗</a>'
-        : '')
+      + (airportHasCoords ?
+          '<span class="venue-map-popup-line">~'+distanceKm+' km from '+esc(airport.name)+(airport.code?' ('+esc(airport.code)+')':'')+'</span>'
+          + '<a class="venue-map-popup-link" href="'+esc(googleMapsDirectionsUrl(v.lat, v.lng, airport.lat, airport.lng))+'" target="_blank" rel="noopener">Get directions to '+esc(airport.code||airport.name)+' ↗</a>'
+        : (airport && airport.name ? '<span class="venue-map-popup-line">Nearest airport: '+esc(airport.name)+'</span>' : ''))
       + '<button type="button" class="venue-map-popup-link venue-map-popup-view-list">View in list ↓</button>'
     + '</div>';
 

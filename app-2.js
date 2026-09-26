@@ -933,6 +933,10 @@ let editingVenueOriginalWebsite = '';
    placed/moved in this session, so reopening and resaving a venue that
    already has a location (curated or custom) never accidentally clears it. */
 let editingVenueOriginalLat = null, editingVenueOriginalLng = null;
+/* Same idea again, for the "Nearest airport" field: only written on save
+   if it was actually changed, so a curated venue's hand-picked airport (or
+   a custom venue's already-set one) survives an unrelated edit untouched. */
+let editingVenueOriginalAirportLabel = '';
 function ensureCustomVenueModal(){
   let m = document.getElementById('customVenueModal');
   if(m) return m;
@@ -950,6 +954,10 @@ function ensureCustomVenueModal(){
       + '<button class="btn small ghost" id="cvClearLocation" type="button" style="align-self:flex-start;">Clear location</button>'
     + '</div>'
     + '<input type="hidden" id="cvLat"><input type="hidden" id="cvLng">'
+    + '<label class="field">Nearest airport (optional, for the map\'s distance/directions)'
+      + '<input type="text" id="cvAirport" list="cvAirportOptions" placeholder="Start typing an airport name…">'
+    + '</label>'
+    + '<datalist id="cvAirportOptions">'+(typeof AIRPORTS!=='undefined' ? AIRPORTS.map(a=>'<option value="'+esc(airportLabel(a))+'">').join('') : '')+'</datalist>'
     + '<label class="field">Price<input type="text" id="cvPrice" placeholder="e.g. €€€ or TBD: inquire"></label>'
     + '<label class="field">Guest capacity (optional)<input type="number" min="0" id="cvCapacity" placeholder="e.g. 80"></label>'
     + '<label class="field">Description<textarea id="cvDesc" rows="3" placeholder="What makes this one worth considering?"></textarea></label>'
@@ -1247,6 +1255,11 @@ function openCustomVenueModal(existing){
   editingVenueOriginalLng = existing && typeof existing.lng==='number' ? existing.lng : null;
   m.querySelector('#cvLat').value = editingVenueOriginalLat!=null ? editingVenueOriginalLat : '';
   m.querySelector('#cvLng').value = editingVenueOriginalLng!=null ? editingVenueOriginalLng : '';
+  {
+    const existingAirport = existing && (existing.nearestAirport || (typeof VENUE_NEAREST_AIRPORT!=='undefined' && VENUE_NEAREST_AIRPORT[existing.id]));
+    editingVenueOriginalAirportLabel = existingAirport ? (existingAirport.code ? airportLabel(existingAirport) : existingAirport.name) : '';
+    m.querySelector('#cvAirport').value = editingVenueOriginalAirportLabel;
+  }
   m.classList.add('open');
   // Leaflet needs the map container to already have real on-screen size
   // when it initializes, which it won't until the modal's own open/display
@@ -1296,6 +1309,17 @@ function saveCustomVenue(){
     const lat = latVal ? parseFloat(latVal) : null;
     const lng = lngVal ? parseFloat(lngVal) : null;
     if(lat !== editingVenueOriginalLat || lng !== editingVenueOriginalLng){ data.lat = lat; data.lng = lng; }
+  }
+  {
+    const airportLabelVal = m.querySelector('#cvAirport').value.trim();
+    if(airportLabelVal !== editingVenueOriginalAirportLabel){
+      const matched = airportLabelVal && typeof findAirportByLabel==='function' ? findAirportByLabel(airportLabelVal) : null;
+      // A typed name that isn't in the list is kept as-is (just without
+      // coordinates, so the map shows the name but can't compute a
+      // distance or a directions link for it); clearing the field entirely
+      // removes it.
+      data.nearestAirport = airportLabelVal ? (matched || { name: airportLabelVal, code:'', lat:null, lng:null }) : null;
+    }
   }
   if(editingVenueIsCurated){
     // This form has no UI for a curated venue's fact-tag badges, its
