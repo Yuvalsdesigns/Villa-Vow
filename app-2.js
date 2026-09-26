@@ -950,8 +950,11 @@ function ensureCustomVenueModal(){
     + '<div class="field">'
       + '<label>Pin on the map (optional, needed for this venue to appear on the Venues map)</label>'
       + '<div id="cvLocationMap" class="cv-location-map"></div>'
-      + '<p class="cv-location-hint" id="cvLocationHint">Click the map to set this venue\'s location.</p>'
-      + '<button class="btn small ghost" id="cvClearLocation" type="button" style="align-self:flex-start;">Clear location</button>'
+      + '<p class="cv-location-hint" id="cvLocationHint">Click the map to set this venue\'s location, or use the address above.</p>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+        + '<button class="btn small ghost" id="cvFindOnMap" type="button">Find address on map</button>'
+        + '<button class="btn small ghost" id="cvClearLocation" type="button">Clear location</button>'
+      + '</div>'
     + '</div>'
     + '<input type="hidden" id="cvLat"><input type="hidden" id="cvLng">'
     + '<label class="field">Nearest airport (optional, for the map\'s distance/directions)'
@@ -1007,6 +1010,7 @@ function ensureCustomVenueModal(){
     reportCustomVenueExtraction(filled, text, 'pasted text');
   });
   m.querySelector('#cvClearLocation').addEventListener('click', ()=> clearCvLocation());
+  m.querySelector('#cvFindOnMap').addEventListener('click', findCvLocationFromAddress);
   m.querySelector('#cvSave').addEventListener('click', saveCustomVenue);
   m.querySelector('#cvDelete').addEventListener('click', ()=>{
     if(!editingCustomVenueId) return;
@@ -1059,6 +1063,46 @@ function clearCvLocation(){
   m.querySelector('#cvLng').value = '';
   if(cvLocationMarker){ cvLocationMarker.remove(); cvLocationMarker = null; }
   m.querySelector('#cvLocationHint').textContent = "Click the map to set this venue's location.";
+}
+/* Typing a real address into the "Exact address" field never placed a pin
+   on its own, that's a separate, easy-to-miss manual step (clicking the
+   little map), which is exactly how a venue could end up with a real
+   address and still never show on the Venues map. This calls the
+   Worker's geocodeAddress action (OpenStreetMap's free Nominatim
+   geocoder, no Google key, server-side since Nominatim's usage policy
+   wants a real identifying User-Agent a browser fetch can't set) to fill
+   the pin in automatically from the address text, while still leaving
+   the map fully clickable afterward to fine-tune or override it. */
+async function findCvLocationFromAddress(){
+  const m = document.getElementById('customVenueModal');
+  const warn = m.querySelector('#cvWarn'); warn.style.display='none';
+  const address = m.querySelector('#cvAddress').value.trim();
+  const name = m.querySelector('#cvName').value.trim();
+  const region = m.querySelector('#cvRegion').value.trim();
+  const query = [name, address || region].filter(Boolean).join(', ');
+  if(!query){ warn.textContent='Add a name and an address (or at least a region) first.'; warn.style.display='block'; return; }
+  const btn = m.querySelector('#cvFindOnMap');
+  btn.disabled = true; btn.textContent = 'Finding…';
+  try{
+    const user = window.firebase && firebase.auth && firebase.auth().currentUser;
+    if(!user || !window.VV_WORKER_URL) throw new Error("Sign in first, then try again.");
+    const idToken = await user.getIdToken();
+    const resp = await fetch(window.VV_WORKER_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
+      body: JSON.stringify({action:'geocodeAddress', query}),
+    });
+    let data; try{ data = await resp.json(); }catch(e){ data = null; }
+    if(!resp.ok || !data || typeof data.lat!=='number'){
+      throw new Error((data && data.error) || 'Could not find that address on the map.');
+    }
+    setCvLocation(data.lat, data.lng);
+    if(cvLocationMap) cvLocationMap.setView([data.lat, data.lng], 14);
+  }catch(err){
+    warn.textContent = (err && err.message) || 'Could not find that address on the map.';
+    warn.style.display = 'block';
+  }
+  btn.disabled = false; btn.textContent = 'Find address on map';
 }
 /* Shared resize-then-compress-to-dataURL step, same approach as venue
    replies' readVenueContactThumb: shrink to 900px on the long edge, then
