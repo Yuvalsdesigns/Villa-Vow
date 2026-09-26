@@ -1022,13 +1022,29 @@ function ensureCustomVenueModal(){
   // with whatever's typed here, same as clicking the map keeps these
   // fields in sync the other way.
   ['cvLat','cvLng'].forEach(id=>{
-    m.querySelector('#'+id).addEventListener('change', ()=>{
+    const field = m.querySelector('#'+id);
+    field.addEventListener('change', ()=>{
       const lat = parseFloat(m.querySelector('#cvLat').value);
       const lng = parseFloat(m.querySelector('#cvLng').value);
       if(Number.isFinite(lat) && Number.isFinite(lng)){
         setCvLocation(lat, lng);
         if(cvLocationMap) cvLocationMap.setView([lat, lng], 14);
       }
+    });
+    // Google Maps (and most map apps) hand you both numbers as one
+    // "lat, lng" pair, e.g. from a right-click, so pasting that whole
+    // thing into either box splits it into both rather than needing it
+    // typed in twice by hand.
+    field.addEventListener('paste', e=>{
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      const match = text.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+      if(!match) return;
+      e.preventDefault();
+      const lat = parseFloat(match[1]), lng = parseFloat(match[2]);
+      m.querySelector('#cvLat').value = lat;
+      m.querySelector('#cvLng').value = lng;
+      setCvLocation(lat, lng);
+      if(cvLocationMap) cvLocationMap.setView([lat, lng], 14);
     });
   });
   m.querySelector('#cvSave').addEventListener('click', saveCustomVenue);
