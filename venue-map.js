@@ -180,6 +180,19 @@ function wireMarkerOpensPopup(marker){
   function attach(el){
     if(!el || el.__vvPopupClickWired) return;
     el.__vvPopupClickWired = true;
+    // Leaflet's marker icon carries tabindex="0" (a real accessibility
+    // feature, so keyboard users can Tab to a marker), but on a phone,
+    // tapping a focusable element can make the browser itself decide to
+    // scroll the page to bring it into view - and that decision, and the
+    // scroll it triggers, happens as part of focusing the element on
+    // pointer-down, before the 'click' handler below (and its own
+    // preventDefault) ever runs. That's exactly what "tapping the pin
+    // jumps to the top of the page" was, and only the pin, since the
+    // plain tooltip label isn't focusable at all. mousedown's own
+    // preventDefault is the standard way to stop an element from taking
+    // focus from a pointer tap while leaving its click behavior (and real
+    // keyboard Tab navigation, which never fires mousedown) untouched.
+    el.addEventListener('mousedown', function(e){ e.preventDefault(); });
     el.addEventListener('click', function(e){
       e.preventDefault();
       e.stopPropagation();
