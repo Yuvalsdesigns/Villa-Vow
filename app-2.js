@@ -955,8 +955,12 @@ function ensureCustomVenueModal(){
         + '<button class="btn small ghost" id="cvFindOnMap" type="button">Find address on map</button>'
         + '<button class="btn small ghost" id="cvClearLocation" type="button">Clear location</button>'
       + '</div>'
+      + '<p class="cv-location-hint">Address not found above? Paste coordinates instead, e.g. right-click any spot on Google Maps and its lat/lng shows up ready to copy.</p>'
+      + '<div style="display:flex;gap:8px;">'
+        + '<input type="number" step="any" id="cvLat" placeholder="Latitude" style="flex:1;">'
+        + '<input type="number" step="any" id="cvLng" placeholder="Longitude" style="flex:1;">'
+      + '</div>'
     + '</div>'
-    + '<input type="hidden" id="cvLat"><input type="hidden" id="cvLng">'
     + '<label class="field">Nearest airport (optional, for the map\'s distance/directions)'
       + '<input type="text" id="cvAirport" list="cvAirportOptions" placeholder="Start typing an airport name…">'
     + '</label>'
@@ -1011,6 +1015,22 @@ function ensureCustomVenueModal(){
   });
   m.querySelector('#cvClearLocation').addEventListener('click', ()=> clearCvLocation());
   m.querySelector('#cvFindOnMap').addEventListener('click', findCvLocationFromAddress);
+  // Typing/pasting coordinates directly (e.g. from a right-click on Google
+  // Maps) is the one method that never depends on any geocoding service
+  // finding a match, so it always works regardless of how obscure or
+  // informally-addressed a venue is. Keeps the little map's pin in sync
+  // with whatever's typed here, same as clicking the map keeps these
+  // fields in sync the other way.
+  ['cvLat','cvLng'].forEach(id=>{
+    m.querySelector('#'+id).addEventListener('change', ()=>{
+      const lat = parseFloat(m.querySelector('#cvLat').value);
+      const lng = parseFloat(m.querySelector('#cvLng').value);
+      if(Number.isFinite(lat) && Number.isFinite(lng)){
+        setCvLocation(lat, lng);
+        if(cvLocationMap) cvLocationMap.setView([lat, lng], 14);
+      }
+    });
+  });
   m.querySelector('#cvSave').addEventListener('click', saveCustomVenue);
   m.querySelector('#cvDelete').addEventListener('click', ()=>{
     if(!editingCustomVenueId) return;
