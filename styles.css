@@ -454,6 +454,12 @@
      clicking each one in turn. */
   .venue-map-label{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:2px 9px;font:600 11.5px var(--font-primary);color:var(--ink);box-shadow:var(--shadow-sm);white-space:nowrap;}
   .venue-map-label::before{display:none;}
+  /* Airports get their own marker style (a dark circle badge, distinct
+     from a venue's plain pin) so the two are never mistaken for each
+     other at a glance, plus their own smaller always-visible code label. */
+  .venue-map-airport-icon-wrap{background:none;border:none;}
+  .venue-map-airport-icon{width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:var(--shadow-sm);line-height:1;}
+  .venue-map-airport-label{font-size:10.5px;padding:1px 7px;color:var(--ink-soft);}
   .venue-map-popup{display:flex;flex-direction:column;gap:5px;}
   .venue-map-popup img{width:100%;height:58px;border-radius:7px;object-fit:cover;background:var(--surface-2);}
   .venue-map-popup-body{display:flex;flex-direction:column;gap:3px;min-width:0;}
