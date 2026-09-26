@@ -532,44 +532,6 @@ async function handleResolvePageText(rawUrl) {
   return json({ error: 'No readable text found on that page' }, 404);
 }
 
-/* Turns a typed address into a map pin without any Google API key: OSM's
-   own Nominatim geocoder is free and needs none, just a real identifying
-   User-Agent and a low request rate, both of which this satisfies (one
-   on-demand lookup per explicit save, triggered by a person, never a
-   background/bulk job). Server-side because Nominatim's usage policy
-   asks for a distinctive User-Agent identifying the calling application,
-   which a browser's own fetch can't set (browsers silently ignore a
-   script-set User-Agent header), and to avoid relying on Nominatim's
-   CORS support for direct browser calls. */
-async function handleGeocodeAddress(rawQuery) {
-  const query = (rawQuery || '').trim();
-  if (!query) return json({ error: 'No address given' }, 400);
-  const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
-  let resp;
-  try {
-    resp = await fetch(url, {
-      headers: {
-        'User-Agent': 'VillaAndVow-WeddingPlanner/1.0 (private planning app, single household use)',
-        'Accept-Language': 'en',
-      },
-    });
-  } catch (err) {
-    return json({ error: 'Could not reach the geocoding service', debug: String(err && err.message || err) }, 502);
-  }
-  if (!resp.ok) return json({ error: 'Geocoding service error', status: resp.status }, 502);
-  let data;
-  try {
-    data = await resp.json();
-  } catch {
-    return json({ error: 'Geocoding service returned something unexpected' }, 502);
-  }
-  const first = Array.isArray(data) ? data[0] : null;
-  if (!first || !first.lat || !first.lon) {
-    return json({ error: 'No location found for that address' }, 404);
-  }
-  return json({ lat: parseFloat(first.lat), lng: parseFloat(first.lon), displayName: first.display_name || query });
-}
-
 async function handleResolveLinkPreview(rawUrl) {
   let url;
   try {
@@ -660,9 +622,6 @@ export default {
     }
     if (body && body.action === 'resolvePageText') {
       return handleResolvePageText(body.url);
-    }
-    if (body && body.action === 'geocodeAddress') {
-      return handleGeocodeAddress(body.query);
     }
 
     const messages = body && body.messages;
