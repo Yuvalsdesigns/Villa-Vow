@@ -967,19 +967,24 @@ function renderTravelGuide(){
 function autoGrowTextarea(el){ el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
 function resizeAllBudgetNotes(){ document.querySelectorAll('#view-budget .notes-input').forEach(autoGrowTextarea); }
 
-/* Six hand-picked, validated hues (fixed order - never cycled/reassigned by
-   rank, so a category keeps its color as others come and go): each is the
-   app's own existing brand color (wine/coral/lilac/butter/cypress/brass,
-   used elsewhere for the tab tints), boosted in saturation until it clears
-   every check - lightness band, chroma floor, CVD adjacent-pair separation,
-   the normal-vision floor, contrast relief - since the softer originals
-   were tuned as background tints, not as chart marks that need to read as
-   distinct at a glance. "Other" (anything past the top 6) is deliberately
-   neutral gray, not a 7th competing hue, matching how it's de-emphasized
-   everywhere else in this method. */
-const BUDGET_CHART_COLORS = ['#409ae3','#f88049','#9567d9','#f99400','#67c05a','#e63f96'];
+/* Eight hand-picked, validated hues (fixed order - never cycled/reassigned
+   by rank, so a category keeps its color as others come and go): the first
+   six are the app's own existing brand colors (wine/coral/lilac/butter/
+   cypress/brass, used elsewhere for the tab tints), boosted in saturation
+   until they clear every check - lightness band, chroma floor, CVD
+   adjacent-pair separation, the normal-vision floor, contrast relief -
+   since the softer originals were tuned as background tints, not as chart
+   marks that need to read as distinct at a glance. A teal and a red were
+   added (validated the same way, appended rather than interleaved so every
+   category already showing one of the original six keeps that exact
+   color) after 6 slices turned out too few in practice - with a real
+   ~15-category wedding budget, "Other" was swallowing a fifth of the
+   total, which defeats the point of a breakdown. "Other" (anything past
+   the top 8) is deliberately neutral gray, not a 9th competing hue,
+   matching how it's de-emphasized everywhere else in this method. */
+const BUDGET_CHART_COLORS = ['#409ae3','#f88049','#9567d9','#f99400','#67c05a','#e63f96','#14c294','#e6483f'];
 const BUDGET_CHART_OTHER_COLOR = '#BBAFA8';
-const BUDGET_CHART_MAX_SLICES = 6;
+const BUDGET_CHART_MAX_SLICES = 8;
 /* Groups every budget line's ESTIMATE by category (trimmed and case-folded,
    so "Catering" and "catering" don't split into two slices; displayed under
    whichever casing was typed first), sorted largest first. A donut only
@@ -1006,7 +1011,14 @@ function budgetCategoryBreakdown(){
   state.budget.forEach(b=>{
     const est = Number(b.estCost)||0;
     if(est<=0) return;
-    const label = (b.category||'').trim() || 'Other';
+    // String(...) first, not just "||''": a truthy non-string category
+    // (some old/hand-edited Firestore doc storing a number, say) has no
+    // .trim() of its own and would throw here, silently breaking this
+    // whole render - including "Add line" appearing to do nothing, since
+    // the new line was actually saved, but the re-render that's supposed
+    // to show it never got that far. esc() elsewhere already coerces this
+    // safely; this needs the same treatment since it calls .trim() directly.
+    const label = String(b.category||'').trim() || 'Other';
     const key = label.toLowerCase();
     if(!groups.has(key)) groups.set(key, {label, total:0});
     groups.get(key).total += est;
@@ -1033,7 +1045,7 @@ function budgetCategoryBreakdown(){
    gray for a category with no estimate yet (nothing to place in the chart)
    or one this exact breakdown doesn't otherwise know about. */
 function budgetCategoryColor(colorByKey, category){
-  const key = (category||'').trim().toLowerCase() || 'other';
+  const key = String(category||'').trim().toLowerCase() || 'other';
   return colorByKey.get(key) || BUDGET_CHART_OTHER_COLOR;
 }
 let budgetChartTooltipEl = null;
