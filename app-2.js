@@ -1073,28 +1073,47 @@ function clearCvLocation(){
    wants a real identifying User-Agent a browser fetch can't set) to fill
    the pin in automatically from the address text, while still leaving
    the map fully clickable afterward to fine-tune or override it. */
+async function geocodeQuery(query, idToken){
+  const resp = await fetch(window.VV_WORKER_URL, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
+    body: JSON.stringify({action:'geocodeAddress', query}),
+  });
+  let data; try{ data = await resp.json(); }catch(e){ data = null; }
+  if(!resp.ok || !data || typeof data.lat!=='number'){
+    throw new Error((data && data.error) || 'Could not find that address on the map.');
+  }
+  return data;
+}
 async function findCvLocationFromAddress(){
   const m = document.getElementById('customVenueModal');
   const warn = m.querySelector('#cvWarn'); warn.style.display='none';
   const address = m.querySelector('#cvAddress').value.trim();
   const name = m.querySelector('#cvName').value.trim();
   const region = m.querySelector('#cvRegion').value.trim();
-  const query = [name, address || region].filter(Boolean).join(', ');
-  if(!query){ warn.textContent='Add a name and an address (or at least a region) first.'; warn.style.display='block'; return; }
+  const addressQuery = address || region;
+  if(!addressQuery){ warn.textContent='Add an address (or at least a region) first.'; warn.style.display='block'; return; }
   const btn = m.querySelector('#cvFindOnMap');
   btn.disabled = true; btn.textContent = 'Finding…';
   try{
     const user = window.firebase && firebase.auth && firebase.auth().currentUser;
     if(!user || !window.VV_WORKER_URL) throw new Error("Sign in first, then try again.");
     const idToken = await user.getIdToken();
-    const resp = await fetch(window.VV_WORKER_URL, {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
-      body: JSON.stringify({action:'geocodeAddress', query}),
-    });
-    let data; try{ data = await resp.json(); }catch(e){ data = null; }
-    if(!resp.ok || !data || typeof data.lat!=='number'){
-      throw new Error((data && data.error) || 'Could not find that address on the map.');
+    let data;
+    try{
+      // The address alone, exactly as typed: OpenStreetMap's geocoder
+      // matches real addresses, not business names, and prepending the
+      // venue's own name (which it has no way to know) to the query was
+      // making otherwise-perfectly-good addresses fail to match anything.
+      data = await geocodeQuery(addressQuery, idToken);
+    }catch(firstErr){
+      // Only retry with the name folded in for the rarer case where the
+      // plain address is too vague on its own (e.g. just a region); skip
+      // it entirely if there's no separate address to fall back from, or
+      // the combined query is identical to what already failed.
+      const combinedQuery = [name, addressQuery].filter(Boolean).join(', ');
+      if(!address || combinedQuery===addressQuery) throw firstErr;
+      data = await geocodeQuery(combinedQuery, idToken);
     }
     setCvLocation(data.lat, data.lng);
     if(cvLocationMap) cvLocationMap.setView([data.lat, data.lng], 14);
