@@ -384,19 +384,26 @@
       <div id="diyGrid" class="diy-grid"></div>
     </section>
 
-    <div class="confirm-backdrop no-print" id="confirmBackdrop">
-      <div class="confirm-box">
-        <p id="confirmMessage">Are you sure?</p>
-        <div class="confirm-actions">
-          <button class="btn" id="confirmNo">No</button>
-          <button class="btn danger" id="confirmYes">Yes, delete</button>
-        </div>
-      </div>
-    </div>
-
 </main>
 </div>
 <div id="overlayContent">
+</div>
+
+<!-- Was nested inside .app/<main> before, which traps it in .app's own
+     stacking context (.app has position:relative + z-index:1): no z-index
+     on this dialog could ever let it out-rank a modal like #modalBackdrop
+     below, which lives here, outside .app, at the root stacking context.
+     That made confirmAction() completely unusable (invisible/unclickable
+     behind the dialog) any time it was triggered while another modal was
+     already open. Moved out to a sibling of the other modals to fix it. -->
+<div class="confirm-backdrop no-print" id="confirmBackdrop">
+  <div class="confirm-box">
+    <p id="confirmMessage">Are you sure?</p>
+    <div class="confirm-actions">
+      <button class="btn" id="confirmNo">No</button>
+      <button class="btn danger" id="confirmYes">Yes, delete</button>
+    </div>
+  </div>
 </div>
 
 <!-- Add photo modal -->
@@ -494,7 +501,7 @@
 <script src="firebase-sync.js?v=20260926-1"></script>
 <script src="app-1.js?v=20260926-4"></script>
 <script src="app-4.js?v=20260913-24"></script>
-<script src="app-2.js?v=20260926-13"></script>
+<script src="app-2.js?v=20260926-14"></script>
 <script src="app-3.js?v=20260926-2"></script>
 <script src="venue-map.js?v=20260926-11"></script>
 <script src="moodboard-pinterest.js?v=27"></script>
