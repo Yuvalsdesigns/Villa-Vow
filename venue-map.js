@@ -146,8 +146,21 @@ function haversineKm(lat1, lng1, lat2, lng2){
   const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
-function googleMapsDirectionsUrl(fromLat, fromLng, toLat, toLng){
-  return 'https://www.google.com/maps/dir/?api=1&origin='+fromLat+','+fromLng+'&destination='+toLat+','+toLng;
+function googleMapsDirectionsUrl(originParam, destinationParam){
+  return 'https://www.google.com/maps/dir/?api=1&origin='+originParam+'&destination='+destinationParam;
+}
+/* The destination needs to actually resolve to the venue, not just its
+   approximate marker coordinates: a curated venue's lat/lng is a
+   region-level estimate (the middle of the nearest town, roughly), so
+   asking Google to reverse-geocode that raw point landed on whatever
+   random address or business happened to sit there instead of the venue
+   itself. Its real address (once set) or at least its name plus region
+   gives Google actual text to geocode, which resolves correctly; only
+   falls back to the raw coordinates when neither is available. */
+function directionsDestinationQuery(v){
+  if(v.address) return v.name+', '+v.address;
+  if(v.region) return v.name+', '+v.region;
+  return v.lat+','+v.lng;
 }
 
 let venueMap = null;
@@ -181,7 +194,6 @@ function buildVenuePopupContent(v){
   const el = document.createElement('div');
   el.className = 'venue-map-popup';
 
-  const capacity = typeof extractVenueCapacity==='function' ? extractVenueCapacity(v) : null;
   // Curated venues get their airport from the hand-picked table above; a
   // custom venue carries its own (picked from the Add/Edit modal's
   // "Nearest airport" field), which also lets a curated venue's assignment
@@ -191,23 +203,21 @@ function buildVenuePopupContent(v){
   const airport = v.hasOwnProperty('nearestAirport') ? v.nearestAirport : VENUE_NEAREST_AIRPORT[v.id];
   const airportHasCoords = airport && typeof airport.lat==='number' && typeof airport.lng==='number';
   const distanceKm = airportHasCoords ? Math.round(haversineKm(v.lat, v.lng, airport.lat, airport.lng)) : null;
+  const locationLine = v.address || v.region || '';
 
-  const bullets = (typeof CUSTOM_VENUE_EXTRA_FIELDS!=='undefined' ? CUSTOM_VENUE_EXTRA_FIELDS : [])
-    .filter(([key])=> (v[key]||'').trim())
-    .map(([key,label])=> '<li><b>'+esc(label)+':</b> '+esc(v[key])+'</li>').join('');
-
+  // Kept deliberately short: name, location, picture, the airport
+  // distance/directions, and a link back to the full card, everything
+  // else (price, guest count, logistics details) is already one click
+  // away in the list, and stuffing it all in here is what made the box
+  // too tall for a compact map with no way to scroll and see the rest.
   el.innerHTML =
     '<img src="'+esc(venuePhotoUrl(v))+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
     + '<div class="venue-map-popup-body">'
       + '<b>'+esc(v.name)+'</b>'
-      + (v.region ? '<span class="venue-map-popup-line">'+esc(v.region)+'</span>' : '')
-      + (v.address ? '<span class="venue-map-popup-line">'+esc(v.address)+'</span>' : '')
-      + '<span class="venue-map-popup-line">'+esc(v.price||'')+(capacity!==null ? ' · ~'+capacity+' guests' : '')+'</span>'
-      + (v.facts&&v.facts.length ? '<div class="venue-map-popup-facts">'+v.facts.map(f=>'<span class="fact">'+esc(f)+'</span>').join('')+'</div>' : '')
-      + (bullets ? '<ul class="venue-contact-bullets">'+bullets+'</ul>' : '')
+      + (locationLine ? '<span class="venue-map-popup-line">'+esc(locationLine)+'</span>' : '')
       + (airportHasCoords ?
           '<span class="venue-map-popup-line">~'+distanceKm+' km from '+esc(airport.name)+(airport.code?' ('+esc(airport.code)+')':'')+'</span>'
-          + '<a class="venue-map-popup-link" href="'+esc(googleMapsDirectionsUrl(v.lat, v.lng, airport.lat, airport.lng))+'" target="_blank" rel="noopener">Get directions to '+esc(airport.code||airport.name)+' ↗</a>'
+          + '<a class="venue-map-popup-link" href="'+esc(googleMapsDirectionsUrl(airport.lat+','+airport.lng, encodeURIComponent(directionsDestinationQuery(v))))+'" target="_blank" rel="noopener">Get directions from '+esc(airport.code||airport.name)+' ↗</a>'
         : (airport && airport.name ? '<span class="venue-map-popup-line">Nearest airport: '+esc(airport.name)+'</span>' : ''))
       + '<button type="button" class="venue-map-popup-link venue-map-popup-view-list">View in list ↓</button>'
     + '</div>';
@@ -246,7 +256,7 @@ function updateVenueMapMarkers(filteredVenues){
       // default markers on the map there was otherwise no way to tell
       // which one was which without clicking each one in turn.
       marker.bindTooltip(esc(v.name), { permanent:true, direction:'top', offset:[0,-30], className:'venue-map-label' });
-      marker.bindPopup(popupContent, { minWidth:230, maxWidth:260, maxHeight:280 });
+      marker.bindPopup(popupContent, { minWidth:190, maxWidth:220, maxHeight:220, autoPanPadding:[20,20] });
       venueMapMarkers[v.id] = marker;
     }
   });

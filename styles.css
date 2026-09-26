@@ -441,21 +441,24 @@
   .venue-map-bounds-toggle{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12.5px;color:var(--ink-soft);cursor:pointer;}
   .venue-map-bounds-toggle input{cursor:pointer;}
   .venue-map-popup-link{display:block;margin-top:2px;border:none;background:none;padding:0;color:var(--wine);font:600 12px var(--font-primary);cursor:pointer;text-decoration:underline;text-underline-offset:2px;text-align:left;}
-  .leaflet-popup-content{font-family:var(--font-primary);color:var(--ink);margin:10px;}
+  /* max-height/overflow forced explicitly rather than trusting Leaflet's
+     own inline styling for it (from the marker's maxHeight option) to
+     apply cleanly on top of this file's own rules: the popup was capped
+     in size but the content inside it wasn't actually scrollable, so
+     anything past the visible area was just cut off with no way to
+     reach it. */
+  .leaflet-popup-content{font-family:var(--font-primary);color:var(--ink);margin:8px;max-height:204px;overflow-y:auto;box-sizing:border-box;}
   .leaflet-popup-content-wrapper{border-radius:10px;}
   /* The little always-visible name label next to every pin, since 20+
      identical default markers give no way to tell which is which without
      clicking each one in turn. */
   .venue-map-label{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:2px 9px;font:600 11.5px var(--font-primary);color:var(--ink);box-shadow:var(--shadow-sm);white-space:nowrap;}
   .venue-map-label::before{display:none;}
-  .venue-map-popup{display:flex;flex-direction:column;gap:6px;}
-  .venue-map-popup img{width:100%;height:78px;border-radius:8px;object-fit:cover;background:var(--surface-2);}
+  .venue-map-popup{display:flex;flex-direction:column;gap:5px;}
+  .venue-map-popup img{width:100%;height:58px;border-radius:7px;object-fit:cover;background:var(--surface-2);}
   .venue-map-popup-body{display:flex;flex-direction:column;gap:3px;min-width:0;}
-  .venue-map-popup-body b{font-size:13.5px;}
-  .venue-map-popup-line{font-size:11.5px;color:var(--ink-soft);}
-  .venue-map-popup-facts{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0;}
-  .venue-map-popup-facts .fact{font-size:10.5px;padding:2px 6px;}
-  .venue-map-popup .venue-contact-bullets{font-size:11.5px;margin:2px 0;padding-left:16px;}
+  .venue-map-popup-body b{font-size:13px;}
+  .venue-map-popup-line{font-size:11px;color:var(--ink-soft);}
   /* A brief highlight when a marker's "View in list" is clicked, so the
      card that was just scrolled to is obvious at a glance among 20+ others. */
   @keyframes venueCardPing{0%,100%{box-shadow:var(--shadow-sm);}40%{box-shadow:0 0 0 3px var(--wine);}}
