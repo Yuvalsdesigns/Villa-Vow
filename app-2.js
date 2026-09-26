@@ -859,7 +859,7 @@ function renderVenues(){
       + (v.isCustom ? '<button class="icon-btn del-custom-venue" title="Delete this venue" style="position:absolute;top:8px;right:8px;">'+svg(ICON.trash)+'</button>' : '')
       + '</div>'
       + '<div class="venue-body">'
-      + '<div><h3>'+esc(v.name)+'</h3>'+(v.region ? '<div class="region">'+esc(v.region)+'</div>' : '')+'</div>'
+      + '<div><h3>'+esc(v.name)+'</h3>'+(v.region ? '<div class="region">'+esc(v.region)+'</div>' : '')+(v.address ? '<div class="venue-address">'+esc(v.address)+'</div>' : '')+'</div>'
       + (linkedReply && linkedReply.decision ? '<span class="decision-badge '+linkedReply.decision+'">'+(linkedReply.decision==='explore'?'Explore more':'Not a fit')+'</span>' : '')
       + '<p>'+esc(v.desc)+'</p>'
       + '<div class="venue-facts">'+(capacity!==null?'<span class="fact fact-capacity">~'+capacity+' guests</span>':'')+(v.facts||[]).map(f=>'<span class="fact">'+esc(f)+'</span>').join('')+'</div>'
@@ -942,6 +942,7 @@ function ensureCustomVenueModal(){
     + '<h3 id="cvModalTitle">Add a venue</h3>'
     + '<label class="field">Venue name<input type="text" id="cvName" placeholder="e.g. Villa Something"></label>'
     + '<label class="field">Region / location (optional)<input type="text" id="cvRegion" placeholder="e.g. Lake Como, Italy, leave blank if unsure"></label>'
+    + '<label class="field">Exact address (optional)<input type="text" id="cvAddress" placeholder="e.g. Via Roma 12, 50100 Firenze, Italy"></label>'
     + '<div class="field">'
       + '<label>Pin on the map (optional, needed for this venue to appear on the Venues map)</label>'
       + '<div id="cvLocationMap" class="cv-location-map"></div>'
@@ -1027,6 +1028,7 @@ function updateCustomVenuePreview(){
 let cvLocationMap = null, cvLocationMarker = null;
 function ensureCvLocationMap(){
   if(cvLocationMap) return cvLocationMap;
+  if(typeof L==='undefined') return null;
   cvLocationMap = L.map('cvLocationMap', { scrollWheelZoom:false }).setView([46, 10], 4);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -1222,6 +1224,7 @@ function openCustomVenueModal(existing){
   m.querySelector('#cvModalTitle').textContent = existing ? 'Edit venue' : 'Add a venue';
   m.querySelector('#cvName').value = existing ? (existing.name||'') : '';
   m.querySelector('#cvRegion').value = existing ? (existing.region||'') : '';
+  m.querySelector('#cvAddress').value = existing ? (existing.address||'') : '';
   m.querySelector('#cvPrice').value = existing ? (existing.price||'') : '';
   m.querySelector('#cvCapacity').value = existing && existing.capacity ? existing.capacity : '';
   m.querySelector('#cvDesc').value = existing ? (existing.desc||'') : '';
@@ -1249,20 +1252,24 @@ function openCustomVenueModal(existing){
   // when it initializes, which it won't until the modal's own open/display
   // change has actually taken effect, hence the double rAF (one to let the
   // .open class's display:flex apply, another for layout to settle) before
-  // creating or resizing the map.
-  requestAnimationFrame(()=> requestAnimationFrame(()=>{
-    ensureCvLocationMap();
+  // creating or resizing the map. Also retries if Leaflet's own script is
+  // still loading (rather than throwing on L being undefined), since this
+  // can be reached moments after page load, before it's finished fetching.
+  function positionCvLocationMap(){
+    const map = ensureCvLocationMap();
+    if(!map){ setTimeout(positionCvLocationMap, 150); return; }
     if(cvLocationMarker){ cvLocationMarker.remove(); cvLocationMarker = null; }
     if(editingVenueOriginalLat!=null && editingVenueOriginalLng!=null){
-      cvLocationMap.setView([editingVenueOriginalLat, editingVenueOriginalLng], 12);
-      cvLocationMarker = L.marker([editingVenueOriginalLat, editingVenueOriginalLng]).addTo(cvLocationMap);
+      map.setView([editingVenueOriginalLat, editingVenueOriginalLng], 12);
+      cvLocationMarker = L.marker([editingVenueOriginalLat, editingVenueOriginalLng]).addTo(map);
       m.querySelector('#cvLocationHint').textContent = 'Location set ('+editingVenueOriginalLat.toFixed(4)+', '+editingVenueOriginalLng.toFixed(4)+'). Click elsewhere on the map to move it.';
     } else {
-      cvLocationMap.setView([46, 10], 4);
+      map.setView([46, 10], 4);
       m.querySelector('#cvLocationHint').textContent = "Click the map to set this venue's location.";
     }
-    cvLocationMap.invalidateSize();
-  }));
+    map.invalidateSize();
+  }
+  requestAnimationFrame(()=> requestAnimationFrame(positionCvLocationMap));
 }
 function saveCustomVenue(){
   const m = document.getElementById('customVenueModal');
@@ -1276,6 +1283,7 @@ function saveCustomVenue(){
   const websiteChanged = website !== editingVenueOriginalWebsite;
   const data = {
     name, region,
+    address: m.querySelector('#cvAddress').value.trim(),
     price: m.querySelector('#cvPrice').value.trim() || 'TBD: inquire',
     desc: m.querySelector('#cvDesc').value.trim(),
     image: m.querySelector('#cvImage').value.trim(),
