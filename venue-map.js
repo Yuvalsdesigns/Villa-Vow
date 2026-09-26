@@ -250,9 +250,15 @@ function updateVenueMapMarkers(filteredVenues){
       const marker = L.marker([v.lat, v.lng]).addTo(map);
       // A permanent name label next to every pin, since with 20+ identical
       // default markers on the map there was otherwise no way to tell
-      // which one was which without clicking each one in turn.
-      marker.bindTooltip(esc(v.name), { permanent:true, direction:'top', offset:[0,-30], className:'venue-map-label' });
+      // which one was which without clicking each one in turn. Leaflet
+      // tooltips are non-interactive by default (clicks pass straight
+      // through to the bare map underneath, doing nothing useful), so the
+      // label looked clickable but wasn't; interactive:true plus an
+      // explicit click handler makes clicking the name open the same
+      // popup as clicking the pin itself, not just the icon.
+      marker.bindTooltip(esc(v.name), { permanent:true, direction:'top', offset:[0,-30], className:'venue-map-label', interactive:true });
       marker.bindPopup(popupContent, { minWidth:190, maxWidth:220, maxHeight:220, autoPanPadding:[20,20] });
+      marker.on('click', ()=> marker.openPopup());
       venueMapMarkers[v.id] = marker;
     }
   });
@@ -318,8 +324,9 @@ function updateAirportMarkers(locatedVenues){
   relevant.forEach((airport, key)=>{
     if(venueMapAirportMarkers[key]) return; // airport details never change under a stable key, nothing to update
     const marker = L.marker([airport.lat, airport.lng], { icon: airportDivIcon() }).addTo(map);
-    marker.bindTooltip(esc(airport.code || airport.name), { permanent:true, direction:'top', offset:[0,-16], className:'venue-map-label venue-map-airport-label' });
+    marker.bindTooltip(esc(airport.code || airport.name), { permanent:true, direction:'top', offset:[0,-16], className:'venue-map-label venue-map-airport-label', interactive:true });
     marker.bindPopup(buildAirportPopupContent(airport), { minWidth:170, maxWidth:210, maxHeight:160 });
+    marker.on('click', ()=> marker.openPopup());
     venueMapAirportMarkers[key] = marker;
   });
 }
