@@ -966,6 +966,127 @@ function renderTravelGuide(){
    re-measures every note once the tab is actually visible. */
 function autoGrowTextarea(el){ el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
 function resizeAllBudgetNotes(){ document.querySelectorAll('#view-budget .notes-input').forEach(autoGrowTextarea); }
+
+/* Six hand-picked, validated hues (fixed order - never cycled/reassigned by
+   rank, so a category keeps its color as others come and go): each is the
+   app's own existing brand color (wine/coral/lilac/butter/cypress/brass,
+   used elsewhere for the tab tints), boosted in saturation until it clears
+   every check - lightness band, chroma floor, CVD adjacent-pair separation,
+   the normal-vision floor, contrast relief - since the softer originals
+   were tuned as background tints, not as chart marks that need to read as
+   distinct at a glance. "Other" (anything past the top 6) is deliberately
+   neutral gray, not a 7th competing hue, matching how it's de-emphasized
+   everywhere else in this method. */
+const BUDGET_CHART_COLORS = ['#409ae3','#f88049','#9567d9','#f99400','#67c05a','#e63f96'];
+const BUDGET_CHART_OTHER_COLOR = '#BBAFA8';
+const BUDGET_CHART_MAX_SLICES = 6;
+/* Groups every budget line's ESTIMATE by category (trimmed and case-folded,
+   so "Catering" and "catering" don't split into two slices; displayed under
+   whichever casing was typed first), sorted largest first. A donut only
+   reads at a glance up to a handful of segments - past that, adjacent
+   slices blur together no matter the color - so anything past the top 6
+   folds into one neutral "Other" slice rather than piling on more hues. */
+function budgetCategoryTotals(){
+  const groups = new Map();
+  state.budget.forEach(b=>{
+    const est = Number(b.estCost)||0;
+    if(est<=0) return;
+    const label = (b.category||'').trim() || 'Other';
+    const key = label.toLowerCase();
+    if(!groups.has(key)) groups.set(key, {label, total:0});
+    groups.get(key).total += est;
+  });
+  const entries = [...groups.values()].sort((a,b)=>b.total-a.total);
+  const total = entries.reduce((s,e)=>s+e.total,0);
+  if(!entries.length) return {entries:[], total:0};
+  const shown = entries.slice(0, BUDGET_CHART_MAX_SLICES);
+  const rest = entries.slice(BUDGET_CHART_MAX_SLICES);
+  if(rest.length) shown.push({label:'Other', total:rest.reduce((s,e)=>s+e.total,0), isOther:true});
+  return {entries:shown, total};
+}
+let budgetChartTooltipEl = null;
+function ensureBudgetChartTooltip(){
+  if(budgetChartTooltipEl) return budgetChartTooltipEl;
+  budgetChartTooltipEl = document.createElement('div');
+  budgetChartTooltipEl.className = 'budget-chart-tooltip';
+  document.body.appendChild(budgetChartTooltipEl);
+  return budgetChartTooltipEl;
+}
+/* A plain SVG ring built from stroke-dasharray/-dashoffset on stacked
+   circles, rather than a charting library, matching how every other view in
+   this app is hand-built. Redrawn from scratch on every call (cheap: at
+   most 7 circles), so it's always in sync with whatever renderBudget() just
+   recomputed - editing an estimate, changing a category, or adding/deleting
+   a line all flow straight through to this chart with no separate wiring. */
+function renderBudgetCategoryChart(){
+  const card = document.getElementById('budgetChartCard');
+  if(!card) return;
+  const {entries, total} = budgetCategoryTotals();
+  if(!entries.length){
+    card.innerHTML = '<h3 class="budget-chart-title">Estimated budget by category</h3><div class="budget-chart-empty">Add an estimate to a line below to see the breakdown by category here.</div>';
+    return;
+  }
+  const R = 56, STROKE = 16, C = 2*Math.PI*R, GAP = entries.length>1 ? 3 : 0;
+  let offset = 0;
+  const segsHtml = entries.map((e,i)=>{
+    const frac = e.total/total;
+    const dashLen = Math.max(0, frac*C - GAP);
+    const color = e.isOther ? BUDGET_CHART_OTHER_COLOR : BUDGET_CHART_COLORS[i % BUDGET_CHART_COLORS.length];
+    const circle = '<circle class="budget-donut-seg" data-i="'+i+'" cx="70" cy="70" r="'+R+'" fill="none" stroke="'+color+'" stroke-width="'+STROKE+'" stroke-dasharray="'+dashLen+' '+(C-dashLen)+'" stroke-dashoffset="'+(-offset)+'" transform="rotate(-90 70 70)"></circle>';
+    offset += frac*C;
+    return circle;
+  }).join('');
+  const legendHtml = entries.map((e,i)=>{
+    const color = e.isOther ? BUDGET_CHART_OTHER_COLOR : BUDGET_CHART_COLORS[i % BUDGET_CHART_COLORS.length];
+    const pct = Math.round(e.total/total*100);
+    return '<li class="budget-legend-row" data-i="'+i+'">'
+      +'<span class="budget-legend-swatch" style="background:'+color+'"></span>'
+      +'<span class="budget-legend-label">'+esc(e.label)+'</span>'
+      +'<span class="budget-legend-value">€'+Math.round(e.total).toLocaleString()+' <span class="budget-legend-pct">· '+pct+'%</span></span>'
+      +'</li>';
+  }).join('');
+  card.innerHTML =
+    '<h3 class="budget-chart-title">Estimated budget by category</h3>'
+    +'<div class="budget-chart-body">'
+      +'<div class="budget-donut-wrap">'
+        +'<svg class="budget-donut" viewBox="0 0 140 140" role="img" aria-label="Estimated budget split by category">'+segsHtml+'</svg>'
+        +'<div class="budget-donut-center"><div class="budget-donut-total mono">€'+Math.round(total).toLocaleString()+'</div><div class="budget-donut-total-label">Total estimated</div></div>'
+      +'</div>'
+      +'<ul class="budget-legend">'+legendHtml+'</ul>'
+    +'</div>';
+
+  const tooltip = ensureBudgetChartTooltip();
+  const segEls = [...card.querySelectorAll('.budget-donut-seg')];
+  const legendEls = [...card.querySelectorAll('.budget-legend-row')];
+  function setActive(i){
+    segEls.forEach(el=> el.classList.toggle('active', el.dataset.i===String(i)));
+    legendEls.forEach(el=> el.classList.toggle('active', el.dataset.i===String(i)));
+  }
+  function clearActive(){
+    segEls.forEach(el=> el.classList.remove('active'));
+    legendEls.forEach(el=> el.classList.remove('active'));
+    tooltip.classList.remove('open');
+  }
+  function showTooltipFor(i, x, y){
+    const e = entries[i];
+    const pct = Math.round(e.total/total*100);
+    tooltip.innerHTML = '<b>'+esc(e.label)+'</b><br>€'+Math.round(e.total).toLocaleString()+' · '+pct+'%';
+    tooltip.style.left = x+'px';
+    tooltip.style.top = y+'px';
+    tooltip.classList.add('open');
+  }
+  segEls.forEach(el=>{
+    const i = Number(el.dataset.i);
+    el.addEventListener('mouseenter', ()=> setActive(i));
+    el.addEventListener('mousemove', ev=> showTooltipFor(i, ev.clientX+14, ev.clientY+14));
+    el.addEventListener('mouseleave', clearActive);
+  });
+  legendEls.forEach(el=>{
+    const i = Number(el.dataset.i);
+    el.addEventListener('mouseenter', ()=>{ setActive(i); const r = el.getBoundingClientRect(); showTooltipFor(i, r.right+10, r.top); });
+    el.addEventListener('mouseleave', clearActive);
+  });
+}
 function renderBudget(){
   if(syncUnavailable && state.budget.length===0){
     state.budget = SEED_BUDGET.map((b,i)=>({id:'local-budget-'+i, ...b}));
@@ -983,6 +1104,7 @@ function renderBudget(){
     tile('€'+paid.toLocaleString(),'Paid so far'),
     tile(String(state.budget.length),'Line items'),
   ].join('');
+  renderBudgetCategoryChart();
   document.getElementById('budgetGoalInput').addEventListener('change', e=>{
     const val = Math.max(0, Number(e.target.value)||0);
     state.budgetGoal = val;
