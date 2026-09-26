@@ -452,7 +452,32 @@ function onVenuesTabShown(){
   setTimeout(()=>{
     map.invalidateSize();
     if(typeof renderVenues==='function') renderVenues();
+    scrollVenueMapClearOfMobileNav();
   }, 50);
+}
+/* On a phone, switching to this tab lands the page at the very top
+   (showTab's scrollTo(0,0)), and everything above the map (the header,
+   the filter bar) is tall enough that the map's own lower portion ends up
+   sitting right where the fixed bottom nav bar always is. That's not just
+   a visual overlap: the nav bar is a positioned element with its own
+   z-index, so it paints (and receives taps) ON TOP of that part of the
+   map, no matter what z-index the map itself is given, since a
+   non-positioned block of page content can never out-rank a positioned
+   one in the browser's own paint order. That's what "tapping a pin does
+   nothing / jumps to a different tab" on mobile actually was: the tap
+   was landing on a bottom-nav button hiding behind/under the map, not on
+   the map at all. Scrolling just enough to clear that overlap, right
+   after the tab becomes active, is what actually fixes it, rather than
+   anything about how the pins themselves handle a click/tap. */
+function scrollVenueMapClearOfMobileNav(){
+  const wrap = document.querySelector('.venue-map-wrap');
+  const nav = document.getElementById('vvMobileNav');
+  if(!wrap || !nav) return;
+  const navRect = nav.getBoundingClientRect();
+  if(navRect.height === 0) return; // desktop layout: no fixed bottom nav to clash with
+  const wrapRect = wrap.getBoundingClientRect();
+  const overlap = wrapRect.bottom - navRect.top;
+  if(overlap > 0) window.scrollBy({ top: overlap + 12, behavior: 'auto' });
 }
 // Covers the "venues tab already active on page load" case; the showTab()
 // hook in app-1.js covers switching to it later.
