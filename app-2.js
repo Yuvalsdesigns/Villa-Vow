@@ -1171,10 +1171,11 @@ function setCustomVenueExtractStatus(msg, isError){
 function applyGuessesToCustomVenue(text){
   const m = document.getElementById('customVenueModal');
   let filled = 0;
-  const setIfEmpty = (id, val)=>{ if(!val) return; const el = m.querySelector('#'+id); if(el && !el.value.trim()){ el.value = val; filled++; } };
+  const filledFields = [];
+  const setIfEmpty = (id, label, val)=>{ if(!val) return; const el = m.querySelector('#'+id); if(el && !el.value.trim()){ el.value = val; filled++; filledFields.push(label+': '+val); } };
   const capacityEl = m.querySelector('#cvCapacity');
-  if(!capacityEl.value.trim()){ const n = guessGuestCountNumber(text); if(n){ capacityEl.value = n; filled++; } }
-  setIfEmpty('cvPrice', guessPriceFromText(text));
+  if(!capacityEl.value.trim()){ const n = guessGuestCountNumber(text); if(n){ capacityEl.value = n; filled++; filledFields.push('Guest capacity: '+n); } }
+  setIfEmpty('cvPrice', 'Price', guessPriceFromText(text));
   /* Description isn't counted toward "filled": guessSummaryFromText just
      grabs the first sentence and near-always succeeds even on totally
      generic marketing copy, so counting it would mask the case where none
@@ -1182,24 +1183,33 @@ function applyGuessesToCustomVenue(text){
      anything, exactly the situation someone needs to be told about. */
   const descEl = m.querySelector('#cvDesc');
   if(!descEl.value.trim()){ const s = guessSummaryFromText(text); if(s) descEl.value = s; }
-  setIfEmpty('cv_availability', guessAvailabilityFromText(text));
-  setIfEmpty('cv_accommodations', guessAccommodationFromText(text));
-  setIfEmpty('cv_ceremonySpace', guessCeremonyFromText(text));
-  setIfEmpty('cv_kosherCatering', guessKosherFromText(text));
-  setIfEmpty('cv_partyMusicPolicy', guessPartyMusicFromText(text));
-  setIfEmpty('cv_dayAfterAmenities', guessDayAfterFromText(text));
-  setIfEmpty('cv_depositPolicy', guessDepositFromText(text));
-  return filled;
+  CUSTOM_VENUE_EXTRA_FIELDS.forEach(([key,label])=>{
+    const guessFn = {
+      availability: guessAvailabilityFromText, accommodations: guessAccommodationFromText,
+      ceremonySpace: guessCeremonyFromText, kosherCatering: guessKosherFromText,
+      partyMusicPolicy: guessPartyMusicFromText, dayAfterAmenities: guessDayAfterFromText,
+      depositPolicy: guessDepositFromText,
+    }[key];
+    if(guessFn) setIfEmpty('cv_'+key, label, guessFn(text));
+  });
+  return { filled, filledFields };
 }
 /* "Found the page/PDF fine but none of the keyword patterns matched
    anything in it" used to show the exact same cheerful "filled in what
    it could find" message as an actual success, with the raw text
    discarded either way, so there was no way to tell the two apart or see
    why. Now a zero-field result puts the full text into Brochure notes
-   so nothing found is lost, and says plainly that nothing auto-matched. */
-function reportCustomVenueExtraction(filled, text, sourceLabel){
+   so nothing found is lost, and says plainly that nothing auto-matched.
+
+   Every filled field's exact guessed value is spelled out (not just a
+   count) so a wrong guess - a page describing several rooms of different
+   sizes, say, where the wrong one got picked - is obvious immediately by
+   reading this line, rather than only found later by hunting through the
+   form or, worse, not at all. */
+function reportCustomVenueExtraction(result, text, sourceLabel){
+  const {filled, filledFields} = result;
   if(filled > 0){
-    setCustomVenueExtractStatus('Filled in '+filled+' field'+(filled===1?'':'s')+' from the '+sourceLabel+', worth double-checking.');
+    setCustomVenueExtractStatus('Filled in from the '+sourceLabel+' - please check each against the real site: '+filledFields.join('; ')+'.');
     return;
   }
   const notesEl = document.getElementById('customVenueModal').querySelector('#cvBrochureNotes');
@@ -1817,16 +1827,49 @@ async function extractPdfText(file){
    narrow pattern like "N guests" alone was matching only description-style
    text and missing the actual number on a real page. */
 function guessGuestCountNumber(text){
-  let m=text.match(/wedding day up to (\d+)/i); if(m) return parseInt(m[1],10);
-  m=text.match(/(?:event )?capacity (?:of |up to |: )?(\d+)/i); if(m) return parseInt(m[1],10);
-  m=text.match(/(\d+)\s*[–-]\s*(\d+)\s*(?:guests|people|pax|persons)/i); if(m) return parseInt(m[2],10);
-  m=text.match(/up to (\d+)\s*(?:guests|people|pax|persons)/i); if(m) return parseInt(m[1],10);
-  m=text.match(/accommodat(?:es|ing)?\s*(?:up to\s*)?(\d+)/i); if(m) return parseInt(m[1],10);
-  m=text.match(/hosts?\s*(?:up to\s*)?(\d+)\s*(?:guests|people)/i); if(m) return parseInt(m[1],10);
-  m=text.match(/(?:max(?:imum)?\.?\s*(?:of\s*)?)(\d+)\s*(?:guests|people|pax|persons)?/i); if(m) return parseInt(m[1],10);
-  m=text.match(/(\d+)\+?\s*(?:guests|people|pax|persons|personnes|invit[ée]s|convives)/i); if(m) return parseInt(m[1],10);
-  m=text.match(/sleeping (\d+)/i); if(m) return parseInt(m[1],10);
-  m=text.match(/sleeps?\s*(?:up to\s*)?(\d+)/i); if(m) return parseInt(m[1],10);
+  // "Wedding day up to N" is this app's own unambiguous phrasing (used in
+  // the curated venue write-ups), so it always wins outright when present.
+  const weddingDay=[...text.matchAll(/wedding day up to (\d+)/gi)].map(m=>parseInt(m[1],10));
+  if(weddingDay.length) return Math.max(...weddingDay);
+
+  // A real venue page very often describes several different spaces (a
+  // terrace, a ballroom, a garden…), each with its own, smaller capacity -
+  // e.g. "the terrace can accommodate 115" alongside "other rooms fit 80".
+  // Returning whichever one happened to match FIRST in the page's raw text
+  // order (the old behavior) could land on a small side room's number
+  // instead of the venue's actual largest usable space, which is what
+  // "can our wedding fit here" really needs. Collecting every match and
+  // taking the largest fixes that: for a page describing multiple spaces,
+  // the biggest one is the meaningful answer.
+  const EVENT_CAPACITY_PATTERNS=[
+    /(?:event )?capacity (?:of |up to |: )?(\d+)/gi,
+    /(\d+)\s*[–-]\s*(\d+)\s*(?:guests|people|pax|persons)/gi,
+    /up to (\d+)\s*(?:guests|people|pax|persons)/gi,
+    /accommodat(?:es|ing)?\s*(?:up to\s*)?(\d+)/gi,
+    /hosts?\s*(?:up to\s*)?(\d+)\s*(?:guests|people)/gi,
+    /(?:max(?:imum)?\.?\s*(?:of\s*)?)(\d+)\s*(?:guests|people|pax|persons)?/gi,
+    /(\d+)\+?\s*(?:guests|people|pax|persons|personnes|invit[ée]s|convives)/gi,
+  ];
+  const eventMatches=[];
+  EVENT_CAPACITY_PATTERNS.forEach(pattern=>{
+    for(const m of text.matchAll(pattern)){
+      // The range pattern captures two numbers (low-high); every other
+      // pattern captures one, always in the last group - take that either way.
+      const n=parseInt(m[m.length-1],10);
+      if(Number.isFinite(n)) eventMatches.push(n);
+    }
+  });
+  if(eventMatches.length) return Math.max(...eventMatches);
+
+  // No real event-capacity wording found anywhere: fall back to overnight
+  // sleeping capacity as a weaker proxy, same reasoning as before (a
+  // sleeps-N number is at least some indication of the property's scale).
+  const sleepMatches=[
+    ...[...text.matchAll(/sleeping (\d+)/gi)].map(m=>parseInt(m[1],10)),
+    ...[...text.matchAll(/sleeps?\s*(?:up to\s*)?(\d+)/gi)].map(m=>parseInt(m[1],10)),
+  ];
+  if(sleepMatches.length) return Math.max(...sleepMatches);
+
   return null;
 }
 function guessGuestCountFromText(text){
