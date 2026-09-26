@@ -117,11 +117,18 @@ tabNav.addEventListener('scroll', updateTabsScrollArrow);
 window.addEventListener('resize', updateTabsScrollArrow);
 setTimeout(updateTabsScrollArrow, 0);
 function showTab(id){
+  // Jumping the page back to the top makes sense when actually switching
+  // to a different tab, but not if something calls showTab() again for
+  // whichever tab is already open (e.g. a stray re-trigger), which would
+  // otherwise yank the page back up from wherever the user had scrolled to.
+  const alreadyOnThisTab = document.getElementById('view-'+id)?.classList.contains('active');
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+id));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
-  const activeBtn = tabNav.querySelector('.tab-btn[data-tab="'+id+'"]');
-  if(activeBtn) activeBtn.scrollIntoView({inline:'nearest', block:'nearest', behavior:'smooth'});
-  window.scrollTo(0,0);
+  if(!alreadyOnThisTab){
+    const activeBtn = tabNav.querySelector('.tab-btn[data-tab="'+id+'"]');
+    if(activeBtn) activeBtn.scrollIntoView({inline:'nearest', block:'nearest', behavior:'smooth'});
+    window.scrollTo(0,0);
+  }
   if(typeof syncMobileNav==='function') syncMobileNav(id);
   if(id==='budget' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
   if(id==='board' && typeof renderPinterestBoards==='function') renderPinterestBoards();
