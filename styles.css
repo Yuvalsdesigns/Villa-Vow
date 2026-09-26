@@ -440,8 +440,20 @@
   .venue-map{height:380px;width:100%;border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow-sm);z-index:1;}
   .venue-map-bounds-toggle{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12.5px;color:var(--ink-soft);cursor:pointer;}
   .venue-map-bounds-toggle input{cursor:pointer;}
-  .venue-map-popup-link{margin-top:4px;border:none;background:none;padding:0;color:var(--wine);font:600 12px var(--font-primary);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
-  .leaflet-popup-content{font-family:var(--font-primary);color:var(--ink);}
+  .venue-map-popup-link{margin-top:2px;border:none;background:none;padding:0;color:var(--wine);font:600 12px var(--font-primary);cursor:pointer;text-decoration:underline;text-underline-offset:2px;text-align:left;}
+  .leaflet-popup-content{font-family:var(--font-primary);color:var(--ink);margin:10px;}
+  .leaflet-popup-content-wrapper{border-radius:10px;}
+  /* The little always-visible name label next to every pin, since 20+
+     identical default markers give no way to tell which is which without
+     clicking each one in turn. */
+  .venue-map-label{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:2px 9px;font:600 11.5px var(--font-primary);color:var(--ink);box-shadow:var(--shadow-sm);white-space:nowrap;}
+  .venue-map-label::before{display:none;}
+  .venue-map-popup{display:flex;gap:10px;align-items:flex-start;}
+  .venue-map-popup img{width:64px;height:64px;border-radius:8px;object-fit:cover;flex:none;background:var(--surface-2);}
+  .venue-map-popup-body{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .venue-map-popup-body b{font-size:13.5px;}
+  .venue-map-popup-region{font-size:11.5px;color:var(--ink-soft);}
+  .venue-map-popup-price{font-size:11.5px;color:var(--ink-soft);}
   /* A brief highlight when a marker's "View in list" is clicked, so the
      card that was just scrolled to is obvious at a glance among 20+ others. */
   @keyframes venueCardPing{0%,100%{box-shadow:var(--shadow-sm);}40%{box-shadow:0 0 0 3px var(--wine);}}
