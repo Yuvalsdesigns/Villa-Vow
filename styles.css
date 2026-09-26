@@ -648,6 +648,11 @@
   .pin img{display:block;width:100%;}
   .pin .pin-body{padding:10px 12px 12px;}
   .pin .pin-tag{font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-family:var(--font-primary);color:var(--brass);}
+  .pin-tag-select{font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-family:var(--font-primary);color:var(--brass);background:transparent;border:1px solid transparent;border-radius:5px;padding:1px 2px;margin:0 0 2px -2px;cursor:pointer;}
+  .pin-tag-select:hover,.pin-tag-select:focus{border-color:var(--line);background:var(--surface-2);outline:none;}
+  .pin-replace-photo{display:block;margin-top:6px;font:600 11px var(--font-primary);color:var(--ink-soft);background:none;border:1px dashed var(--line);border-radius:7px;padding:4px 8px;cursor:pointer;}
+  .pin-replace-photo:hover{color:var(--ink);border-color:var(--ink-faint);}
+  .pin-img-zoomable{cursor:zoom-in;}
   .pin h5{font-size:13.5px;margin:4px 0 2px;}
   .pin-title-input{display:block;width:100%;box-sizing:border-box;font-size:13.5px;font-weight:700;font-family:inherit;color:inherit;margin:4px 0 2px;padding:1px 3px;border:1px solid transparent;background:transparent;border-radius:5px;}
   .pin-title-input:hover,.pin-title-input:focus{border-color:var(--line);background:var(--surface-2);outline:none;}
@@ -939,6 +944,16 @@
   .confirm-actions{display:flex;justify-content:flex-end;gap:8px;}
   .btn.danger{background:var(--danger);border-color:var(--danger);color:#fff;}
   .btn.danger:hover{background:var(--danger);opacity:.9;}
+  /* Full-screen click-to-enlarge for a moodboard pin's own image, same as
+     most photo sites; appended directly to <body> (like the modals above)
+     rather than nested in .app, since .app's own position:relative +
+     z-index would otherwise cap it below anything outside .app. */
+  .vv-lightbox{position:fixed;inset:0;background:rgba(20,16,8,.92);display:none;align-items:center;justify-content:center;z-index:300;padding:28px;}
+  .vv-lightbox.open{display:flex;}
+  .vv-lightbox-img{max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.5);}
+  .vv-lightbox-close{position:fixed;top:16px;right:16px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.15);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .vv-lightbox-close svg{width:18px;height:18px;stroke:#fff;}
+  .vv-lightbox-close:hover{background:rgba(255,255,255,.28);}
   .row-detail{display:none;padding:2px 12px 14px 38px;gap:10px;flex-wrap:wrap;}
   .row-detail.open{display:flex;}
   .row-detail label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--ink-soft);}

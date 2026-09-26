@@ -106,6 +106,60 @@
   window.ensurePinterestWidgets=ensurePinterestScript;
   window.classifyPinterestUrl=classifyPinterestUrl;
 
+  /* Same category list as the "Add Photo"/etc modal's own tag <select>
+     (see #photoTag in index.html), reused here so a moodboard pin's
+     category can be changed in place, right on its own card, instead of
+     only being settable once at creation. */
+  const PIN_TAG_OPTIONS=[['dress','Dress'],['suit','Suit'],['flowers','Flowers'],['venue','Venue'],['music','Music'],['hair','Hair'],['makeup','Makeup'],['stationery','Stationery'],['other','Other']];
+
+  /* A moodboard photo is shown small in its grid tile by design (so many
+     pins fit on screen at once), which is exactly why a click-to-enlarge
+     view matters, same as most photo sites. One shared full-screen overlay
+     is built lazily and reused for every pin, rather than one per card. */
+  let lightboxEl=null;
+  function ensureLightbox(){
+    if(lightboxEl) return lightboxEl;
+    lightboxEl=document.createElement('div');
+    lightboxEl.className='vv-lightbox';
+    lightboxEl.innerHTML='<button type="button" class="vv-lightbox-close" aria-label="Close">'+svg(ICON.x)+'</button><img class="vv-lightbox-img" alt="">';
+    document.body.appendChild(lightboxEl);
+    function close(){ lightboxEl.classList.remove('open'); lightboxEl.querySelector('.vv-lightbox-img').src=''; }
+    lightboxEl.addEventListener('click',function(e){ if(e.target===lightboxEl) close(); });
+    lightboxEl.querySelector('.vv-lightbox-close').addEventListener('click',close);
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });
+    return lightboxEl;
+  }
+  function openLightbox(src){
+    const el=ensureLightbox();
+    el.querySelector('.vv-lightbox-img').src=src;
+    el.classList.add('open');
+  }
+
+  /* Shared resize-then-compress-to-dataURL step for a moodboard photo pin,
+     matching what the original "Add Photo" upload already does (app-3.js's
+     handleFile), so a pin's picture can be swapped for a better one later
+     without needing to delete and re-add the whole pin (which would also
+     lose its title/category/position). */
+  function compressPinImageFile(file,onDone,onTooLarge){
+    const img=new Image();
+    const reader=new FileReader();
+    reader.onload=function(e){
+      img.onload=function(){
+        let quality=0.72; const maxW=1000;
+        const scale=Math.min(1,maxW/img.width);
+        const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+        const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        let url=canvas.toDataURL('image/jpeg',quality);
+        while(url.length>230000&&quality>0.3){ quality-=0.12; url=canvas.toDataURL('image/jpeg',quality); }
+        if(url.length>230000){ onTooLarge(); return; }
+        onDone(url);
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
   /* Pinterest's client-side embed widget (used below only for whole boards)
      is a well-known tracker and gets silently blocked by ad blockers and
      Safari's tracking prevention on some devices, which is why a pin could
@@ -605,7 +659,17 @@
       }else{
         inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
       }
-      el.innerHTML=inner+'<div class="pin-body"><div class="pin-tag">'+(p.tag||'other')+'</div><input class="pin-title-input" type="text" value="'+esc(p.title||'')+'" placeholder="Untitled">'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:var(--font-primary);">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
+      const currentTag=p.tag||'other';
+      const tagOptionsHtml=PIN_TAG_OPTIONS.map(function(t){
+        return '<option value="'+t[0]+'"'+(t[0]===currentTag?' selected':'')+'>'+t[1]+'</option>';
+      }).join('');
+      /* Only a photo's own picture can meaningfully be "replaced": a
+         Pinterest/link pin's image is just a fetched preview of the real
+         source, not something this app owns a copy of. */
+      const replacePhotoHtml=p.type==='photo'
+        ? '<button type="button" class="pin-replace-photo">Change photo</button><input type="file" accept="image/*" class="pin-replace-photo-input" style="display:none;">'
+        : '';
+      el.innerHTML=inner+'<div class="pin-body"><select class="pin-tag-select" aria-label="Category">'+tagOptionsHtml+'</select><input class="pin-title-input" type="text" value="'+esc(p.title||'')+'" placeholder="Untitled">'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:var(--font-primary);">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+replacePhotoHtml+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
       const titleInput=el.querySelector('.pin-title-input');
       const titleCommitted=titleInput.value;
       titleInput.addEventListener('keydown',function(e){
@@ -616,6 +680,35 @@
         if(val===titleCommitted) return;
         if(dbReady) db.collection('pinboard').doc(p.id).update({title:val});
         else { p.title=val; }
+      });
+      el.querySelector('.pin-tag-select').addEventListener('change',function(e){
+        const val=e.target.value;
+        if(dbReady) db.collection('pinboard').doc(p.id).update({tag:val});
+        else { p.tag=val; }
+      });
+      if(p.type==='photo'){
+        const changeBtn=el.querySelector('.pin-replace-photo');
+        const replaceInput=el.querySelector('.pin-replace-photo-input');
+        changeBtn.addEventListener('click',function(){ replaceInput.click(); });
+        replaceInput.addEventListener('change',function(){
+          const file=replaceInput.files[0];
+          if(!file) return;
+          compressPinImageFile(file,function(url){
+            if(dbReady) db.collection('pinboard').doc(p.id).update({imageDataUrl:url});
+            else { p.imageDataUrl=url; renderBoard(); }
+          },function(){
+            alert('This image is still too large after compression. Try a smaller or simpler photo.');
+          });
+        });
+      }
+      // A bare pin image (an uploaded photo, or a fetched Pinterest/video
+      // preview) has no click behavior of its own to open larger; one
+      // already wrapped in a link (a section thumbnail) keeps going to its
+      // real source instead, so it's left alone here.
+      el.querySelectorAll('img').forEach(function(img){
+        if(img.closest('a')) return;
+        img.classList.add('pin-img-zoomable');
+        img.addEventListener('click',function(){ openLightbox(img.src); });
       });
       el.querySelector('.del-pin').addEventListener('click',function(){
         const label=p.title?'"'+p.title+'"':'this item';
