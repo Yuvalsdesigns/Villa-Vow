@@ -250,7 +250,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 "use strict";
 
 let db = null, dbReady=false, syncUnavailable=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, customStyles:[], customVenues:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[] };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -647,6 +647,16 @@ async function initDb(){
     unsub.push(db.collection('venueFavorites').onSnapshot(snap=>{
       state.venues = {};
       snap.docs.forEach(d=> state.venues[d.id] = d.data());
+      renderVenues();
+    }, err=>setSync(false,'sync error')));
+    /* Edits to a curated (built-in) venue, keyed by that venue's fixed id,
+       are stored here instead of mutating the VENUES array itself, since
+       that array lives in source code, not Firestore. allVenuesList()
+       layers each one over its base curated entry at render time. */
+    unsub.push(db.collection('venueOverrides').onSnapshot(snap=>{
+      state.venueOverrides = {};
+      snap.docs.forEach(d=> state.venueOverrides[d.id] = d.data());
+      if(typeof renderVenueFilters==='function') renderVenueFilters();
       renderVenues();
     }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('customStyles').orderBy('createdAt','desc').onSnapshot(snap=>{

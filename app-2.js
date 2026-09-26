@@ -740,7 +740,17 @@ function extractVenueCapacity(v){
   const text=[v.desc,...(v.facts||[])].join(' ');
   return guessGuestCountNumber(text);
 }
-function allVenuesList(){ return VENUES.concat(state.customVenues||[]); }
+/* Curated venues live in the VENUES array (source code), not Firestore,
+   so an edit to one can't be written back into VENUES itself. Instead it's
+   layered on top of the base entry from venueOverrides (keyed by the
+   venue's own fixed id) at render time, same idea as venueFavorites. A
+   real custom venue (isCustom:true) is unaffected, it's already fully
+   stored in Firestore and edited in place. */
+function allVenuesList(){
+  const overrides = state.venueOverrides||{};
+  const curated = VENUES.map(v=> overrides[v.id] ? Object.assign({}, v, overrides[v.id]) : v);
+  return curated.concat(state.customVenues||[]);
+}
 function renderVenueFilters(){
   const regionSel=document.getElementById('venueRegionFilter');
   if(!regionSel) return;
@@ -785,7 +795,8 @@ function renderVenues(){
       + '<span class="venue-image-label"></span>'
       + '<span class="price">'+esc(v.price)+'</span>'
       + (v.badge? '<span class="price" style="margin-left:6px;background:rgba(0,0,0,.4)">'+esc(v.badge)+'</span>' : '')
-      + (v.isCustom ? '<button class="icon-btn edit-custom-venue" title="Edit this venue" style="position:absolute;top:8px;right:38px;">'+svg(ICON.pencil)+'</button><button class="icon-btn del-custom-venue" title="Delete this venue" style="position:absolute;top:8px;right:8px;">'+svg(ICON.trash)+'</button>' : '')
+      + '<button class="icon-btn edit-custom-venue" title="Edit this venue" style="position:absolute;top:8px;'+(v.isCustom?'right:38px;':'right:8px;')+'">'+svg(ICON.pencil)+'</button>'
+      + (v.isCustom ? '<button class="icon-btn del-custom-venue" title="Delete this venue" style="position:absolute;top:8px;right:8px;">'+svg(ICON.trash)+'</button>' : '')
       + '</div>'
       + '<div class="venue-body">'
       + '<div><h3>'+esc(v.name)+'</h3>'+(v.region ? '<div class="region">'+esc(v.region)+'</div>' : '')+'</div>'
@@ -793,11 +804,11 @@ function renderVenues(){
       + '<p>'+esc(v.desc)+'</p>'
       + '<div class="venue-facts">'+(capacity!==null?'<span class="fact fact-capacity">~'+capacity+' guests</span>':'')+(v.facts||[]).map(f=>'<span class="fact">'+esc(f)+'</span>').join('')+'</div>'
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'+(v.sources||[]).map(s=>{const label=Array.isArray(s)?s[0]:s.label;const url=Array.isArray(s)?s[1]:s.url;return '<a class="src-link" target="_blank" rel="noopener" href="'+esc(url)+'">'+esc(label)+' ↗</a>';}).join('')+'</div>'
-      + (v.isCustom ? (()=>{
+      + (()=>{
           const bullets = CUSTOM_VENUE_EXTRA_FIELDS.filter(([key])=> (v[key]||'').trim()).map(([key,label])=> '<li><b>'+esc(label)+':</b> '+esc(v[key])+'</li>').join('');
           return bullets ? '<ul class="venue-contact-bullets">'+bullets+'</ul>' : '';
-        })() : '')
-      + (v.isCustom && v.brochureNotes ? '<p class="venue-contact-notes"><b>Notes:</b> '+esc(v.brochureNotes)+'</p>' : '')
+        })()
+      + (v.brochureNotes ? '<p class="venue-contact-notes"><b>Notes:</b> '+esc(v.brochureNotes)+'</p>' : '')
       + '<div class="venue-image-credit">'+(v.image ? 'Venue / wedding source image' : 'Destination visual reference, verify the exact property photo before publishing')+'</div>'
       + '<div class="venue-note"><textarea placeholder="Notes on '+esc(v.name)+'…">'+esc(fav.note||'')+'</textarea></div>'
       + '<div class="venue-foot"><button class="heart'+(fav.favorited?' on':'')+'">'+svg(ICON.heart)+'</button><span style="font-size:11.5px;color:var(--ink-faint)">'+(fav.favorited?'Shortlisted':'Tap to shortlist')+'</span>'
@@ -813,8 +824,8 @@ function renderVenues(){
     const logReplyBtn = card.querySelector('.log-reply-link');
     if(logReplyBtn) logReplyBtn.addEventListener('click', ()=> openVenueContactModal(null, v));
     card.querySelector('.ask-venue').addEventListener('click', ()=> askPlannerAbout('What should we know about planning a kosher, chuppah wedding in '+v.name+' ('+v.region+') specifically? We are considering it for our shortlist.'));
+    card.querySelector('.edit-custom-venue').addEventListener('click', ()=> openCustomVenueModal(v));
     if(v.isCustom){
-      card.querySelector('.edit-custom-venue').addEventListener('click', ()=> openCustomVenueModal(v));
       card.querySelector('.del-custom-venue').addEventListener('click', ()=>{
         confirmAction('Delete "'+v.name+'" from your venues list?', ()=>{
           if(dbReady) db.collection('customVenues').doc(v.id).delete().catch(err=> console.error(err));
@@ -848,6 +859,16 @@ const CUSTOM_VENUE_EXTRA_FIELDS = [
   ['depositPolicy', 'Deposit / cancellation policy', 'e.g. 30% deposit, refundable until 60 days out'],
 ];
 let editingCustomVenueId = null;
+/* True while editing a curated (built-in) venue rather than a real
+   customVenues doc, so saveCustomVenue() knows to write to venueOverrides
+   instead, and to leave curated-only fields (facts tags, badge, gradient)
+   untouched since this form has no UI for them. */
+let editingVenueIsCurated = false;
+/* The website field's value as loaded into the form, so a save that never
+   touched this field doesn't blow away a curated venue's original (often
+   multiple, individually labeled) source links with a single generic
+   "Venue website" entry. Only actually edited values get written. */
+let editingVenueOriginalWebsite = '';
 function ensureCustomVenueModal(){
   let m = document.getElementById('customVenueModal');
   if(m) return m;
@@ -1091,6 +1112,7 @@ function fetchCustomVenueText(){
 }
 function openCustomVenueModal(existing){
   editingCustomVenueId = existing ? existing.id : null;
+  editingVenueIsCurated = !!(existing && !existing.isCustom);
   const m = ensureCustomVenueModal();
   m.querySelector('#cvModalTitle').textContent = existing ? 'Edit venue' : 'Add a venue';
   m.querySelector('#cvName').value = existing ? (existing.name||'') : '';
@@ -1100,7 +1122,8 @@ function openCustomVenueModal(existing){
   m.querySelector('#cvDesc').value = existing ? (existing.desc||'') : '';
   {
     const src0 = existing && existing.sources && existing.sources[0];
-    m.querySelector('#cvWebsite').value = src0 ? (Array.isArray(src0) ? (src0[1]||'') : (src0.url||'')) : '';
+    editingVenueOriginalWebsite = src0 ? (Array.isArray(src0) ? (src0[1]||'') : (src0.url||'')) : '';
+    m.querySelector('#cvWebsite').value = editingVenueOriginalWebsite;
   }
   m.querySelector('#cvImage').value = existing ? (existing.image||'') : '';
   CUSTOM_VENUE_EXTRA_FIELDS.forEach(([key])=>{ m.querySelector('#cv_'+key).value = existing ? (existing[key]||'') : ''; });
@@ -1111,7 +1134,7 @@ function openCustomVenueModal(existing){
   setCustomVenueExtractStatus('');
   updateCustomVenuePreview();
   m.querySelector('#cvWarn').style.display='none';
-  m.querySelector('#cvDelete').style.display = existing ? 'inline-flex' : 'none';
+  m.querySelector('#cvDelete').style.display = (existing && existing.isCustom) ? 'inline-flex' : 'none';
   m.classList.add('open');
 }
 function saveCustomVenue(){
@@ -1123,20 +1146,32 @@ function saveCustomVenue(){
   const capacity = parseInt(m.querySelector('#cvCapacity').value,10);
   const hasCapacity = Number.isFinite(capacity) && capacity>0;
   const website = m.querySelector('#cvWebsite').value.trim();
+  const websiteChanged = website !== editingVenueOriginalWebsite;
   const data = {
     name, region,
     price: m.querySelector('#cvPrice').value.trim() || 'TBD: inquire',
     desc: m.querySelector('#cvDesc').value.trim(),
     image: m.querySelector('#cvImage').value.trim(),
     brochureNotes: m.querySelector('#cvBrochureNotes').value.trim(),
-    capacity: hasCapacity ? capacity : null,
-    facts: hasCapacity ? ['Wedding day up to '+capacity+' guests'] : [],
-    sources: website ? [{label:'Venue website', url:website}] : [],
-    badge: 'Your addition',
-    grad: ['#DCE8E2','#4A6C7A'],
-    isCustom: true,
   };
   CUSTOM_VENUE_EXTRA_FIELDS.forEach(([key])=>{ data[key] = m.querySelector('#cv_'+key).value.trim(); });
+  if(editingVenueIsCurated){
+    // This form has no UI for a curated venue's fact-tag badges, its
+    // "Your addition" badge, its card gradient, or its (often several,
+    // individually labeled) source links, so none of those are touched
+    // here, only overwritten if the user actually changed them. Otherwise
+    // saving an unrelated field (say, just the price) would silently wipe
+    // out that curated venue's original tags and links.
+    if(hasCapacity) data.capacity = capacity;
+    if(websiteChanged) data.sources = website ? [{label:'Venue website', url:website}] : [];
+  } else {
+    data.capacity = hasCapacity ? capacity : null;
+    data.facts = hasCapacity ? ['Wedding day up to '+capacity+' guests'] : [];
+    data.sources = website ? [{label:'Venue website', url:website}] : [];
+    data.badge = 'Your addition';
+    data.grad = ['#DCE8E2','#4A6C7A'];
+    data.isCustom = true;
+  }
   warn.style.display='none';
   const saveBtn = m.querySelector('#cvSave');
   saveBtn.disabled = true; saveBtn.textContent='Saving…';
@@ -1185,7 +1220,16 @@ function saveCustomVenue(){
       saveFailed(new Error("you're signed out, sign in again (top-right corner) and retry"));
       return;
     }
-    if(editingCustomVenueId){
+    if(editingVenueIsCurated){
+      const id = editingCustomVenueId;
+      if(dbReady){
+        withTimeout(db.collection('venueOverrides').doc(id).set(data, {merge:true})).then(saveSucceeded).catch(saveFailed);
+      } else {
+        state.venueOverrides = state.venueOverrides||{};
+        state.venueOverrides[id] = Object.assign({}, state.venueOverrides[id], data);
+        renderVenueFilters(); renderVenues(); saveSucceeded();
+      }
+    } else if(editingCustomVenueId){
       const id = editingCustomVenueId;
       if(dbReady){
         withTimeout(db.collection('customVenues').doc(id).update(data)).then(saveSucceeded).catch(saveFailed);
