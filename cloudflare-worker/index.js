@@ -344,6 +344,58 @@ async function fetchHtml(url, userAgent) {
   return { ok: true, html: text };
 }
 
+/* Returning the bare image URL from extractPreview and letting the
+   browser load it directly (as this used to do) fails silently on any
+   site that hotlink-protects its images by checking the Referer header,
+   or serves session/token-scoped CDN URLs: the Worker's own fetch found
+   an og:image tag, but the <img> tag on villa-vow's own domain then gets
+   blocked or 403s with no visible error. Downloading the image here,
+   server-side, and inlining it as a data URI sidesteps that entirely,
+   the same way an uploaded photo already works. Capped well under
+   Firestore's 1MB document limit; the client still re-compresses it
+   through the same resize pipeline used for uploads. */
+const MAX_INLINE_IMAGE_BYTES = 6 * 1024 * 1024;
+
+async function arrayBufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function fetchImageAsDataUri(imageUrl, refererUrl) {
+  let resp;
+  try {
+    resp = await fetch(imageUrl, {
+      redirect: 'follow',
+      headers: {
+        'User-Agent': LINK_PREVIEW_USER_AGENTS[0],
+        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        'Referer': refererUrl,
+      },
+    });
+  } catch {
+    return null;
+  }
+  if (!resp.ok) return null;
+  const contentType = (resp.headers.get('content-type') || '').split(';')[0].trim();
+  if (!contentType.startsWith('image/')) return null;
+  const declaredLength = Number(resp.headers.get('content-length') || 0);
+  if (declaredLength && declaredLength > MAX_INLINE_IMAGE_BYTES) return null;
+  let buffer;
+  try {
+    buffer = await resp.arrayBuffer();
+  } catch {
+    return null;
+  }
+  if (buffer.byteLength > MAX_INLINE_IMAGE_BYTES) return null;
+  const base64 = await arrayBufferToBase64(buffer);
+  return 'data:' + contentType + ';base64,' + base64;
+}
+
 function extractPreview(html, baseUrl) {
   function metaContent(prop) {
     const escaped = prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -460,7 +512,15 @@ async function handleResolveLinkPreview(rawUrl) {
     }
     const preview = extractPreview(result.html, url);
     if (preview) {
-      return json({ url: url.toString(), title: preview.title, thumbnailUrl: preview.thumbnailUrl });
+      let dataUri = null;
+      try { dataUri = await fetchImageAsDataUri(preview.thumbnailUrl, url.toString()); } catch {}
+      return json({
+        url: url.toString(),
+        title: preview.title,
+        thumbnailUrl: dataUri || preview.thumbnailUrl,
+        sourceImageUrl: preview.thumbnailUrl,
+        inlined: !!dataUri,
+      });
     }
   }
   if (lastStatus) return json({ error: 'Could not fetch that page', status: lastStatus }, 502);

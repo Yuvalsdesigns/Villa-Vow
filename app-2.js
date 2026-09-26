@@ -924,35 +924,51 @@ function updateCustomVenuePreview(){
   if(url){ m.querySelector('#cvPreview').src = url; wrap.style.display='block'; }
   else wrap.style.display='none';
 }
-/* Same resize-then-compress-to-dataURL approach as venue replies'
-   readVenueContactThumb, but written straight into the existing Photo URL
-   field instead of a separate thumbnail field, custom venues only ever
-   had the one image slot to begin with. */
+/* Shared resize-then-compress-to-dataURL step, same approach as venue
+   replies' readVenueContactThumb: shrink to 900px on the long edge, then
+   step the JPEG quality down until the string is small enough for a
+   Firestore field. Used both for a photo picked from disk and one the
+   Worker just fetched from a venue's website (see fetchCustomVenuePhoto
+   below), so a fetched photo ends up the same size either way. */
+function resizeDataUrlForVenuePhoto(dataUrl, onDone){
+  const img = new Image();
+  img.onload = ()=>{
+    const max = 900, scale = Math.min(1, max/Math.max(img.width,img.height));
+    const canvas = document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
+    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+    let q=.8, url=canvas.toDataURL('image/jpeg',q);
+    while(url.length>350000 && q>.4){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
+    onDone(url);
+  };
+  img.onerror = ()=> onDone(dataUrl);
+  img.src = dataUrl;
+}
 function readCustomVenuePhoto(file){
   const m = document.getElementById('customVenueModal');
   const warn = m.querySelector('#cvWarn'); warn.style.display='none';
   if(!file || !/^image\//.test(file.type)){ warn.textContent='Please choose an image.'; warn.style.display='block'; return; }
   const reader = new FileReader();
   reader.onload = e=>{
-    const img = new Image();
-    img.onload = ()=>{
-      const max = 900, scale = Math.min(1, max/Math.max(img.width,img.height));
-      const canvas = document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
-      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-      let q=.8, url=canvas.toDataURL('image/jpeg',q);
-      while(url.length>350000 && q>.4){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
+    resizeDataUrlForVenuePhoto(e.target.result, url=>{
       m.querySelector('#cvImage').value = url;
       updateCustomVenuePreview();
-    };
-    img.src = e.target.result;
+    });
   };
   reader.readAsDataURL(file);
 }
 /* Reuses the same Worker og:image lookup already built for Wedding d.i.y
    link previews (fetchLinkPreviewThumbnail, defined in app-3.js), rather
-   than a second copy of the same fetch logic. Falls back to telling the
-   user to paste a direct picture link instead if the page has no usable
-   preview image, or the fetch itself fails. */
+   than a second copy of the same fetch logic. The Worker now downloads
+   the image itself and hands back a data: URI instead of a bare URL,
+   since a bare URL silently fails to load whenever the venue's site
+   hotlink-protects its images (checks the Referer header) or serves a
+   session-scoped CDN link, and that's exactly what "fetch photo" looked
+   like it was doing while quietly doing nothing. A data: URI gets resized
+   through the same pipeline as an uploaded photo; a plain URL (an older
+   Worker deploy, or one that couldn't be downloaded) is still used
+   directly as before. Falls back to telling the user to paste a direct
+   picture link instead if the page has no usable preview image, or the
+   fetch itself fails. */
 function fetchCustomVenuePhoto(){
   const m = document.getElementById('customVenueModal');
   const website = m.querySelector('#cvWebsite').value.trim();
@@ -963,8 +979,15 @@ function fetchCustomVenuePhoto(){
   fetchLinkPreviewThumbnail(website,
     (thumbUrl)=>{
       btn.disabled = false; btn.textContent='Fetch photo from website';
-      m.querySelector('#cvImage').value = thumbUrl;
-      updateCustomVenuePreview();
+      if(/^data:/.test(thumbUrl)){
+        resizeDataUrlForVenuePhoto(thumbUrl, url=>{
+          m.querySelector('#cvImage').value = url;
+          updateCustomVenuePreview();
+        });
+      } else {
+        m.querySelector('#cvImage').value = thumbUrl;
+        updateCustomVenuePreview();
+      }
     },
     (err)=>{
       btn.disabled = false; btn.textContent='Fetch photo from website';
