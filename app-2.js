@@ -1256,7 +1256,7 @@ function openCustomVenueModal(existing){
   m.querySelector('#cvLat').value = editingVenueOriginalLat!=null ? editingVenueOriginalLat : '';
   m.querySelector('#cvLng').value = editingVenueOriginalLng!=null ? editingVenueOriginalLng : '';
   {
-    const existingAirport = existing && (existing.nearestAirport || (typeof VENUE_NEAREST_AIRPORT!=='undefined' && VENUE_NEAREST_AIRPORT[existing.id]));
+    const existingAirport = existing && (existing.nearestAirport || (typeof VENUE_NEAREST_AIRPORT_CODE!=='undefined' && typeof airportByCode==='function' && airportByCode(VENUE_NEAREST_AIRPORT_CODE[existing.id])));
     editingVenueOriginalAirportLabel = existingAirport ? (existingAirport.code ? airportLabel(existingAirport) : existingAirport.name) : '';
     m.querySelector('#cvAirport').value = editingVenueOriginalAirportLabel;
   }

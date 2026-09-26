@@ -30,114 +30,110 @@
    Google Maps. That link is a plain URL, not the Maps JavaScript API,
    so it needs no key and can't hit anyone's quota or bill anyone. */
 
-const VENUE_NEAREST_AIRPORT = {
-  'tuscany': { code:'FLR', name:'Florence Airport', lat:43.8100, lng:11.2051 },
-  'puglia': { code:'BRI', name:'Bari Karol Wojtyła Airport', lat:41.1389, lng:16.7606 },
-  'provence': { code:'MRS', name:'Marseille Provence Airport', lat:43.4393, lng:5.2214 },
-  'algarve': { code:'FAO', name:'Faro Airport', lat:37.0144, lng:-7.9659 },
-  'dajas': { code:'OPO', name:'Porto Airport', lat:41.2481, lng:-8.6814 },
-  'kotor': { code:'TIV', name:'Tivat Airport', lat:42.4047, lng:18.7233 },
-  'stari-mlin': { code:'TIV', name:'Tivat Airport', lat:42.4047, lng:18.7233 },
-  'huma-kotor': { code:'TIV', name:'Tivat Airport', lat:42.4047, lng:18.7233 },
-  'lake-orta-laqua': { code:'MXP', name:'Milan Malpensa Airport', lat:45.6306, lng:8.7281 },
-  'lake-iseo-catilina': { code:'BGY', name:'Milan Bergamo Airport', lat:45.6739, lng:9.7042 },
-  'villa-helene': { code:'BGY', name:'Milan Bergamo Airport', lat:45.6739, lng:9.7042 },
-  'lake-maggiore-royal': { code:'MXP', name:'Milan Malpensa Airport', lat:45.6306, lng:8.7281 },
-  'villa-clodia': { code:'FCO', name:'Rome Fiumicino Airport', lat:41.8003, lng:12.2389 },
-  'rocca-romana': { code:'FCO', name:'Rome Fiumicino Airport', lat:41.8003, lng:12.2389 },
-  'podere-sant-antonio': { code:'FCO', name:'Rome Fiumicino Airport', lat:41.8003, lng:12.2389 },
-  'poderaccio-bolsena': { code:'FCO', name:'Rome Fiumicino Airport', lat:41.8003, lng:12.2389 },
-  'cilento-castello': { code:'NAP', name:'Naples Capodichino Airport', lat:40.8860, lng:14.2908 },
-  'il-pilaccio': { code:'NAP', name:'Naples Capodichino Airport', lat:40.8860, lng:14.2908 },
-  'umbria-monastero': { code:'PEG', name:"Perugia San Francesco d'Assisi Airport", lat:43.0959, lng:12.5133 },
-  'villa-poropati': { code:'PUY', name:'Pula Airport', lat:44.8935, lng:13.9222 },
-  'borgo-lapis': { code:'PUY', name:'Pula Airport', lat:44.8935, lng:13.9222 },
-  'procida': { code:'NAP', name:'Naples Capodichino Airport', lat:40.8860, lng:14.2908 },
-  'lake-ohrid': { code:'OHD', name:'Ohrid St. Paul the Apostle Airport', lat:41.1800, lng:20.7423 },
-  'albanian-riviera': { code:'TIA', name:'Tirana International Airport', lat:41.4147, lng:19.7206 },
-  'lake-bohinj': { code:'LJU', name:'Ljubljana Jože Pučnik Airport', lat:46.2237, lng:14.4576 },
-  'la-darbia': { code:'MXP', name:'Milan Malpensa Airport', lat:45.6306, lng:8.7281 },
-};
+/* A pick-list of major European/Mediterranean airports: the "Nearest
+   airport" field on any venue (curated or custom) picks from this same
+   list, so there's exactly one source of truth for an airport's
+   coordinates and details, not two copies that could drift apart.
+   Covers the countries this app's own curated destinations already span,
+   plus other common ones a venue you add yourself might be near. Not
+   exhaustive: the field also accepts any free-typed name that isn't in
+   this list, just without a distance or directions link, since there'd
+   be no coordinates to compute either from.
 
-/* A broader pick-list of major European/Mediterranean airports, for the
-   "Nearest airport" field on a custom venue (VENUE_NEAREST_AIRPORT above
-   only covers the 26 curated ones). Covers the countries this app's own
-   curated destinations already span, plus other common ones a venue you
-   add yourself might be near. Not exhaustive: the field also accepts any
-   free-typed name that isn't in this list, just without a distance or
-   directions link, since there'd be no coordinates to compute either
-   from. */
+   `primary:false` marks the handful of airports that share a metro area
+   with a clearly bigger sibling already in this list (e.g. Milan Linate
+   and Bergamo next to Malpensa) so the map can call that one out as the
+   main international gateway; every other entry is the only realistic
+   option for its own city/region, so it's primary by default (the key is
+   simply left off rather than set true on all ~60 of them). This is a
+   judgment call only made where it's genuinely well known, not a formal
+   domestic/international classification, since nearly every airport
+   here does handle international flights at some level. */
 const AIRPORTS = [
-  {code:'FCO',name:'Rome Fiumicino Airport',lat:41.8003,lng:12.2389},
-  {code:'CIA',name:'Rome Ciampino Airport',lat:41.7994,lng:12.5949},
-  {code:'MXP',name:'Milan Malpensa Airport',lat:45.6306,lng:8.7281},
-  {code:'LIN',name:'Milan Linate Airport',lat:45.4451,lng:9.2767},
-  {code:'BGY',name:'Milan Bergamo Airport',lat:45.6739,lng:9.7042},
-  {code:'VCE',name:'Venice Marco Polo Airport',lat:45.5053,lng:12.3519},
-  {code:'FLR',name:'Florence Airport',lat:43.8100,lng:11.2051},
-  {code:'PSA',name:'Pisa Airport',lat:43.6839,lng:10.3927},
-  {code:'BLQ',name:'Bologna Airport',lat:44.5354,lng:11.2887},
-  {code:'NAP',name:'Naples Capodichino Airport',lat:40.8860,lng:14.2908},
-  {code:'BRI',name:'Bari Karol Wojtyła Airport',lat:41.1389,lng:16.7606},
-  {code:'BDS',name:'Brindisi Airport',lat:40.6576,lng:17.9470},
-  {code:'CTA',name:'Catania Airport',lat:37.4668,lng:15.0664},
-  {code:'PMO',name:'Palermo Airport',lat:38.1760,lng:13.0910},
-  {code:'VRN',name:'Verona Airport',lat:45.3957,lng:10.8885},
-  {code:'TRN',name:'Turin Airport',lat:45.2008,lng:7.6497},
-  {code:'GOA',name:'Genoa Airport',lat:44.4133,lng:8.8375},
-  {code:'PEG',name:"Perugia San Francesco d'Assisi Airport",lat:43.0959,lng:12.5133},
-  {code:'OLB',name:'Olbia Airport',lat:40.8987,lng:9.5175},
-  {code:'CAG',name:'Cagliari Airport',lat:39.2515,lng:9.0543},
-  {code:'CDG',name:'Paris Charles de Gaulle Airport',lat:49.0097,lng:2.5479},
-  {code:'ORY',name:'Paris Orly Airport',lat:48.7233,lng:2.3794},
-  {code:'NCE',name:"Nice Côte d'Azur Airport",lat:43.6584,lng:7.2159},
-  {code:'MRS',name:'Marseille Provence Airport',lat:43.4393,lng:5.2214},
-  {code:'LYS',name:'Lyon Airport',lat:45.7256,lng:5.0811},
-  {code:'TLS',name:'Toulouse Airport',lat:43.6293,lng:1.3638},
-  {code:'BOD',name:'Bordeaux Airport',lat:44.8283,lng:-0.7156},
-  {code:'NTE',name:'Nantes Airport',lat:47.1532,lng:-1.6107},
-  {code:'MPL',name:'Montpellier Airport',lat:43.5762,lng:3.9630},
-  {code:'LIS',name:'Lisbon Airport',lat:38.7813,lng:-9.1359},
-  {code:'OPO',name:'Porto Airport',lat:41.2481,lng:-8.6814},
-  {code:'FAO',name:'Faro Airport',lat:37.0144,lng:-7.9659},
-  {code:'MAD',name:'Madrid Barajas Airport',lat:40.4936,lng:-3.5668},
-  {code:'BCN',name:'Barcelona Airport',lat:41.2974,lng:2.0833},
-  {code:'AGP',name:'Málaga Airport',lat:36.6749,lng:-4.4991},
-  {code:'PMI',name:'Palma de Mallorca Airport',lat:39.5517,lng:2.7388},
-  {code:'IBZ',name:'Ibiza Airport',lat:38.8729,lng:1.3731},
-  {code:'VLC',name:'Valencia Airport',lat:39.4893,lng:-0.4816},
-  {code:'SVQ',name:'Seville Airport',lat:37.4180,lng:-5.8931},
-  {code:'ATH',name:'Athens Airport',lat:37.9364,lng:23.9445},
-  {code:'JTR',name:'Santorini Airport',lat:36.3992,lng:25.4793},
-  {code:'JMK',name:'Mykonos Airport',lat:37.4351,lng:25.3481},
-  {code:'CHQ',name:'Chania Airport',lat:35.5317,lng:24.1497},
-  {code:'HER',name:'Heraklion Airport',lat:35.3397,lng:25.1803},
-  {code:'CFU',name:'Corfu Airport',lat:39.6019,lng:19.9117},
-  {code:'RHO',name:'Rhodes Airport',lat:36.4054,lng:28.0862},
-  {code:'ZAG',name:'Zagreb Airport',lat:45.7429,lng:16.0688},
-  {code:'SPU',name:'Split Airport',lat:43.5389,lng:16.2980},
-  {code:'DBV',name:'Dubrovnik Airport',lat:42.5614,lng:18.2682},
-  {code:'PUY',name:'Pula Airport',lat:44.8935,lng:13.9222},
-  {code:'ZAD',name:'Zadar Airport',lat:44.1083,lng:15.3467},
-  {code:'TGD',name:'Podgorica Airport',lat:42.3594,lng:19.2519},
-  {code:'TIV',name:'Tivat Airport',lat:42.4047,lng:18.7233},
-  {code:'LJU',name:'Ljubljana Airport',lat:46.2237,lng:14.4576},
-  {code:'TIA',name:'Tirana International Airport',lat:41.4147,lng:19.7206},
-  {code:'OHD',name:'Ohrid St. Paul the Apostle Airport',lat:41.1800,lng:20.7423},
-  {code:'SKP',name:'Skopje Airport',lat:41.9616,lng:21.6214},
-  {code:'GVA',name:'Geneva Airport',lat:46.2381,lng:6.1090},
-  {code:'ZRH',name:'Zurich Airport',lat:47.4647,lng:8.5492},
-  {code:'VIE',name:'Vienna Airport',lat:48.1103,lng:16.5697},
-  {code:'SZG',name:'Salzburg Airport',lat:47.7933,lng:13.0043},
-  {code:'MUC',name:'Munich Airport',lat:48.3538,lng:11.7861},
-  {code:'FRA',name:'Frankfurt Airport',lat:50.0379,lng:8.5622},
-  {code:'BER',name:'Berlin Brandenburg Airport',lat:52.3667,lng:13.5033},
-  {code:'MLA',name:'Malta International Airport',lat:35.8575,lng:14.4775},
-  {code:'LCA',name:'Larnaca Airport',lat:34.8751,lng:33.6249},
-  {code:'PFO',name:'Paphos Airport',lat:34.7180,lng:32.4857},
+  {code:'FCO',name:'Rome Fiumicino Airport',city:'Rome, Italy',lat:41.8003,lng:12.2389},
+  {code:'CIA',name:'Rome Ciampino Airport',city:'Rome, Italy',lat:41.7994,lng:12.5949,primary:false},
+  {code:'MXP',name:'Milan Malpensa Airport',city:'Milan, Italy',lat:45.6306,lng:8.7281},
+  {code:'LIN',name:'Milan Linate Airport',city:'Milan, Italy',lat:45.4451,lng:9.2767,primary:false},
+  {code:'BGY',name:'Milan Bergamo Airport',city:'Milan, Italy',lat:45.6739,lng:9.7042,primary:false},
+  {code:'VCE',name:'Venice Marco Polo Airport',city:'Venice, Italy',lat:45.5053,lng:12.3519},
+  {code:'FLR',name:'Florence Airport',city:'Florence, Italy',lat:43.8100,lng:11.2051},
+  {code:'PSA',name:'Pisa Airport',city:'Pisa / Tuscany, Italy',lat:43.6839,lng:10.3927},
+  {code:'BLQ',name:'Bologna Airport',city:'Bologna, Italy',lat:44.5354,lng:11.2887},
+  {code:'NAP',name:'Naples Capodichino Airport',city:'Naples, Italy',lat:40.8860,lng:14.2908},
+  {code:'BRI',name:'Bari Karol Wojtyła Airport',city:'Bari, Italy',lat:41.1389,lng:16.7606},
+  {code:'BDS',name:'Brindisi Airport',city:'Brindisi / Puglia, Italy',lat:40.6576,lng:17.9470,primary:false},
+  {code:'CTA',name:'Catania Airport',city:'Catania, Italy',lat:37.4668,lng:15.0664},
+  {code:'PMO',name:'Palermo Airport',city:'Palermo, Italy',lat:38.1760,lng:13.0910},
+  {code:'VRN',name:'Verona Airport',city:'Verona, Italy',lat:45.3957,lng:10.8885},
+  {code:'TRN',name:'Turin Airport',city:'Turin, Italy',lat:45.2008,lng:7.6497},
+  {code:'GOA',name:'Genoa Airport',city:'Genoa, Italy',lat:44.4133,lng:8.8375},
+  {code:'PEG',name:"Perugia San Francesco d'Assisi Airport",city:'Perugia / Umbria, Italy',lat:43.0959,lng:12.5133,primary:false},
+  {code:'OLB',name:'Olbia Airport',city:'Olbia / North Sardinia, Italy',lat:40.8987,lng:9.5175},
+  {code:'CAG',name:'Cagliari Airport',city:'Cagliari / South Sardinia, Italy',lat:39.2515,lng:9.0543},
+  {code:'CDG',name:'Paris Charles de Gaulle Airport',city:'Paris, France',lat:49.0097,lng:2.5479},
+  {code:'ORY',name:'Paris Orly Airport',city:'Paris, France',lat:48.7233,lng:2.3794,primary:false},
+  {code:'NCE',name:"Nice Côte d'Azur Airport",city:'Nice, France',lat:43.6584,lng:7.2159},
+  {code:'MRS',name:'Marseille Provence Airport',city:'Marseille, France',lat:43.4393,lng:5.2214},
+  {code:'LYS',name:'Lyon Airport',city:'Lyon, France',lat:45.7256,lng:5.0811},
+  {code:'TLS',name:'Toulouse Airport',city:'Toulouse, France',lat:43.6293,lng:1.3638},
+  {code:'BOD',name:'Bordeaux Airport',city:'Bordeaux, France',lat:44.8283,lng:-0.7156},
+  {code:'NTE',name:'Nantes Airport',city:'Nantes, France',lat:47.1532,lng:-1.6107},
+  {code:'MPL',name:'Montpellier Airport',city:'Montpellier, France',lat:43.5762,lng:3.9630,primary:false},
+  {code:'LIS',name:'Lisbon Airport',city:'Lisbon, Portugal',lat:38.7813,lng:-9.1359},
+  {code:'OPO',name:'Porto Airport',city:'Porto, Portugal',lat:41.2481,lng:-8.6814},
+  {code:'FAO',name:'Faro Airport',city:'Faro / Algarve, Portugal',lat:37.0144,lng:-7.9659},
+  {code:'MAD',name:'Madrid Barajas Airport',city:'Madrid, Spain',lat:40.4936,lng:-3.5668},
+  {code:'BCN',name:'Barcelona Airport',city:'Barcelona, Spain',lat:41.2974,lng:2.0833},
+  {code:'AGP',name:'Málaga Airport',city:'Málaga, Spain',lat:36.6749,lng:-4.4991},
+  {code:'PMI',name:'Palma de Mallorca Airport',city:'Mallorca, Spain',lat:39.5517,lng:2.7388},
+  {code:'IBZ',name:'Ibiza Airport',city:'Ibiza, Spain',lat:38.8729,lng:1.3731},
+  {code:'VLC',name:'Valencia Airport',city:'Valencia, Spain',lat:39.4893,lng:-0.4816},
+  {code:'SVQ',name:'Seville Airport',city:'Seville, Spain',lat:37.4180,lng:-5.8931},
+  {code:'ATH',name:'Athens Airport',city:'Athens, Greece',lat:37.9364,lng:23.9445},
+  {code:'JTR',name:'Santorini Airport',city:'Santorini, Greece',lat:36.3992,lng:25.4793},
+  {code:'JMK',name:'Mykonos Airport',city:'Mykonos, Greece',lat:37.4351,lng:25.3481},
+  {code:'CHQ',name:'Chania Airport',city:'Chania / West Crete, Greece',lat:35.5317,lng:24.1497},
+  {code:'HER',name:'Heraklion Airport',city:'Heraklion / East Crete, Greece',lat:35.3397,lng:25.1803},
+  {code:'CFU',name:'Corfu Airport',city:'Corfu, Greece',lat:39.6019,lng:19.9117},
+  {code:'RHO',name:'Rhodes Airport',city:'Rhodes, Greece',lat:36.4054,lng:28.0862},
+  {code:'ZAG',name:'Zagreb Airport',city:'Zagreb, Croatia',lat:45.7429,lng:16.0688},
+  {code:'SPU',name:'Split Airport',city:'Split, Croatia',lat:43.5389,lng:16.2980},
+  {code:'DBV',name:'Dubrovnik Airport',city:'Dubrovnik, Croatia',lat:42.5614,lng:18.2682},
+  {code:'PUY',name:'Pula Airport',city:'Pula / Istria, Croatia',lat:44.8935,lng:13.9222},
+  {code:'ZAD',name:'Zadar Airport',city:'Zadar, Croatia',lat:44.1083,lng:15.3467},
+  {code:'TGD',name:'Podgorica Airport',city:'Podgorica, Montenegro',lat:42.3594,lng:19.2519},
+  {code:'TIV',name:'Tivat Airport',city:'Tivat / Bay of Kotor, Montenegro',lat:42.4047,lng:18.7233},
+  {code:'LJU',name:'Ljubljana Airport',city:'Ljubljana, Slovenia',lat:46.2237,lng:14.4576},
+  {code:'TIA',name:'Tirana International Airport',city:'Tirana, Albania',lat:41.4147,lng:19.7206},
+  {code:'OHD',name:'Ohrid St. Paul the Apostle Airport',city:'Ohrid, North Macedonia',lat:41.1800,lng:20.7423},
+  {code:'SKP',name:'Skopje Airport',city:'Skopje, North Macedonia',lat:41.9616,lng:21.6214},
+  {code:'GVA',name:'Geneva Airport',city:'Geneva, Switzerland',lat:46.2381,lng:6.1090},
+  {code:'ZRH',name:'Zurich Airport',city:'Zurich, Switzerland',lat:47.4647,lng:8.5492},
+  {code:'VIE',name:'Vienna Airport',city:'Vienna, Austria',lat:48.1103,lng:16.5697},
+  {code:'SZG',name:'Salzburg Airport',city:'Salzburg, Austria',lat:47.7933,lng:13.0043},
+  {code:'MUC',name:'Munich Airport',city:'Munich, Germany',lat:48.3538,lng:11.7861},
+  {code:'FRA',name:'Frankfurt Airport',city:'Frankfurt, Germany',lat:50.0379,lng:8.5622},
+  {code:'BER',name:'Berlin Brandenburg Airport',city:'Berlin, Germany',lat:52.3667,lng:13.5033},
+  {code:'MLA',name:'Malta International Airport',city:'Malta',lat:35.8575,lng:14.4775},
+  {code:'LCA',name:'Larnaca Airport',city:'Larnaca, Cyprus',lat:34.8751,lng:33.6249},
+  {code:'PFO',name:'Paphos Airport',city:'Paphos, Cyprus',lat:34.7180,lng:32.4857},
 ];
 function airportLabel(a){ return a.name+' ('+a.code+')'; }
 function findAirportByLabel(label){ return AIRPORTS.find(a=> airportLabel(a)===label); }
+function airportByCode(code){ return AIRPORTS.find(a=> a.code===code); }
+
+/* Each curated venue's nearest airport, by code, looked up against
+   AIRPORTS above rather than duplicating its coordinates/city/primary
+   details a second time here. */
+const VENUE_NEAREST_AIRPORT_CODE = {
+  'tuscany':'FLR', 'puglia':'BRI', 'provence':'MRS', 'algarve':'FAO', 'dajas':'OPO',
+  'kotor':'TIV', 'stari-mlin':'TIV', 'huma-kotor':'TIV',
+  'lake-orta-laqua':'MXP', 'lake-iseo-catilina':'BGY', 'villa-helene':'BGY', 'lake-maggiore-royal':'MXP',
+  'villa-clodia':'FCO', 'rocca-romana':'FCO', 'podere-sant-antonio':'FCO', 'poderaccio-bolsena':'FCO',
+  'cilento-castello':'NAP', 'il-pilaccio':'NAP', 'umbria-monastero':'PEG',
+  'villa-poropati':'PUY', 'borgo-lapis':'PUY', 'procida':'NAP',
+  'lake-ohrid':'OHD', 'albanian-riviera':'TIA', 'lake-bohinj':'LJU', 'la-darbia':'MXP',
+};
 
 function haversineKm(lat1, lng1, lat2, lng2){
   const R = 6371;
@@ -200,7 +196,7 @@ function buildVenuePopupContent(v){
   // be corrected, or explicitly cleared (an own nearestAirport key set to
   // null, hence the hasOwnProperty check rather than v.nearestAirport ||
   // the table, which could never let a clear actually take effect).
-  const airport = v.hasOwnProperty('nearestAirport') ? v.nearestAirport : VENUE_NEAREST_AIRPORT[v.id];
+  const airport = v.hasOwnProperty('nearestAirport') ? v.nearestAirport : airportByCode(VENUE_NEAREST_AIRPORT_CODE[v.id]);
   const airportHasCoords = airport && typeof airport.lat==='number' && typeof airport.lng==='number';
   const distanceKm = airportHasCoords ? Math.round(haversineKm(v.lat, v.lng, airport.lat, airport.lng)) : null;
   const locationLine = v.address || v.region || '';
@@ -269,6 +265,63 @@ function updateVenueMapMarkers(filteredVenues){
     map.fitBounds(bounds, { padding:[30,30], maxZoom: venueMapEverFitted ? map.getZoom() : 11 });
     venueMapEverFitted = true;
   }
+
+  updateAirportMarkers(located);
+}
+
+let venueMapAirportMarkers = {}; // airport code (or name, if code-less) -> L.Marker
+/* A plain emoji glyph rather than a hand-drawn SVG path: guaranteed to
+   render as a clearly recognizable airplane on every device's own emoji
+   font, with none of the risk of a custom path looking wrong without a
+   way to preview it first. */
+function airportDivIcon(){
+  return L.divIcon({
+    html: '<div class="venue-map-airport-icon">✈️</div>',
+    className: 'venue-map-airport-icon-wrap',
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  });
+}
+function buildAirportPopupContent(airport){
+  const el = document.createElement('div');
+  el.className = 'venue-map-popup';
+  el.innerHTML =
+    '<div class="venue-map-popup-body">'
+    + '<b>'+esc(airport.name)+(airport.code ? ' ('+esc(airport.code)+')' : '')+'</b>'
+    + (airport.city ? '<span class="venue-map-popup-line">'+esc(airport.city)+'</span>' : '')
+    + '<span class="venue-map-popup-line">'+(airport.primary===false ? 'Secondary airport for this area' : 'Main airport for this area')+'</span>'
+    + '</div>';
+  return el;
+}
+/* Only the airports actually relevant to whichever venues are currently
+   shown, not the full ~65-airport list, since a plane icon for every one
+   of them at once would be its own kind of clutter and most would be
+   nowhere near what's actually on screen. This is what gives an at-a-
+   glance sense of how far each venue's airport really is: a venue's own
+   popup already has the exact distance, but seeing both pins together on
+   the same map is the more immediate, visual version of that. */
+function updateAirportMarkers(locatedVenues){
+  const map = ensureVenueMap();
+  if(!map) return;
+  const relevant = new Map();
+  locatedVenues.forEach(v=>{
+    const airport = v.hasOwnProperty('nearestAirport') ? v.nearestAirport : airportByCode(VENUE_NEAREST_AIRPORT_CODE[v.id]);
+    if(airport && typeof airport.lat==='number' && typeof airport.lng==='number'){
+      relevant.set(airport.code || airport.name, airport);
+    }
+  });
+
+  Object.keys(venueMapAirportMarkers).forEach(key=>{
+    if(!relevant.has(key)){ venueMapAirportMarkers[key].remove(); delete venueMapAirportMarkers[key]; }
+  });
+
+  relevant.forEach((airport, key)=>{
+    if(venueMapAirportMarkers[key]) return; // airport details never change under a stable key, nothing to update
+    const marker = L.marker([airport.lat, airport.lng], { icon: airportDivIcon() }).addTo(map);
+    marker.bindTooltip(esc(airport.code || airport.name), { permanent:true, direction:'top', offset:[0,-16], className:'venue-map-label venue-map-airport-label' });
+    marker.bindPopup(buildAirportPopupContent(airport), { minWidth:170, maxWidth:210, maxHeight:160 });
+    venueMapAirportMarkers[key] = marker;
+  });
 }
 
 /* The other direction: renderVenues() calls this as one more filter
