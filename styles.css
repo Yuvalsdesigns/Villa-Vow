@@ -349,7 +349,7 @@
     outline:2px solid var(--brass);outline-offset:1px;
   }
   textarea{resize:vertical;min-height:60px;font-family:var(--font-primary);}
-  label.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-soft);}
+  label.field,div.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-soft);}
 
 
 
@@ -436,6 +436,19 @@
   .budget-add{display:grid;grid-template-columns:1.1fr 1.4fr .8fr .8fr auto;gap:8px;margin-top:12px;align-items:end;}
 
   /* Venues */
+  .venue-map-wrap{margin:0 0 18px;}
+  .venue-map{height:380px;width:100%;border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow-sm);z-index:1;}
+  .venue-map-bounds-toggle{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12.5px;color:var(--ink-soft);cursor:pointer;}
+  .venue-map-bounds-toggle input{cursor:pointer;}
+  .venue-map-popup-link{margin-top:4px;border:none;background:none;padding:0;color:var(--wine);font:600 12px var(--font-primary);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+  .leaflet-popup-content{font-family:var(--font-primary);color:var(--ink);}
+  /* A brief highlight when a marker's "View in list" is clicked, so the
+     card that was just scrolled to is obvious at a glance among 20+ others. */
+  @keyframes venueCardPing{0%,100%{box-shadow:var(--shadow-sm);}40%{box-shadow:0 0 0 3px var(--wine);}}
+  .venue-card-pinged{animation:venueCardPing 1.6s ease;}
+  .cv-location-map{height:200px;width:100%;border-radius:8px;border:1px solid var(--line);z-index:1;}
+  .cv-location-hint{margin:6px 0 0;font-size:12px;color:var(--ink-soft);}
+
   .venue-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:18px;}
   .venue-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column;}
   .venue-hero{height:108px;position:relative;display:flex;align-items:flex-end;padding:12px 14px;color:#fff;}

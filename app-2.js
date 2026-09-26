@@ -5,6 +5,8 @@ const VENUES_PART_1 = [
     "id": "tuscany",
     "name": "Tuscany",
     "region": "Florence & Chianti, Italy",
+    "lat": 43.7696,
+    "lng": 11.2558,
     "price": "€€€–€€€€",
     "grad": [
       "#C9DFC3",
@@ -32,6 +34,8 @@ const VENUES_PART_1 = [
     "id": "puglia",
     "name": "Puglia",
     "region": "Valle d’Itria & the Adriatic coast, Italy",
+    "lat": 40.7833,
+    "lng": 17.2833,
     "price": "€€–€€€",
     "grad": [
       "#F2DFC0",
@@ -59,6 +63,8 @@ const VENUES_PART_1 = [
     "id": "provence",
     "name": "Provence",
     "region": "Luberon & the Var, South of France",
+    "lat": 43.9114,
+    "lng": 5.2,
     "price": "€€€–€€€€",
     "grad": [
       "#D9CFEA",
@@ -86,6 +92,8 @@ const VENUES_PART_1 = [
     "id": "algarve",
     "name": "The Algarve",
     "region": "Lagos & Praia da Luz, Portugal",
+    "lat": 37.102,
+    "lng": -8.6746,
     "price": "€€–€€€",
     "grad": [
       "#CFE3ED",
@@ -113,6 +121,8 @@ const VENUES_PART_1 = [
     "id": "dajas",
     "name": "Dájas Douro Valley",
     "region": "São Lourenço do Douro, Portugal",
+    "lat": 41.16,
+    "lng": -8.13,
     "price": "TBD: inquire",
     "badge": "Your find",
     "grad": [
@@ -150,6 +160,8 @@ const VENUES_PART_2 = [
     "id": "kotor",
     "name": "Bay of Kotor",
     "region": "Montenegro: Dobrota, Perast, Luštica & Kamenari",
+    "lat": 42.4247,
+    "lng": 18.7712,
     "price": "€€–€€€",
     "badge": "Hidden gem",
     "grad": [
@@ -183,6 +195,8 @@ const VENUES_PART_2 = [
     "id": "stari-mlin",
     "name": "Villa Stari Mlin",
     "region": "Luštica Peninsula, Bay of Kotor, Montenegro",
+    "lat": 42.435,
+    "lng": 18.67,
     "price": "Known hire, inquire",
     "badge": "Small group",
     "grad": [
@@ -212,6 +226,8 @@ const VENUES_PART_2 = [
     "id": "huma-kotor",
     "name": "Huma Kotor Bay",
     "region": "Dobrota, Bay of Kotor, Montenegro",
+    "lat": 42.4478,
+    "lng": 18.7644,
     "price": "€€€",
     "badge": "Hotel + villas",
     "grad": [
@@ -241,6 +257,8 @@ const VENUES_PART_2 = [
     "id": "lake-orta-laqua",
     "name": "Lake Orta / Laqua by the Lake",
     "region": "Pettenasco, Lake Orta, Piedmont, Italy",
+    "lat": 45.8167,
+    "lng": 8.4083,
     "price": "€€€",
     "badge": "Lake Como alternative",
     "grad": [
@@ -270,6 +288,8 @@ const VENUES_PART_2 = [
     "id": "lake-iseo-catilina",
     "name": "La Catilina",
     "region": "Lake Iseo, Lombardy, Italy",
+    "lat": 45.6547,
+    "lng": 10.0511,
     "price": "€€–€€€",
     "badge": "High priority",
     "grad": [
@@ -306,6 +326,8 @@ const VENUES_PART_3 = [
     "id": "villa-helene",
     "name": "Villa Hélène",
     "region": "Lake Iseo, Lombardy, Italy",
+    "lat": 45.68,
+    "lng": 10.07,
     "price": "TBD",
     "badge": "Multi-day fit",
     "grad": [
@@ -332,6 +354,8 @@ const VENUES_PART_3 = [
     "id": "lake-maggiore-royal",
     "name": "Royal Villa 4",
     "region": "Lake Maggiore, Stresa, Italy",
+    "lat": 45.8842,
+    "lng": 8.5389,
     "price": "€€€",
     "badge": "Lake alternative",
     "grad": [
@@ -356,6 +380,8 @@ const VENUES_PART_3 = [
     "id": "villa-clodia",
     "name": "Villa Clodia / Lake Bracciano",
     "region": "Manziana, Lake Bracciano, near Rome, Italy",
+    "lat": 42.0989,
+    "lng": 12.1264,
     "price": "€€€",
     "badge": "Lake + Rome",
     "grad": [
@@ -385,6 +411,8 @@ const VENUES_PART_3 = [
     "id": "rocca-romana",
     "name": "Residenza di Rocca Romana",
     "region": "Lake Bracciano, Italy",
+    "lat": 42.1024,
+    "lng": 12.1802,
     "price": "€€",
     "badge": "Weekend fit",
     "grad": [
@@ -410,6 +438,8 @@ const VENUES_PART_3 = [
     "id": "podere-sant-antonio",
     "name": "Podere Sant'Antonio",
     "region": "Lake Bolsena, Lazio, Italy",
+    "lat": 42.6417,
+    "lng": 11.9897,
     "price": "€€",
     "badge": "Secret Italy",
     "grad": [
@@ -442,6 +472,8 @@ const VENUES_PART_4 = [
     "id": "poderaccio-bolsena",
     "name": "Il Poderaccio Agri-Relais",
     "region": "Lake Bolsena, Lazio, Italy",
+    "lat": 42.62,
+    "lng": 11.95,
     "price": "€€",
     "badge": "Weekend fit",
     "grad": [
@@ -467,6 +499,8 @@ const VENUES_PART_4 = [
     "id": "cilento-castello",
     "name": "Castello di Rocca Cilento",
     "region": "Cilento, Campania, Italy",
+    "lat": 40.35,
+    "lng": 15.15,
     "price": "€€–€€€",
     "badge": "Secret Italy",
     "grad": [
@@ -492,6 +526,8 @@ const VENUES_PART_4 = [
     "id": "il-pilaccio",
     "name": "Il Pilaccio nel Cilento",
     "region": "Perdifumo, Cilento, Italy",
+    "lat": 40.2967,
+    "lng": 15.0733,
     "price": "€€",
     "badge": "Pool + sea",
     "grad": [
@@ -517,6 +553,8 @@ const VENUES_PART_4 = [
     "id": "umbria-monastero",
     "name": "Monastero Santa Margherita",
     "region": "Umbria, Italy",
+    "lat": 42.85,
+    "lng": 12.65,
     "price": "€€–€€€",
     "badge": "Tuscany alternative",
     "grad": [
@@ -542,6 +580,8 @@ const VENUES_PART_4 = [
     "id": "villa-poropati",
     "name": "Villa Poropati",
     "region": "Grožnjan / Istria, Croatia",
+    "lat": 45.3736,
+    "lng": 13.7239,
     "price": "€€",
     "badge": "Adriatic alternative",
     "grad": [
@@ -573,6 +613,8 @@ const VENUES_PART_5 = [
     "id": "borgo-lapis",
     "name": "Borgo Lapis",
     "region": "Fabci / Višnjan, Istria, Croatia",
+    "lat": 45.28,
+    "lng": 13.72,
     "price": "€€–€€€",
     "badge": "Private hamlet feel",
     "grad": [
@@ -598,6 +640,8 @@ const VENUES_PART_5 = [
     "id": "procida",
     "name": "Procida",
     "region": "Bay of Naples, Italy",
+    "lat": 40.7597,
+    "lng": 14.0219,
     "price": "€€",
     "badge": "Island wild card",
     "grad": [
@@ -623,6 +667,8 @@ const VENUES_PART_5 = [
     "id": "lake-ohrid",
     "name": "Lake Ohrid",
     "region": "Ohrid & Struga, North Macedonia",
+    "lat": 41.1231,
+    "lng": 20.8016,
     "price": "€",
     "badge": "Wild card",
     "grad": [
@@ -652,6 +698,8 @@ const VENUES_PART_5 = [
     "id": "albanian-riviera",
     "name": "Albanian Riviera",
     "region": "Himarë, Dhërmi & southern coast, Albania",
+    "lat": 40.1017,
+    "lng": 19.7439,
     "price": "€",
     "badge": "Wild card",
     "grad": [
@@ -677,6 +725,8 @@ const VENUES_PART_5 = [
     "id": "lake-bohinj",
     "name": "Lake Bohinj",
     "region": "Slovenia",
+    "lat": 46.2833,
+    "lng": 13.8833,
     "price": "€€",
     "badge": "Lake wild card",
     "grad": [
@@ -702,6 +752,8 @@ const VENUES_PART_5 = [
     "id": "la-darbia",
     "name": "La Darbia",
     "region": "Ameno / Vacciaghetto, Lake Orta, Piedmont, Italy",
+    "lat": 45.8102,
+    "lng": 8.4283,
     "price": "TBD: inquire",
     "badge": "Full-property buyout",
     "image": "https://ladarbia.com/wp-content/uploads/2024/11/homepage-ladarbia.webp",
@@ -773,8 +825,10 @@ function renderVenues(){
     return (!q || hay.includes(q)) && (!region || (v.region||'').toLowerCase().startsWith(region))
       && (!minGuests || capacity===null || capacity>=minGuests)
       && (!contactedFilter || (contactedFilter==='contacted' ? contacted : !contacted))
-      && (!shortlistedFilter || (shortlistedFilter==='shortlisted' ? shortlisted : !shortlisted));
+      && (!shortlistedFilter || (shortlistedFilter==='shortlisted' ? shortlisted : !shortlisted))
+      && (typeof venueMapBoundsFilterPasses!=='function' || venueMapBoundsFilterPasses(v));
   });
+  if(typeof updateVenueMapMarkers==='function') updateVenueMapMarkers(filtered);
   if(!filtered.length){
     grid.innerHTML='<div class="empty-board" style="grid-column:1/-1;">No matches yet. Try a broader search.</div>';
     return;
@@ -783,7 +837,7 @@ function renderVenues(){
     const fav = state.venues[v.id]||{};
     const capacity=extractVenueCapacity(v);
     const linkedReply = state.venueContacts.find(c=>c.venueId===v.id);
-    const card = document.createElement('div'); card.className='venue-card';
+    const card = document.createElement('div'); card.className='venue-card'; card.dataset.venueId = v.id;
     const venuePhoto = v.image || STYLE_PHOTOS[{
       'tuscany':'venueTuscany','puglia':'venuePuglia','provence':'venueProvence','algarve':'venueAlgarve','dajas':'venueDouro',
       'kotor':'venueAdriatic','villa-stari-mlin':'venueAdriatic','huma-kotor':'venueAdriatic','lake-orta':'venueLake','lake-iseo':'venueLake','villa-helene':'venueLake','royal-villa-4':'venueLake','lake-bracciano':'venueLake','rocca-romana':'venueLake','lake-bolsena':'venueLake','poderaccio-bolsena':'venueLake','cilento-castello':'venueSouthItaly','il-pilaccio':'venueSouthItaly','umbria-monastero':'venueUmbria','villa-poropati':'venueIstria','borgo-lapis':'venueIstria','procida':'venueProcida','lake-ohrid':'venueLake','albanian-riviera':'venueAdriatic','lake-bohinj':'venueAdriatic'
@@ -869,6 +923,10 @@ let editingVenueIsCurated = false;
    multiple, individually labeled) source links with a single generic
    "Venue website" entry. Only actually edited values get written. */
 let editingVenueOriginalWebsite = '';
+/* Same idea, for the map pin: only written on save if it was actually
+   placed/moved in this session, so reopening and resaving a venue that
+   already has a location (curated or custom) never accidentally clears it. */
+let editingVenueOriginalLat = null, editingVenueOriginalLng = null;
 function ensureCustomVenueModal(){
   let m = document.getElementById('customVenueModal');
   if(m) return m;
@@ -878,6 +936,13 @@ function ensureCustomVenueModal(){
     + '<h3 id="cvModalTitle">Add a venue</h3>'
     + '<label class="field">Venue name<input type="text" id="cvName" placeholder="e.g. Villa Something"></label>'
     + '<label class="field">Region / location (optional)<input type="text" id="cvRegion" placeholder="e.g. Lake Como, Italy, leave blank if unsure"></label>'
+    + '<div class="field">'
+      + '<label>Pin on the map (optional, needed for this venue to appear on the Venues map)</label>'
+      + '<div id="cvLocationMap" class="cv-location-map"></div>'
+      + '<p class="cv-location-hint" id="cvLocationHint">Click the map to set this venue\'s location.</p>'
+      + '<button class="btn small ghost" id="cvClearLocation" type="button" style="align-self:flex-start;">Clear location</button>'
+    + '</div>'
+    + '<input type="hidden" id="cvLat"><input type="hidden" id="cvLng">'
     + '<label class="field">Price<input type="text" id="cvPrice" placeholder="e.g. €€€ or TBD: inquire"></label>'
     + '<label class="field">Guest capacity (optional)<input type="number" min="0" id="cvCapacity" placeholder="e.g. 80"></label>'
     + '<label class="field">Description<textarea id="cvDesc" rows="3" placeholder="What makes this one worth considering?"></textarea></label>'
@@ -926,6 +991,7 @@ function ensureCustomVenueModal(){
     const filled = applyGuessesToCustomVenue(text);
     reportCustomVenueExtraction(filled, text, 'pasted text');
   });
+  m.querySelector('#cvClearLocation').addEventListener('click', ()=> clearCvLocation());
   m.querySelector('#cvSave').addEventListener('click', saveCustomVenue);
   m.querySelector('#cvDelete').addEventListener('click', ()=>{
     if(!editingCustomVenueId) return;
@@ -944,6 +1010,39 @@ function updateCustomVenuePreview(){
   const wrap = m.querySelector('#cvPreviewWrap');
   if(url){ m.querySelector('#cvPreview').src = url; wrap.style.display='block'; }
   else wrap.style.display='none';
+}
+/* A small click-to-drop-a-pin map inside the Add/Edit Venue modal, so a
+   venue's location can be set without any geocoding service or API key,
+   just Leaflet + OpenStreetMap tiles (both free, no key). This is the only
+   way a custom venue's lat/lng gets set, since it's the one detail no
+   pasted text or fetched page can reliably give us. Built lazily (only
+   once, the first time the modal actually needs it) since Leaflet must
+   size itself against a container that's already visible on screen. */
+let cvLocationMap = null, cvLocationMarker = null;
+function ensureCvLocationMap(){
+  if(cvLocationMap) return cvLocationMap;
+  cvLocationMap = L.map('cvLocationMap', { scrollWheelZoom:false }).setView([46, 10], 4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  }).addTo(cvLocationMap);
+  cvLocationMap.on('click', e=> setCvLocation(e.latlng.lat, e.latlng.lng));
+  return cvLocationMap;
+}
+function setCvLocation(lat, lng){
+  const m = document.getElementById('customVenueModal');
+  m.querySelector('#cvLat').value = lat;
+  m.querySelector('#cvLng').value = lng;
+  if(cvLocationMarker) cvLocationMarker.setLatLng([lat, lng]);
+  else cvLocationMarker = L.marker([lat, lng]).addTo(cvLocationMap);
+  m.querySelector('#cvLocationHint').textContent = 'Location set ('+lat.toFixed(4)+', '+lng.toFixed(4)+'). Click elsewhere on the map to move it.';
+}
+function clearCvLocation(){
+  const m = document.getElementById('customVenueModal');
+  m.querySelector('#cvLat').value = '';
+  m.querySelector('#cvLng').value = '';
+  if(cvLocationMarker){ cvLocationMarker.remove(); cvLocationMarker = null; }
+  m.querySelector('#cvLocationHint').textContent = "Click the map to set this venue's location.";
 }
 /* Shared resize-then-compress-to-dataURL step, same approach as venue
    replies' readVenueContactThumb: shrink to 900px on the long edge, then
@@ -1135,7 +1234,29 @@ function openCustomVenueModal(existing){
   updateCustomVenuePreview();
   m.querySelector('#cvWarn').style.display='none';
   m.querySelector('#cvDelete').style.display = (existing && existing.isCustom) ? 'inline-flex' : 'none';
+  editingVenueOriginalLat = existing && typeof existing.lat==='number' ? existing.lat : null;
+  editingVenueOriginalLng = existing && typeof existing.lng==='number' ? existing.lng : null;
+  m.querySelector('#cvLat').value = editingVenueOriginalLat!=null ? editingVenueOriginalLat : '';
+  m.querySelector('#cvLng').value = editingVenueOriginalLng!=null ? editingVenueOriginalLng : '';
   m.classList.add('open');
+  // Leaflet needs the map container to already have real on-screen size
+  // when it initializes, which it won't until the modal's own open/display
+  // change has actually taken effect, hence the double rAF (one to let the
+  // .open class's display:flex apply, another for layout to settle) before
+  // creating or resizing the map.
+  requestAnimationFrame(()=> requestAnimationFrame(()=>{
+    ensureCvLocationMap();
+    if(cvLocationMarker){ cvLocationMarker.remove(); cvLocationMarker = null; }
+    if(editingVenueOriginalLat!=null && editingVenueOriginalLng!=null){
+      cvLocationMap.setView([editingVenueOriginalLat, editingVenueOriginalLng], 12);
+      cvLocationMarker = L.marker([editingVenueOriginalLat, editingVenueOriginalLng]).addTo(cvLocationMap);
+      m.querySelector('#cvLocationHint').textContent = 'Location set ('+editingVenueOriginalLat.toFixed(4)+', '+editingVenueOriginalLng.toFixed(4)+'). Click elsewhere on the map to move it.';
+    } else {
+      cvLocationMap.setView([46, 10], 4);
+      m.querySelector('#cvLocationHint').textContent = "Click the map to set this venue's location.";
+    }
+    cvLocationMap.invalidateSize();
+  }));
 }
 function saveCustomVenue(){
   const m = document.getElementById('customVenueModal');
@@ -1155,6 +1276,13 @@ function saveCustomVenue(){
     brochureNotes: m.querySelector('#cvBrochureNotes').value.trim(),
   };
   CUSTOM_VENUE_EXTRA_FIELDS.forEach(([key])=>{ data[key] = m.querySelector('#cv_'+key).value.trim(); });
+  {
+    const latVal = m.querySelector('#cvLat').value.trim();
+    const lngVal = m.querySelector('#cvLng').value.trim();
+    const lat = latVal ? parseFloat(latVal) : null;
+    const lng = lngVal ? parseFloat(lngVal) : null;
+    if(lat !== editingVenueOriginalLat || lng !== editingVenueOriginalLng){ data.lat = lat; data.lng = lng; }
+  }
   if(editingVenueIsCurated){
     // This form has no UI for a curated venue's fact-tag badges, its
     // "Your addition" badge, its card gradient, or its (often several,

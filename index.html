@@ -7,8 +7,9 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=20260925-4">
 <link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png?v=20260925-4">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260925-3">
-<link rel="stylesheet" href="styles.css?v=20260926-3">
-<link rel="stylesheet" href="mobile-app.css?v=20260925-5">
+<link rel="stylesheet" href="styles.css?v=20260926-4">
+<link rel="stylesheet" href="mobile-app.css?v=20260926-1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 
 <div class="bg-watermark no-print" style="background-image:url('watermark.jpg');"></div>
 
@@ -233,6 +234,10 @@
         <select id="venueShortlistedFilter"><option value="">Shortlisted or not</option><option value="shortlisted">Shortlisted</option><option value="not">Not shortlisted</option></select>
       </div>
       <p class="venue-capacity-note">Guest count is read from each venue's description, not a verified field, a venue with no number mentioned is still shown rather than hidden, since it might fit, worth confirming directly either way.</p>
+      <div class="venue-map-wrap">
+        <div id="venueMap" class="venue-map"></div>
+        <label class="venue-map-bounds-toggle"><input type="checkbox" id="venueMapBoundsFilter"> Only list venues currently visible on the map</label>
+      </div>
       <div class="venue-grid" id="venueGrid"></div>
     </section>
 
@@ -485,9 +490,11 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="firebase-sync.js?v=20260926-1"></script>
-<script src="app-1.js?v=20260926-2"></script>
+<script src="app-1.js?v=20260926-3"></script>
 <script src="app-4.js?v=20260913-24"></script>
-<script src="app-2.js?v=20260926-3"></script>
+<script src="app-2.js?v=20260926-4"></script>
 <script src="app-3.js?v=20260926-2"></script>
+<script src="venue-map.js?v=20260926-1"></script>
 <script src="moodboard-pinterest.js?v=27"></script>
