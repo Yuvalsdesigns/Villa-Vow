@@ -308,22 +308,28 @@ async function fetchPageText(url, onSuccess, onError){
   }catch(e){ console.error('[page text] unexpected error', e); onError('Request failed: '+(e&&e.message||e)); }
 }
 let pendingDiyThumb = '';
+function resizeDataUrlForDiyThumb(dataUrl, onDone){
+  const img = new Image();
+  img.onload = ()=>{
+    const max = 300, scale = Math.min(1, max/Math.max(img.width,img.height));
+    const canvas = document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
+    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+    let q=.8, url=canvas.toDataURL('image/jpeg',q);
+    while(url.length>150000 && q>.4){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
+    onDone(url);
+  };
+  img.onerror = ()=> onDone(dataUrl);
+  img.src = dataUrl;
+}
 function readDiyThumb(file){
   if(!file || !/^image\//.test(file.type)) return;
   const reader = new FileReader();
   reader.onload = e=>{
-    const img = new Image();
-    img.onload = ()=>{
-      const max = 300, scale = Math.min(1, max/Math.max(img.width,img.height));
-      const canvas = document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
-      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-      let q=.8, url=canvas.toDataURL('image/jpeg',q);
-      while(url.length>150000 && q>.4){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
+    resizeDataUrlForDiyThumb(e.target.result, url=>{
       pendingDiyThumb = url;
       const preview = document.getElementById('diyThumbPreview');
       preview.src = url; preview.style.display='inline-block';
-    };
-    img.src = e.target.result;
+    });
   };
   reader.readAsDataURL(file);
 }
@@ -345,11 +351,15 @@ function runDiyThumbFetch(rawUrl){
   setDiyFetchStatus('Fetching thumbnail...');
   fetchLinkPreviewThumbnail(url,
     (thumbnailUrl)=>{
-      pendingDiyThumb = thumbnailUrl;
       const preview = document.getElementById('diyThumbPreview');
-      preview.src = thumbnailUrl; preview.style.display='inline-block';
-      btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
-      setDiyFetchStatus('Thumbnail found.');
+      const finish = (finalUrl)=>{
+        pendingDiyThumb = finalUrl;
+        preview.src = finalUrl; preview.style.display='inline-block';
+        btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
+        setDiyFetchStatus('Thumbnail found.');
+      };
+      if(/^data:/.test(thumbnailUrl)) resizeDataUrlForDiyThumb(thumbnailUrl, finish);
+      else finish(thumbnailUrl);
     },
     (reason)=>{
       setDiyFetchStatus("Couldn't fetch a thumbnail: "+reason+" You can still upload one instead.", true);
@@ -392,18 +402,11 @@ function readDiyEditThumb(file){
   if(!file || !/^image\//.test(file.type)) return;
   const reader = new FileReader();
   reader.onload = e=>{
-    const img = new Image();
-    img.onload = ()=>{
-      const max = 300, scale = Math.min(1, max/Math.max(img.width,img.height));
-      const canvas = document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
-      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-      let q=.8, url=canvas.toDataURL('image/jpeg',q);
-      while(url.length>150000 && q>.4){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
+    resizeDataUrlForDiyThumb(e.target.result, url=>{
       editingDiyThumb = url;
       const preview = document.getElementById('diyEditThumbPreview');
       if(preview){ preview.src = url; preview.style.display='inline-block'; }
-    };
-    img.src = e.target.result;
+    });
   };
   reader.readAsDataURL(file);
 }
@@ -449,11 +452,15 @@ function renderDiyIdeas(){
       setStatus('Fetching thumbnail...');
       fetchLinkPreviewThumbnail(idea.url,
         (thumbnailUrl)=>{
-          editingDiyThumb = thumbnailUrl;
           const preview = card.querySelector('#diyEditThumbPreview');
-          preview.src = thumbnailUrl; preview.style.display='inline-block';
-          btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
-          setStatus('Thumbnail found.');
+          const finish = (finalUrl)=>{
+            editingDiyThumb = finalUrl;
+            preview.src = finalUrl; preview.style.display='inline-block';
+            btn.disabled = false; btn.textContent = 'Fetch thumbnail from link';
+            setStatus('Thumbnail found.');
+          };
+          if(/^data:/.test(thumbnailUrl)) resizeDataUrlForDiyThumb(thumbnailUrl, finish);
+          else finish(thumbnailUrl);
         },
         (reason)=>{
           setStatus("Couldn't fetch a thumbnail: "+reason+" You can still upload one instead.", true);
