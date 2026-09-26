@@ -985,8 +985,23 @@ const BUDGET_CHART_MAX_SLICES = 6;
    whichever casing was typed first), sorted largest first. A donut only
    reads at a glance up to a handful of segments - past that, adjacent
    slices blur together no matter the color - so anything past the top 6
-   folds into one neutral "Other" slice rather than piling on more hues. */
-function budgetCategoryTotals(){
+   folds into one neutral "Other" slice rather than piling on more hues.
+
+   Also builds colorByKey, a category -> color lookup covering EVERY
+   category currently in state.budget (not just the ones shown as their own
+   slice): the line-item table below uses this exact same map to color each
+   row's own category, so the table and the chart can never drift apart -
+   both are built from one pass over the same data, in the same render.
+   A category that got folded into "Other" here (or has no estimate at all
+   yet) maps to Other's neutral gray in the table too, which is the
+   correct, honest answer: that row isn't broken out as its own slice right
+   now. Colors are assigned by current sort position, not tied to a
+   specific category name forever, so a category's color can shift if its
+   relative size changes - but since both the chart and the table are
+   rebuilt from this same map on every render, they always agree with each
+   other at any given moment, including right after adding/editing/deleting
+   a line. */
+function budgetCategoryBreakdown(){
   const groups = new Map();
   state.budget.forEach(b=>{
     const est = Number(b.estCost)||0;
@@ -996,13 +1011,30 @@ function budgetCategoryTotals(){
     if(!groups.has(key)) groups.set(key, {label, total:0});
     groups.get(key).total += est;
   });
-  const entries = [...groups.values()].sort((a,b)=>b.total-a.total);
-  const total = entries.reduce((s,e)=>s+e.total,0);
-  if(!entries.length) return {entries:[], total:0};
-  const shown = entries.slice(0, BUDGET_CHART_MAX_SLICES);
-  const rest = entries.slice(BUDGET_CHART_MAX_SLICES);
-  if(rest.length) shown.push({label:'Other', total:rest.reduce((s,e)=>s+e.total,0), isOther:true});
-  return {entries:shown, total};
+  const sorted = [...groups.entries()].sort((a,b)=> b[1].total-a[1].total);
+  const total = sorted.reduce((s,[,v])=>s+v.total,0);
+  const colorByKey = new Map();
+  const entries = [];
+  sorted.forEach(([key,v],i)=>{
+    if(i < BUDGET_CHART_MAX_SLICES){
+      const color = BUDGET_CHART_COLORS[i % BUDGET_CHART_COLORS.length];
+      colorByKey.set(key, color);
+      entries.push({label:v.label, total:v.total, color});
+    } else {
+      colorByKey.set(key, BUDGET_CHART_OTHER_COLOR);
+    }
+  });
+  const restTotal = sorted.slice(BUDGET_CHART_MAX_SLICES).reduce((s,[,v])=>s+v.total,0);
+  if(restTotal > 0) entries.push({label:'Other', total:restTotal, color:BUDGET_CHART_OTHER_COLOR, isOther:true});
+  return {entries, total, colorByKey};
+}
+/* Same lookup the chart just built for a single category name - used to
+   color a budget-table row's own category swatch. Falls back to Other's
+   gray for a category with no estimate yet (nothing to place in the chart)
+   or one this exact breakdown doesn't otherwise know about. */
+function budgetCategoryColor(colorByKey, category){
+  const key = (category||'').trim().toLowerCase() || 'other';
+  return colorByKey.get(key) || BUDGET_CHART_OTHER_COLOR;
 }
 let budgetChartTooltipEl = null;
 function ensureBudgetChartTooltip(){
@@ -1018,10 +1050,10 @@ function ensureBudgetChartTooltip(){
    most 7 circles), so it's always in sync with whatever renderBudget() just
    recomputed - editing an estimate, changing a category, or adding/deleting
    a line all flow straight through to this chart with no separate wiring. */
-function renderBudgetCategoryChart(){
+function renderBudgetCategoryChart(breakdown){
   const card = document.getElementById('budgetChartCard');
   if(!card) return;
-  const {entries, total} = budgetCategoryTotals();
+  const {entries, total} = breakdown;
   if(!entries.length){
     card.innerHTML = '<h3 class="budget-chart-title">Estimated budget by category</h3><div class="budget-chart-empty">Add an estimate to a line below to see the breakdown by category here.</div>';
     return;
@@ -1031,16 +1063,14 @@ function renderBudgetCategoryChart(){
   const segsHtml = entries.map((e,i)=>{
     const frac = e.total/total;
     const dashLen = Math.max(0, frac*C - GAP);
-    const color = e.isOther ? BUDGET_CHART_OTHER_COLOR : BUDGET_CHART_COLORS[i % BUDGET_CHART_COLORS.length];
-    const circle = '<circle class="budget-donut-seg" data-i="'+i+'" cx="70" cy="70" r="'+R+'" fill="none" stroke="'+color+'" stroke-width="'+STROKE+'" stroke-dasharray="'+dashLen+' '+(C-dashLen)+'" stroke-dashoffset="'+(-offset)+'" transform="rotate(-90 70 70)"></circle>';
+    const circle = '<circle class="budget-donut-seg" data-i="'+i+'" cx="70" cy="70" r="'+R+'" fill="none" stroke="'+e.color+'" stroke-width="'+STROKE+'" stroke-dasharray="'+dashLen+' '+(C-dashLen)+'" stroke-dashoffset="'+(-offset)+'" transform="rotate(-90 70 70)"></circle>';
     offset += frac*C;
     return circle;
   }).join('');
   const legendHtml = entries.map((e,i)=>{
-    const color = e.isOther ? BUDGET_CHART_OTHER_COLOR : BUDGET_CHART_COLORS[i % BUDGET_CHART_COLORS.length];
     const pct = Math.round(e.total/total*100);
     return '<li class="budget-legend-row" data-i="'+i+'">'
-      +'<span class="budget-legend-swatch" style="background:'+color+'"></span>'
+      +'<span class="budget-legend-swatch" style="background:'+e.color+'"></span>'
       +'<span class="budget-legend-label">'+esc(e.label)+'</span>'
       +'<span class="budget-legend-value">€'+Math.round(e.total).toLocaleString()+' <span class="budget-legend-pct">· '+pct+'%</span></span>'
       +'</li>';
@@ -1104,7 +1134,11 @@ function renderBudget(){
     tile('€'+paid.toLocaleString(),'Paid so far'),
     tile(String(state.budget.length),'Line items'),
   ].join('');
-  renderBudgetCategoryChart();
+  // Computed once here, then handed to both the chart and every table row's
+  // category swatch below, so the two can never show a different color for
+  // the same category - they're built from this one pass over the data.
+  const budgetBreakdown = budgetCategoryBreakdown();
+  renderBudgetCategoryChart(budgetBreakdown);
   document.getElementById('budgetGoalInput').addEventListener('change', e=>{
     const val = Math.max(0, Number(e.target.value)||0);
     state.budgetGoal = val;
@@ -1114,7 +1148,8 @@ function renderBudget(){
   body.innerHTML='';
   state.budget.forEach(b=>{
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td>'+esc(b.category)+'</td><td>'+esc(b.item)+'</td>'
+    const catColor = budgetCategoryColor(budgetBreakdown.colorByKey, b.category);
+    tr.innerHTML = '<td><span class="budget-row-swatch" style="background:'+catColor+'"></span>'+esc(b.category)+'</td><td>'+esc(b.item)+'</td>'
       +'<td class="num-cell mono">'+numInput('est',b)+'</td>'
       +'<td class="num-cell mono">'+numInput('act',b)+'</td>'
       +'<td></td><td></td><td></td>';
