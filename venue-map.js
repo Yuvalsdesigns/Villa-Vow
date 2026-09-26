@@ -179,6 +179,12 @@ function ensureVenueMap(){
     venueMapCurrentBounds = venueMap.getBounds();
     if(typeof renderVenues==='function') renderVenues();
   });
+  // Belt-and-suspenders: whatever a click anywhere on the map resolves to
+  // (a marker, its label, or bare map background), it should never fall
+  // through to a native browser default action like a page jump.
+  venueMap.on('click', e=>{
+    if(e.originalEvent && typeof e.originalEvent.preventDefault==='function') e.originalEvent.preventDefault();
+  });
   return venueMap;
 }
 
@@ -226,27 +232,61 @@ function buildVenuePopupContent(v){
   return el;
 }
 
-/* Called from renderVenues() with exactly the array it's about to draw as
-   cards, so the map's pins are always a mirror of the list, in bounds-
-   filter mode as much as in the ordinary search/region/etc. filters. */
+/* renderVenues() runs once per Firestore collection that happens to
+   touch the venues view (venueContacts, venueFavorites, customVenues,
+   venueOverrides, ...), each syncing independently, so a fresh page load
+   can fire it several times in a tight burst as each one's first
+   snapshot arrives, rather than once. Rebuilding and re-fitting the map
+   on every single one of those (tearing down and rebuilding a marker's
+   popup DOM repeatedly, right as someone might be trying to click it,
+   plus panning the view mid-burst) is exactly the kind of churn that
+   makes the map feel like it takes forever to settle down after a
+   refresh, and made a click that landed mid-rebuild behave strangely.
+   Coalescing rapid calls into one, on the next animation frame, using
+   whichever filtered list was passed last, fixes both: far less DOM
+   churn, and a click only ever lands on a marker that isn't mid-rebuild. */
+let venueMapPendingFiltered = null, venueMapUpdateScheduled = false;
 function updateVenueMapMarkers(filteredVenues){
+  venueMapPendingFiltered = filteredVenues;
+  if(venueMapUpdateScheduled) return;
+  venueMapUpdateScheduled = true;
+  requestAnimationFrame(()=>{
+    venueMapUpdateScheduled = false;
+    applyVenueMapMarkers(venueMapPendingFiltered);
+  });
+}
+/* A venue's own fields relevant to its marker, so a render triggered by
+   an unrelated collection (say, a budget change firing renderVenues()
+   indirectly through some other path) doesn't tear down and rebuild
+   every single popup/tooltip when nothing about the venues themselves
+   actually changed. */
+function venueMapSignature(v){
+  const airport = v.hasOwnProperty('nearestAirport') ? v.nearestAirport : airportByCode(VENUE_NEAREST_AIRPORT_CODE[v.id]);
+  return JSON.stringify([v.name, v.region, v.address, v.lat, v.lng, airport && airport.code, airport && airport.name]);
+}
+let venueMapSignatures = {};
+function applyVenueMapMarkers(filteredVenues){
   const map = ensureVenueMap();
   if(!map) return;
   const located = filteredVenues.filter(v=> typeof v.lat==='number' && typeof v.lng==='number');
   const locatedIds = new Set(located.map(v=>v.id));
 
   Object.keys(venueMapMarkers).forEach(id=>{
-    if(!locatedIds.has(id)){ venueMapMarkers[id].remove(); delete venueMapMarkers[id]; }
+    if(!locatedIds.has(id)){ venueMapMarkers[id].remove(); delete venueMapMarkers[id]; delete venueMapSignatures[id]; }
   });
 
   located.forEach(v=>{
-    const popupContent = buildVenuePopupContent(v);
     const existing = venueMapMarkers[v.id];
+    const signature = venueMapSignature(v);
+    const unchanged = existing && venueMapSignatures[v.id]===signature;
     if(existing){
       existing.setLatLng([v.lat, v.lng]);
-      existing.setTooltipContent(esc(v.name));
-      existing.setPopupContent(popupContent);
+      if(!unchanged){
+        existing.setTooltipContent(esc(v.name));
+        existing.setPopupContent(buildVenuePopupContent(v));
+      }
     } else {
+      const popupContent = buildVenuePopupContent(v);
       const marker = L.marker([v.lat, v.lng]).addTo(map);
       // A permanent name label next to every pin, since with 20+ identical
       // default markers on the map there was otherwise no way to tell
@@ -261,6 +301,7 @@ function updateVenueMapMarkers(filteredVenues){
       marker.on('click', ()=> marker.openPopup());
       venueMapMarkers[v.id] = marker;
     }
+    venueMapSignatures[v.id] = signature;
   });
 
   // Auto-fit to whatever the list is showing, but only when the map itself
