@@ -973,6 +973,13 @@ function ensureCustomVenueModal(){
       + '<button class="btn small ghost" id="cvFetchText" type="button">Fetch details from website</button>'
       + '<button class="btn small ghost" id="cvPdfBtn" type="button">Attach a PDF brochure</button>'
     + '</div>'
+    + '<div class="field">'
+      + '<label>Not happy with that photo? Fetch one from a different link instead</label>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+        + '<input type="url" id="cvImageSourceUrl" placeholder="Any link to a page with a better photo (Pinterest, a blog post, a listing site…)" style="flex:1;min-width:220px;">'
+        + '<button class="btn small ghost" id="cvFetchFromLink" type="button">Fetch from this link</button>'
+      + '</div>'
+    + '</div>'
     + '<input type="file" id="cvPdfInput" accept="application/pdf" style="display:none;">'
     + '<p id="cvExtractStatus" style="display:none;font-size:12px;color:var(--ink-soft);"></p>'
     + '<div id="cvPreviewWrap" style="display:none;"><img id="cvPreview" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;"></div>'
@@ -990,6 +997,7 @@ function ensureCustomVenueModal(){
   m.querySelector('#cvCancel').addEventListener('click', close);
   m.querySelector('#cvImage').addEventListener('input', updateCustomVenuePreview);
   m.querySelector('#cvFetchPhoto').addEventListener('click', fetchCustomVenuePhoto);
+  m.querySelector('#cvFetchFromLink').addEventListener('click', fetchCustomVenuePhotoFromLink);
   m.querySelector('#cvFetchText').addEventListener('click', fetchCustomVenueText);
   m.querySelector('#cvPdfBtn').addEventListener('click', ()=> m.querySelector('#cvPdfInput').click());
   m.querySelector('#cvPdfInput').addEventListener('change', ()=>{ const f=m.querySelector('#cvPdfInput').files[0]; if(f) handleCustomVenuePdf(f); });
@@ -1115,28 +1123,27 @@ function readCustomVenuePhoto(file){
    link previews (fetchLinkPreviewThumbnail, defined in app-3.js), rather
    than a second copy of the same fetch logic. The Worker now downloads
    the image itself and hands back a data: URI instead of a bare URL,
-   since a bare URL silently fails to load whenever the venue's site
-   hotlink-protects its images (checks the Referer header) or serves a
-   session-scoped CDN link, and that's exactly what "fetch photo" looked
-   like it was doing while quietly doing nothing. A data: URI gets resized
-   through the same pipeline as an uploaded photo; a plain URL (an older
-   Worker deploy, or one that couldn't be downloaded) is still used
-   directly as before. Falls back to telling the user to paste a direct
-   picture link instead if the page has no usable preview image, or the
-   fetch itself fails. */
-function fetchCustomVenuePhoto(){
+   since a bare URL silently fails to load whenever a site hotlink-protects
+   its images (checks the Referer header) or serves a session-scoped CDN
+   link, and that's exactly what "fetch photo" looked like it was doing
+   while quietly doing nothing. A data: URI gets resized through the same
+   pipeline as an uploaded photo; a plain URL (an older Worker deploy, or
+   one that couldn't be downloaded) is still used directly as before.
+   Shared by both "Fetch photo from website" (the venue's own registered
+   site) and "Fetch from this link" (any other page - Pinterest, a blog
+   post, a listing site - for when the venue's own site doesn't have a
+   photo worth using), which differ only in which URL and button they
+   pass in. */
+function fetchPhotoFromUrl(url, btn, idleLabel){
   const m = document.getElementById('customVenueModal');
-  const website = m.querySelector('#cvWebsite').value.trim();
   const warn = m.querySelector('#cvWarn'); warn.style.display='none';
-  if(!website){ warn.textContent="Paste the venue's website link above first."; warn.style.display='block'; return; }
-  const btn = m.querySelector('#cvFetchPhoto');
   btn.disabled = true; btn.textContent='Fetching…';
-  fetchLinkPreviewThumbnail(website,
+  fetchLinkPreviewThumbnail(url,
     (thumbUrl)=>{
-      btn.disabled = false; btn.textContent='Fetch photo from website';
+      btn.disabled = false; btn.textContent=idleLabel;
       if(/^data:/.test(thumbUrl)){
-        resizeDataUrlForVenuePhoto(thumbUrl, url=>{
-          m.querySelector('#cvImage').value = url;
+        resizeDataUrlForVenuePhoto(thumbUrl, resizedUrl=>{
+          m.querySelector('#cvImage').value = resizedUrl;
           updateCustomVenuePreview();
         });
       } else {
@@ -1145,11 +1152,32 @@ function fetchCustomVenuePhoto(){
       }
     },
     (err)=>{
-      btn.disabled = false; btn.textContent='Fetch photo from website';
+      btn.disabled = false; btn.textContent=idleLabel;
       warn.textContent = err+' You can still paste a direct picture link into the Photo URL field instead.';
       warn.style.display='block';
     }
   );
+}
+function fetchCustomVenuePhoto(){
+  const m = document.getElementById('customVenueModal');
+  const website = m.querySelector('#cvWebsite').value.trim();
+  const warn = m.querySelector('#cvWarn'); warn.style.display='none';
+  if(!website){ warn.textContent="Paste the venue's website link above first."; warn.style.display='block'; return; }
+  fetchPhotoFromUrl(website, m.querySelector('#cvFetchPhoto'), 'Fetch photo from website');
+}
+/* The website fetch not turning up a good photo is exactly when this
+   matters: a link to a nicer picture somewhere else entirely (a Pinterest
+   pin, a travel blog post, a listing site) that isn't a direct image file
+   itself, so pasting it straight into Photo URL would just show a broken
+   image - this resolves it into an actual photo the same way the website
+   fetch does, just pointed at whatever link is typed here instead of the
+   venue's own registered site. */
+function fetchCustomVenuePhotoFromLink(){
+  const m = document.getElementById('customVenueModal');
+  const link = m.querySelector('#cvImageSourceUrl').value.trim();
+  const warn = m.querySelector('#cvWarn'); warn.style.display='none';
+  if(!link){ warn.textContent='Paste a link to fetch a photo from first.'; warn.style.display='block'; return; }
+  fetchPhotoFromUrl(link, m.querySelector('#cvFetchFromLink'), 'Fetch from this link');
 }
 function setCustomVenueExtractStatus(msg, isError){
   const el = document.getElementById('customVenueModal')?.querySelector('#cvExtractStatus');
@@ -1271,6 +1299,7 @@ function openCustomVenueModal(existing){
     m.querySelector('#cvWebsite').value = editingVenueOriginalWebsite;
   }
   m.querySelector('#cvImage').value = existing ? (existing.image||'') : '';
+  m.querySelector('#cvImageSourceUrl').value = '';
   CUSTOM_VENUE_EXTRA_FIELDS.forEach(([key])=>{ m.querySelector('#cv_'+key).value = existing ? (existing[key]||'') : ''; });
   m.querySelector('#cvBrochureNotes').value = existing ? (existing.brochureNotes||'') : '';
   m.querySelector('#cvRawText').value = '';
