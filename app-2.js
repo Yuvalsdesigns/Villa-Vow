@@ -1104,14 +1104,30 @@ async function geocodeQuery(query, idToken){
   }
   return data;
 }
-async function findCvLocationFromAddress(){
+function findCvLocationFromAddress(){
+  const m = document.getElementById('customVenueModal');
+  const warn = m.querySelector('#cvWarn'); warn.style.display='none';
+  const addressQuery = m.querySelector('#cvAddress').value.trim() || m.querySelector('#cvRegion').value.trim();
+  if(!addressQuery){ warn.textContent='Add an address (or at least a region) first.'; warn.style.display='block'; return; }
+  // A location that's already set here almost always means someone pasted
+  // exact coordinates straight from Google Maps (the reliable, precise
+  // path this whole address-lookup feature can't always match) - silently
+  // overwriting that with whatever this free geocoder guesses from the
+  // address text would be a straight downgrade, and it was happening with
+  // no warning at all. Ask first, same as any other action that would
+  // throw away something more precise the person already set on purpose.
+  const hasExistingLocation = m.querySelector('#cvLat').value.trim() && m.querySelector('#cvLng').value.trim();
+  if(hasExistingLocation){
+    confirmAction('This venue already has a location set (e.g. pasted coordinates). Looking up the address will replace it with the looked-up location instead - continue?', ()=> runFindCvLocationFromAddress(addressQuery));
+    return;
+  }
+  runFindCvLocationFromAddress(addressQuery);
+}
+async function runFindCvLocationFromAddress(addressQuery){
   const m = document.getElementById('customVenueModal');
   const warn = m.querySelector('#cvWarn'); warn.style.display='none';
   const address = m.querySelector('#cvAddress').value.trim();
   const name = m.querySelector('#cvName').value.trim();
-  const region = m.querySelector('#cvRegion').value.trim();
-  const addressQuery = address || region;
-  if(!addressQuery){ warn.textContent='Add an address (or at least a region) first.'; warn.style.display='block'; return; }
   const btn = m.querySelector('#cvFindOnMap');
   btn.disabled = true; btn.textContent = 'Finding…';
   try{
