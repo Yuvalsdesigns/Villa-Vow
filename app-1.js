@@ -271,8 +271,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 "use strict";
 
 let db = null, dbReady=false, syncUnavailable=false;
-let storage = null, storageReady=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[], emailTemplates:[] };
+const state ={ todos:[], budget:[], pins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[], emailTemplates:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -609,7 +608,6 @@ async function initDb(){
     if(!db){ syncUnavailable=true; setSync(false,'no live sync in this view, changes stay on this device only'); renderAll(); return; }
     dbReady = true;
     setSync(true,'synced');
-    window.claude.use('storage').then(s=>{ storage = s; storageReady = !!s; }).catch(()=>{});
     unsub.push(db.collection('todos').orderBy('order','asc').onSnapshot(snap=>{
       state.todos = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_TODOS.map(([category,text],i)=>({id:'seed-todo-'+i, category, text, done:false, order:i}));
       renderTodos(); renderStart();
@@ -1228,12 +1226,21 @@ function updateBudget(b, data){
 }
 
 /* ---- invoice/receipt file attached to a budget line ----
-   Stored in Firebase Storage (not Firestore, which isn't for binary blobs);
-   the budget doc just keeps a pointer: {name,url,path,size,contentType,
-   uploadedAt}. Gated on storageReady the same way writes are gated on
-   dbReady elsewhere - only signed-in access uploads/deletes files, so
-   invoices stay private to the two of you rather than public in Storage. */
-const INVOICE_MAX_MB = 15;
+   Firebase Storage turned out to require the paid Blaze plan (a Google
+   policy, not a config issue - no CORS fix could get around it), which
+   the couple doesn't want. So the file itself lives in Firestore instead,
+   as its own document in 'invoiceFiles' (a data: URL string), kept out of
+   the budget line's own document so every budget-collection sync doesn't
+   have to drag file bytes along with it - the budget doc just keeps a
+   small pointer: {name,contentType,size,fileId,uploadedAt}. Offline/local
+   mode (dbReady false) has nowhere to persist a second document, so it
+   keeps the data: URL inline on the budget line itself instead.
+   Firestore caps a document at 1MiB, and base64 inflates a file by about
+   a third, so INVOICE_MAX_BYTES leaves real headroom under that limit. A
+   photo over the limit is automatically resized/recompressed to fit
+   first, since a phone photo is the overwhelmingly common case; a PDF
+   over the limit just isn't something this can compress client-side. */
+const INVOICE_MAX_BYTES = 700 * 1024;
 let invoiceFileInput = null, invoicePendingTarget = null;
 function ensureInvoiceFileInput(){
   if(invoiceFileInput) return invoiceFileInput;
@@ -1252,7 +1259,6 @@ function ensureInvoiceFileInput(){
   return invoiceFileInput;
 }
 function triggerInvoiceUpload(b){
-  if(!storageReady || !storage){ alert("File uploads need you to be signed in first (see the sign-in box at the top) - that keeps invoices private to just the two of you."); return; }
   invoicePendingTarget = b;
   ensureInvoiceFileInput().click();
 }
@@ -1265,78 +1271,148 @@ function invoiceCellFor(b){
   for(const cell of cells){ if(cell.offsetParent !== null) return cell; }
   return cells[0] || null;
 }
-/* A CORS-misconfigured Storage bucket doesn't reject an upload outright -
-   the SDK just keeps quietly retrying a blocked request, so without this
-   the UI would sit on "Uploading…" forever with no error at all. This
-   turns that into a clear, actionable message after a reasonable wait
-   instead of leaving it looking merely slow. */
-function withTimeout(promise, ms, timeoutMessage){
-  let timer;
-  const timeout = new Promise((_, reject)=>{
-    timer = setTimeout(()=> reject(Object.assign(new Error(timeoutMessage), {isTimeout:true})), ms);
+function readFileAsDataURL(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result);
+    reader.onerror = ()=> reject(reader.error || new Error('Could not read that file.'));
+    reader.readAsDataURL(file);
   });
-  return Promise.race([promise, timeout]).finally(()=> clearTimeout(timer));
 }
-const INVOICE_TIMEOUT_MESSAGE = "This is timing out, which usually means Firebase Storage's CORS settings haven't been configured to allow uploads from this website yet - see storage-cors.json in the repo for the fix.";
+function dataUrlToBlob(dataUrl){
+  const commaIdx = dataUrl.indexOf(',');
+  const mimeMatch = dataUrl.slice(0, commaIdx).match(/data:(.*?);base64/);
+  const binary = atob(dataUrl.slice(commaIdx+1));
+  const bytes = new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], {type: mimeMatch ? mimeMatch[1] : 'application/octet-stream'});
+}
+function loadImageFromFile(file){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    img.onload = ()=> resolve(img);
+    img.onerror = ()=> reject(new Error('Could not read that image.'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+function canvasBlobAt(img, width, height, quality){
+  return new Promise(resolve=>{
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+    canvas.toBlob(resolve, 'image/jpeg', quality);
+  });
+}
+/* Resizes to a sane max dimension, then steps quality and finally
+   dimensions down until it fits, or gives up (null) rather than loop
+   forever - a photo that still won't fit at 500px wide isn't going to. */
+async function compressImageToFit(file, maxBytes){
+  let img;
+  try{ img = await loadImageFromFile(file); }catch(e){ return null; }
+  let width = img.naturalWidth, height = img.naturalHeight;
+  const maxDim = 1800;
+  if(Math.max(width, height) > maxDim){
+    const scale = maxDim / Math.max(width, height);
+    width = Math.round(width*scale); height = Math.round(height*scale);
+  }
+  let quality = 0.85;
+  let blob = await canvasBlobAt(img, width, height, quality);
+  while(blob && blob.size > maxBytes && quality > 0.35){
+    quality -= 0.12;
+    blob = await canvasBlobAt(img, width, height, quality);
+  }
+  while(blob && blob.size > maxBytes && width > 500){
+    width = Math.round(width*0.82); height = Math.round(height*0.82);
+    blob = await canvasBlobAt(img, width, height, quality);
+  }
+  URL.revokeObjectURL(img.src);
+  if(!blob || blob.size > maxBytes) return null;
+  return new File([blob], (file.name||'photo').replace(/\.\w+$/,'')+'.jpg', {type:'image/jpeg'});
+}
 async function uploadInvoiceFile(b, file){
-  if(file.size > INVOICE_MAX_MB*1024*1024){ alert('That file is larger than '+INVOICE_MAX_MB+'MB - try a smaller scan or a compressed PDF.'); return; }
   const cell = invoiceCellFor(b);
-  if(cell) cell.innerHTML = '<span class="invoice-status">Uploading…</span>';
-  const oldPath = b.invoice && b.invoice.path;
-  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_ ]+/g,'_').slice(0,120) || 'file';
-  const path = 'invoices/'+b.id+'/'+Date.now()+'-'+safeName;
   try{
-    const ref = storage.ref(path);
-    await withTimeout(ref.put(file, {contentType: file.type||undefined}), 25000, INVOICE_TIMEOUT_MESSAGE);
-    const url = await withTimeout(ref.getDownloadURL(), 15000, INVOICE_TIMEOUT_MESSAGE);
-    if(oldPath && oldPath!==path) storage.ref(oldPath).delete().catch(()=>{});
-    updateBudget(b, {invoice: {name:file.name, url, path, size:file.size, contentType:file.type||'', uploadedAt:Date.now()}});
+    let workingFile = file;
+    if(workingFile.size > INVOICE_MAX_BYTES){
+      if(!/^image\//.test(file.type)){
+        throw Object.assign(new Error('That file is '+Math.round(file.size/1024)+'KB - files need to be under '+Math.round(INVOICE_MAX_BYTES/1024)+'KB here. Try a lighter/compressed PDF, or a phone photo of the receipt instead of a high-res scan.'), {isUserFacing:true});
+      }
+      if(cell) cell.innerHTML = '<span class="invoice-status">Compressing photo…</span>';
+      const compressed = await compressImageToFit(file, INVOICE_MAX_BYTES);
+      if(!compressed) throw Object.assign(new Error("This photo is too large even after compressing it. Try cropping it tighter to just the receipt, or retaking it at a lower resolution."), {isUserFacing:true});
+      workingFile = compressed;
+    }
+    if(cell) cell.innerHTML = '<span class="invoice-status">Uploading…</span>';
+    const dataUrl = await readFileAsDataURL(workingFile);
+    const oldFileId = b.invoice && b.invoice.fileId;
+    const fileDoc = {name:file.name, contentType:workingFile.type||'application/octet-stream', size:workingFile.size, dataUrl, uploadedAt:Date.now()};
+    if(dbReady){
+      const ref = await db.collection('invoiceFiles').add(fileDoc);
+      if(oldFileId) db.collection('invoiceFiles').doc(oldFileId).delete().catch(()=>{});
+      updateBudget(b, {invoice: {name:fileDoc.name, contentType:fileDoc.contentType, size:fileDoc.size, fileId:ref.id, uploadedAt:fileDoc.uploadedAt}});
+    } else {
+      updateBudget(b, {invoice: {name:fileDoc.name, contentType:fileDoc.contentType, size:fileDoc.size, dataUrl:fileDoc.dataUrl, uploadedAt:fileDoc.uploadedAt}});
+    }
   }catch(err){
     console.error('Villa & Vow invoice upload error:', err);
-    alert(err.isTimeout ? err.message : "Couldn't upload that file. Check your connection and try again.");
+    alert(err.isUserFacing ? err.message : "Couldn't upload that file. Please try again.");
     if(cell) buildInvoiceCell(cell, b);
   }
 }
 async function deleteInvoiceFile(b){
-  if(!storageReady || !storage){ alert("Not connected right now - please try again after signing in."); return; }
   const cell = invoiceCellFor(b);
   if(cell) cell.innerHTML = '<span class="invoice-status">Deleting…</span>';
   try{
-    if(b.invoice && b.invoice.path){
-      await withTimeout(storage.ref(b.invoice.path).delete().catch(err=>{ if(err.code!=='storage/object-not-found') throw err; }), 15000, INVOICE_TIMEOUT_MESSAGE);
-    }
+    const fileId = b.invoice && b.invoice.fileId;
+    if(fileId && dbReady) await db.collection('invoiceFiles').doc(fileId).delete();
     updateBudget(b, {invoice: null});
   }catch(err){
     console.error('Villa & Vow invoice delete error:', err);
-    alert(err.isTimeout ? err.message : "Couldn't delete that file. Please try again.");
+    alert("Couldn't delete that file. Please try again.");
     if(cell) buildInvoiceCell(cell, b);
+  }
+}
+async function getInvoiceDataUrl(inv){
+  if(inv.dataUrl) return inv.dataUrl;
+  if(inv.fileId){
+    if(!dbReady) throw new Error('Not connected right now - please try again in a moment.');
+    const doc = await db.collection('invoiceFiles').doc(inv.fileId).get();
+    if(!doc.exists) throw new Error("This file couldn't be found - it may have been deleted.");
+    return doc.data().dataUrl;
+  }
+  throw new Error('No file to show.');
+}
+async function viewInvoiceFile(inv){
+  try{
+    const blobUrl = URL.createObjectURL(dataUrlToBlob(await getInvoiceDataUrl(inv)));
+    window.open(blobUrl, '_blank', 'noopener');
+    setTimeout(()=> URL.revokeObjectURL(blobUrl), 60000);
+  }catch(err){
+    console.error('Villa & Vow invoice view error:', err);
+    alert(err.message || "Couldn't open that file.");
   }
 }
 async function downloadInvoiceFile(inv){
   try{
-    const resp = await fetch(inv.url);
-    const blob = await resp.blob();
-    const blobUrl = URL.createObjectURL(blob);
+    const blobUrl = URL.createObjectURL(dataUrlToBlob(await getInvoiceDataUrl(inv)));
     const a = document.createElement('a');
     a.href = blobUrl; a.download = inv.name || 'invoice';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(blobUrl);
   }catch(err){
     console.error('Villa & Vow invoice download error:', err);
-    window.open(inv.url, '_blank', 'noopener');
+    alert(err.message || "Couldn't download that file.");
   }
 }
 function buildInvoiceCell(cell, b){
   cell.innerHTML = '';
   const inv = b.invoice;
-  if(inv && inv.url){
+  if(inv){
     const wrap = document.createElement('div'); wrap.className = 'invoice-file';
-    const link = document.createElement('a');
-    link.href = inv.url; link.target = '_blank'; link.rel = 'noopener';
-    link.className = 'invoice-file-link';
-    link.title = 'View '+(inv.name||'invoice');
-    link.innerHTML = svg(ICON.paperclip) + '<span>'+esc(inv.name||'Invoice')+'</span>';
-    wrap.appendChild(link);
+    const viewBtn = document.createElement('button'); viewBtn.type='button'; viewBtn.className='invoice-file-link'; viewBtn.title='View '+(inv.name||'invoice');
+    viewBtn.innerHTML = svg(ICON.paperclip) + '<span>'+esc(inv.name||'Invoice')+'</span>';
+    viewBtn.addEventListener('click', ()=> viewInvoiceFile(inv));
+    wrap.appendChild(viewBtn);
     const actions = document.createElement('div'); actions.className = 'invoice-file-actions';
     const dlBtn = document.createElement('button'); dlBtn.type='button'; dlBtn.className='icon-btn'; dlBtn.title='Download'; dlBtn.innerHTML = svg(ICON.download);
     dlBtn.addEventListener('click', ()=> downloadInvoiceFile(inv));
@@ -1351,6 +1427,7 @@ function buildInvoiceCell(cell, b){
     cell.appendChild(wrap);
   } else {
     const btn = document.createElement('button'); btn.type='button'; btn.className='btn ghost small'; btn.innerHTML = svg(ICON.upload)+'<span>Attach</span>';
+    btn.title = 'PDF or image, up to ~'+Math.round(INVOICE_MAX_BYTES/1024)+'KB (photos are compressed automatically to fit)';
     btn.addEventListener('click', ()=> triggerInvoiceUpload(b));
     cell.appendChild(btn);
   }

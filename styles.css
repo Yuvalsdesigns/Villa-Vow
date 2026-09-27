@@ -496,7 +496,7 @@
   .invoice-cell{vertical-align:middle;}
   .invoice-status{font-size:12px;color:var(--ink-faint);}
   .invoice-file{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
-  .invoice-file-link{display:inline-flex;align-items:center;gap:5px;min-width:0;font-size:12.5px;color:var(--wine);text-decoration:none;}
+  .invoice-file-link{display:inline-flex;align-items:center;gap:5px;min-width:0;font-size:12.5px;color:var(--wine);text-decoration:none;border:none;background:none;padding:0;cursor:pointer;font-family:inherit;}
   .invoice-file-link:hover{text-decoration:underline;}
   .invoice-file-link svg{width:14px;height:14px;flex:none;}
   .invoice-file-link span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;}
