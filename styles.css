@@ -328,7 +328,26 @@
      using the exact color the chart/legend above just picked for that
      category (or Other's gray, if it isn't broken out as its own slice
      right now) - so a row can be matched to its slice at a glance. */
-  .budget-row-swatch{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle;}
+  .budget-row-swatch{display:inline-block;width:8px;height:8px;border-radius:2px;flex:0 0 auto;}
+  /* Category cell wraps the swatch and its now-editable text input in a flex
+     row so the two stay truly centered on each other - vertical-align:middle
+     depends on the surrounding font's metrics and drifted noticeably high
+     against this display serif, this sidesteps that entirely. */
+  .budget-cat-cell{display:inline-flex;align-items:center;gap:6px;width:100%;}
+  .budget-cat-cell textarea.cat-input{flex:1 1 auto;min-width:0;}
+  /* Category and item were plain text that could wrap across lines when
+     long (a venue name, a multi-word category); an <input> can't wrap, so
+     these are auto-growing single-row textareas instead, matching the
+     Notes column's existing pattern, to keep that same wrapping behavior
+     while becoming editable. */
+  .budget-table textarea.cat-input,
+  .budget-table textarea.item-input{
+    display:block;width:100%;box-sizing:border-box;border:1px solid transparent;background:transparent;
+    padding:4px 6px;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;
+    resize:none;overflow:hidden;line-height:1.4;min-height:0;
+  }
+  .budget-table textarea.cat-input:hover,.budget-table textarea.cat-input:focus,
+  .budget-table textarea.item-input:hover,.budget-table textarea.item-input:focus{border-color:var(--line);outline:none;}
   .budget-chart-tooltip{position:fixed;z-index:260;background:var(--ink);color:#fff;font-size:11.5px;line-height:1.4;padding:6px 10px;border-radius:7px;pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .1s,transform .1s;box-shadow:var(--shadow-md);max-width:200px;}
   .budget-chart-tooltip.open{opacity:1;transform:translateY(0);}
   .budget-chart-tooltip b{font-weight:700;}
@@ -444,12 +463,12 @@
      number instead of putting the extra room where it's actually useful:
      Item and Notes. */
   .budget-table{table-layout:fixed;}
-  .budget-table th:nth-child(1){width:13%;}
+  .budget-table th:nth-child(1){width:15%;}
   .budget-table th:nth-child(2){width:20%;}
   .budget-table th:nth-child(3){width:130px;}
   .budget-table th:nth-child(4){width:130px;}
   .budget-table th:nth-child(5){width:82px;}
-  .budget-table th:nth-child(6){width:38%;}
+  .budget-table th:nth-child(6){width:36%;}
   .budget-table th:nth-child(7){width:44px;}
   .budget-table td{padding:9px 12px;border-bottom:1px solid var(--line-soft);font-size:13.5px;vertical-align:top;}
   /* The delete icon's button was exactly as wide as its own column (14px
