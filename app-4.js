@@ -167,8 +167,10 @@ function buildGuestRow(g, side){
         + '<option value="declined"'+(plusRsvp==='declined'?' selected':'')+'>Declined</option>'
       + '</select></label>' : '')
     + '<label class="email-field">Email (for e-vites)<input type="email" value="'+esc(g.email||'')+'" placeholder="name@email.com"></label>'
+    + '<label class="address-field">Home address<input type="text" value="'+esc(g.address||'')+'" placeholder="Street, city, zip"></label>'
     + '<label class="dietary-field">Dietary / kosher<input type="text" value="'+esc(g.dietary||'')+'" placeholder="e.g. Kosher, gluten-free"></label>'
     + '<label class="table-field">Table / group<input type="text" value="'+esc(g.table||'')+'" placeholder="e.g. Family table"></label>'
+    + '<label class="gift-field">Gift received<input type="text" value="'+esc(g.gift||'')+'" placeholder="e.g. €150, or a gift description"></label>'
     + '<label class="notes-field">Notes<textarea placeholder="Anything else">'+esc(g.notes||'')+'</textarea></label>';
   row.appendChild(detail);
 
@@ -200,8 +202,10 @@ function buildGuestRow(g, side){
   plusTbdCk.addEventListener('change', ()=> updateGuest(g, {plusOnesTBD: plusTbdCk.checked, plusOnes: plusTbdCk.checked? 0 : (g.plusOnes||0)}));
   plusNotes.addEventListener('change', ()=> updateGuest(g, {plusOneNotes: plusNotes.value.trim()}));
   detail.querySelector('.email-field input').addEventListener('change', e=> updateGuest(g, {email: e.target.value.trim()}));
+  detail.querySelector('.address-field input').addEventListener('change', e=> updateGuest(g, {address: e.target.value.trim()}));
   detail.querySelector('.dietary-field input').addEventListener('change', e=> updateGuest(g, {dietary: e.target.value.trim()}));
   detail.querySelector('.table-field input').addEventListener('change', e=> updateGuest(g, {table: e.target.value.trim()}));
+  detail.querySelector('.gift-field input').addEventListener('change', e=> updateGuest(g, {gift: e.target.value.trim()}));
   detail.querySelector('.notes-field textarea').addEventListener('change', e=> updateGuest(g, {notes: e.target.value.trim()}));
 
   row.addEventListener('dragstart', e=>{ row.classList.add('dragging'); e.dataTransfer.setData('text/plain', g.id); e.dataTransfer.effectAllowed='move'; });
@@ -259,7 +263,7 @@ function addGuest(side){
   if(!name) return;
   const existing = guestsFor(side);
   const maxOrder = existing.reduce((m,g)=>Math.max(m,g.order||0),0);
-  const data = {name, side, likelihood:'likely', rsvp:'pending', invited:false, plusOnes:0, plusOnesTBD:false, plusLikelihood:'likely', plusRsvp:'pending', plusOneNotes:'', dietary:'', table:'', notes:'', email:'', order:maxOrder+1};
+  const data = {name, side, likelihood:'likely', rsvp:'pending', invited:false, plusOnes:0, plusOnesTBD:false, plusLikelihood:'likely', plusRsvp:'pending', plusOneNotes:'', dietary:'', table:'', notes:'', email:'', address:'', gift:'', order:maxOrder+1};
   if(dbReady) db.collection('guests').add(data);
   input.value='';
 }
@@ -326,7 +330,7 @@ document.querySelectorAll('[data-paste-import]').forEach(btn=>{
     let maxOrder = guestsFor(side).reduce((m,g)=>Math.max(m,g.order||0),0);
     entries.forEach(parsed=>{
       maxOrder += 1;
-      const data = {name:parsed.name, side, likelihood:'likely', rsvp:'pending', plusOnes:parsed.plusOnes, plusOnesTBD:parsed.plusOnesTBD, plusLikelihood:'likely', plusRsvp:'pending', plusOneNotes:'', dietary:'', table:'', notes:'', email:'', order:maxOrder};
+      const data = {name:parsed.name, side, likelihood:'likely', rsvp:'pending', plusOnes:parsed.plusOnes, plusOnesTBD:parsed.plusOnesTBD, plusLikelihood:'likely', plusRsvp:'pending', plusOneNotes:'', dietary:'', table:'', notes:'', email:'', address:'', gift:'', order:maxOrder};
       if(dbReady) db.collection('guests').add(data);
     });
     textarea.value='';
@@ -357,4 +361,53 @@ document.getElementById('exportEmailsBtn').addEventListener('click', ()=>{
   a.href = url; a.download = 'guest-emails.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
+});
+
+/* ---- export the full guest list as an Excel workbook, one sheet per side,
+   every field the guest app tracks (a spreadsheet replica of the app) ---- */
+const GUEST_XLSX_HEADERS = ['Name','RSVP','Likelihood','Invite sent','Plus-one(s)','Plus-one name(s)','Plus-one RSVP','Plus-one likelihood','Email','Home address','Dietary / kosher','Table / group','Gift received','Notes'];
+function guestExcelRow(g){
+  const hasPlus = g.plusOnesTBD || (g.plusOnes||0) > 0;
+  return [
+    g.name||'',
+    g.rsvp||'pending',
+    g.likelihood||'likely',
+    g.invited ? 'Yes' : 'No',
+    g.plusOnesTBD ? 'TBD' : (g.plusOnes||0),
+    g.plusOneNotes||'',
+    hasPlus ? (g.plusRsvp||'pending') : '',
+    hasPlus ? (g.plusLikelihood||'likely') : '',
+    g.email||'',
+    g.address||'',
+    g.dietary||'',
+    g.table||'',
+    g.gift||'',
+    g.notes||'',
+  ];
+}
+/* Excel sheet names can't hold \ / ? * [ ] : and top out at 31 chars, and
+   two sheets can't share a name - guards against both since the labels
+   above are free text the couple can rename to anything. */
+function safeSheetName(label, fallback, taken){
+  let name = String(label||'').replace(/[\\/?*[\]:]/g,'').trim().slice(0,31) || fallback;
+  let unique = name;
+  let n = 2;
+  while(taken.has(unique)){ unique = name.slice(0, 28) + ' ' + n; n++; }
+  taken.add(unique);
+  return unique;
+}
+document.getElementById('exportExcelBtn').addEventListener('click', ()=>{
+  if(typeof XLSX==='undefined'){ alert("The Excel export library didn't load (check your internet connection), please try again."); return; }
+  const taken = new Set();
+  const wb = XLSX.utils.book_new();
+  [
+    {side:'mine', label: state.labels.mineLabel || 'Your guests'},
+    {side:'partner', label: state.labels.partnerLabel || "Fiancé's guests"},
+  ].forEach(({side,label})=>{
+    const aoa = [GUEST_XLSX_HEADERS, ...guestsFor(side).map(guestExcelRow)];
+    const sheet = XLSX.utils.aoa_to_sheet(aoa);
+    sheet['!cols'] = [{wch:20},{wch:11},{wch:11},{wch:11},{wch:12},{wch:20},{wch:14},{wch:16},{wch:24},{wch:28},{wch:20},{wch:16},{wch:22},{wch:28}];
+    XLSX.utils.book_append_sheet(wb, sheet, safeSheetName(label, side==='mine'?'Guest list A':'Guest list B', taken));
+  });
+  XLSX.writeFile(wb, 'guest-list.xlsx');
 });

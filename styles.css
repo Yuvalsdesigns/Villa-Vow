@@ -1015,8 +1015,10 @@
   .row-detail label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--ink-soft);}
   .row-detail input, .row-detail textarea{width:100%;}
   .row-detail .plusone-field{flex:1 1 160px;}
+  .row-detail .address-field{flex:1 1 200px;}
   .row-detail .dietary-field{flex:1 1 160px;}
   .row-detail .table-field{flex:1 1 120px;}
+  .row-detail .gift-field{flex:1 1 160px;}
   .row-detail .notes-field{flex:1 1 100%;}
   .row-detail textarea{min-height:44px;resize:vertical;font-family:var(--font-primary);}
   .empty-side{padding:26px 18px;text-align:center;color:var(--ink-faint);font-size:12.5px;}
