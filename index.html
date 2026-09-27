@@ -122,8 +122,8 @@
 
       <div class="quick-jump">
         <button class="jump-card" data-jump="considerations"><span class="tag">Things to Get</span><h4>What to get & decide</h4><p>Chuppah, ketubah, kosher logistics, paperwork, language.</p></button>
-        <button class="jump-card" data-jump="emails"><span class="tag">Emails and Gifts</span><h4>Templates & gift ideas</h4><p>Vendor emails, brand outreach, DIY and bought favors.</p></button>
-        <button class="jump-card" data-jump="diy"><span class="tag">Wedding d.i.y</span><h4>Your link and idea board</h4><p>Save tutorials and product links with a thumbnail, edit anytime.</p></button>
+        <button class="jump-card" data-jump="emails"><span class="tag">Email Templates</span><h4>Vendor & brand emails</h4><p>Venue, photographer, caterer inquiries and brand outreach.</p></button>
+        <button class="jump-card" data-jump="diy"><span class="tag">Wedding d.i.y</span><h4>Ideas, links & gifts</h4><p>Tutorials, product links, plus bridesmaid gifts & favors with their own budget.</p></button>
       </div>
     </section>
 
@@ -289,10 +289,9 @@
 <!-- EMAIL TEMPLATES -->
     <section class="view" id="view-emails">
       <div class="view-head">
-        <h2>Templates and Gift Ideas</h2>
+        <h2>Email Templates</h2>
       </div>
       <div id="emailCards"></div>
-      <div id="giftIdeas" style="margin-top:34px;"></div>
     </section>
 
 <!-- GUEST APP -->
@@ -385,6 +384,24 @@
         <div class="pinterest-board-shelf" id="diyPinterestBoardShelf"></div>
       </div>
       <div id="diyGrid" class="diy-grid"></div>
+
+      <div class="view-head" style="margin-top:36px;">
+        <h2 style="font-size:44px;">Bridesmaid gifts &amp; favors</h2>
+        <p>Idea starters below, mostly d.i.y, plus their own editable budget lines so you can track what you're actually spending without leaving this page.</p>
+      </div>
+      <div id="giftIdeas"></div>
+      <div class="card" style="padding:16px;margin-top:20px;">
+        <h4 style="font-size:14px;margin-bottom:4px;">Gifts &amp; favors budget</h4>
+        <p style="font-size:12px;color:var(--ink-soft);margin-bottom:12px;">The same budget as the Budget page - editing a line here updates it there too, and vice versa.</p>
+        <div id="giftBudgetBody"></div>
+        <div class="budget-add" style="margin-top:10px;">
+          <label class="field">Category<select id="gbCategory"><option value="Bridesmaid gifts">Bridesmaid gifts</option><option value="Guest favors">Guest favors</option></select></label>
+          <label class="field">Item<input type="text" id="gbItem" placeholder="e.g. Robes for 4 bridesmaids"></label>
+          <label class="field">Estimate<input type="number" id="gbEst" placeholder="0"></label>
+          <label class="field">Actual<input type="number" id="gbAct" placeholder="0"></label>
+          <button class="btn primary" id="btnAddGiftBudget">+ Add line</button>
+        </div>
+      </div>
     </section>
 
 </main>
@@ -502,9 +519,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="firebase-sync.js?v=20260926-1"></script>
-<script src="app-1.js?v=20260926-7"></script>
+<script src="app-1.js?v=20260927-1"></script>
 <script src="app-4.js?v=20260913-24"></script>
 <script src="app-2.js?v=20260926-17"></script>
-<script src="app-3.js?v=20260926-3"></script>
+<script src="app-3.js?v=20260927-1"></script>
 <script src="venue-map.js?v=20260926-11"></script>
 <script src="moodboard-pinterest.js?v=29"></script>
