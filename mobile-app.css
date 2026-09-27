@@ -67,3 +67,16 @@
 }
 @media (max-width: 430px){.style-grid,.style-visual-grid{grid-template-columns:1fr 1fr !important;}.style-card .style-img{height:135px !important;}.board-columns{column-count:2 !important;}}
 @media (max-width: 360px){#vvAuthBox{max-width:104px !important;right:6px !important;padding:3px 5px !important;font-size:8.5px !important;}#vvAuthBox button{padding:3px 5px !important;font-size:8.5px !important;}}
+
+/* A printed page (A4/Letter) is narrower than the 820px breakpoint above,
+   so its .sidebar{display:flex !important} and #vvMobileNav were winning
+   over styles.css's own @media print block - this file loads after it, so
+   ties go to whichever !important rule appears here instead. Re-asserting
+   the same hide here, last, is what actually makes it stick when printing
+   "Print guest list" or "Print / save budget as PDF". */
+@media print{
+  .sidebar,#vvMobileNav,#vvMobileMore,.no-print{display:none !important;}
+  .view{display:none !important;}
+  .view.active{display:block !important;}
+  body{padding-bottom:0 !important;}
+}
