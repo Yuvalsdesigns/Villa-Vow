@@ -66,6 +66,9 @@ const ICON = {
   suitGuayabera:'<path d="M7 21V9l5-3 5 3v12"/><path d="M9 21V12M15 21V12"/><path d="M9.8 14h1M13.2 14h1M9.8 17h1M13.2 17h1"/>',
   mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 6l9 7 9-7"/>',
   scissors:'<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M20 4L7.9 15.9M14.5 14.5L20 20M7.9 8.1L12 12"/>',
+  paperclip:'<path d="M8 12.5l6.5-6.5a3.5 3.5 0 115 5L9.5 21a5 5 0 11-7-7L13 3.5"/>',
+  upload:'<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/>',
+  download:'<path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/>',
 };
 function svg(paths, extra){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" '+(extra||'')+'>'+paths+'</svg>'; }
 
@@ -268,6 +271,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 "use strict";
 
 let db = null, dbReady=false, syncUnavailable=false;
+let storage = null, storageReady=false;
 const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
@@ -605,6 +609,7 @@ async function initDb(){
     if(!db){ syncUnavailable=true; setSync(false,'no live sync in this view, changes stay on this device only'); renderAll(); return; }
     dbReady = true;
     setSync(true,'synced');
+    window.claude.use('storage').then(s=>{ storage = s; storageReady = !!s; }).catch(()=>{});
     unsub.push(db.collection('todos').orderBy('order','asc').onSnapshot(snap=>{
       state.todos = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_TODOS.map(([category,text],i)=>({id:'seed-todo-'+i, category, text, done:false, order:i}));
       renderTodos(); renderStart();
@@ -1161,12 +1166,13 @@ function renderBudget(){
   body.innerHTML='';
   state.budget.forEach(b=>{
     const tr = document.createElement('tr');
+    tr.dataset.id = b.id;
     const catColor = budgetCategoryColor(budgetBreakdown.colorByKey, b.category);
     tr.innerHTML = '<td><span class="budget-cat-cell"><span class="budget-row-swatch" style="background:'+catColor+'"></span><textarea class="cat-input" rows="1" placeholder="Category">'+esc(b.category)+'</textarea></span></td>'
       +'<td><textarea class="item-input" rows="1" placeholder="Item">'+esc(b.item)+'</textarea></td>'
       +'<td class="num-cell mono">'+numInput('est',b)+'</td>'
       +'<td class="num-cell mono">'+numInput('act',b)+'</td>'
-      +'<td></td><td></td><td></td>';
+      +'<td></td><td></td><td class="invoice-cell"></td><td></td>';
     body.appendChild(tr);
     const paidCell = tr.children[4];
     const pill = document.createElement('button'); pill.className='paid-pill'+(b.paid?'':' no'); pill.textContent = b.paid?'Paid':'Unpaid';
@@ -1177,7 +1183,8 @@ function renderBudget(){
     ni.addEventListener('input', ()=> autoGrowTextarea(ni));
     ni.addEventListener('change', ()=> updateBudget(b,{notes:ni.value}));
     notesCell.appendChild(ni);
-    const delCell = tr.children[6];
+    buildInvoiceCell(tr.children[6], b);
+    const delCell = tr.children[7];
     const delBtn = document.createElement('button'); delBtn.className='btn ghost small'; delBtn.innerHTML = svg(ICON.trash);
     delBtn.addEventListener('click', ()=>{
       const label = b.item ? '"'+b.item+'"' : 'this line';
@@ -1212,6 +1219,123 @@ function updateBudget(b, data){
   if(dbReady) db.collection('budget').doc(b.id).update(data);
   else renderBudget();
 }
+
+/* ---- invoice/receipt file attached to a budget line ----
+   Stored in Firebase Storage (not Firestore, which isn't for binary blobs);
+   the budget doc just keeps a pointer: {name,url,path,size,contentType,
+   uploadedAt}. Gated on storageReady the same way writes are gated on
+   dbReady elsewhere - only signed-in access uploads/deletes files, so
+   invoices stay private to the two of you rather than public in Storage. */
+const INVOICE_MAX_MB = 15;
+let invoiceFileInput = null, invoicePendingTarget = null;
+function ensureInvoiceFileInput(){
+  if(invoiceFileInput) return invoiceFileInput;
+  invoiceFileInput = document.createElement('input');
+  invoiceFileInput.type = 'file';
+  invoiceFileInput.accept = '.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,application/pdf,image/*';
+  invoiceFileInput.style.display = 'none';
+  document.body.appendChild(invoiceFileInput);
+  invoiceFileInput.addEventListener('change', ()=>{
+    const file = invoiceFileInput.files[0];
+    const target = invoicePendingTarget;
+    invoiceFileInput.value = '';
+    invoicePendingTarget = null;
+    if(file && target) uploadInvoiceFile(target, file);
+  });
+  return invoiceFileInput;
+}
+function triggerInvoiceUpload(b){
+  if(!storageReady || !storage){ alert("File uploads need you to be signed in first (see the sign-in box at the top) - that keeps invoices private to just the two of you."); return; }
+  invoicePendingTarget = b;
+  ensureInvoiceFileInput().click();
+}
+function invoiceCellFor(b){
+  // A gift/favor line's row exists in both the main Budget table and the
+  // DIY page's mirrored one at once (both stay in the DOM, just hidden
+  // when their tab isn't open) - prefer whichever copy is actually visible
+  // so the Uploading/Deleting status shows up wherever the user is looking.
+  const cells = document.querySelectorAll('tr[data-id="'+b.id+'"] .invoice-cell');
+  for(const cell of cells){ if(cell.offsetParent !== null) return cell; }
+  return cells[0] || null;
+}
+async function uploadInvoiceFile(b, file){
+  if(file.size > INVOICE_MAX_MB*1024*1024){ alert('That file is larger than '+INVOICE_MAX_MB+'MB - try a smaller scan or a compressed PDF.'); return; }
+  const cell = invoiceCellFor(b);
+  if(cell) cell.innerHTML = '<span class="invoice-status">Uploading…</span>';
+  const oldPath = b.invoice && b.invoice.path;
+  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_ ]+/g,'_').slice(0,120) || 'file';
+  const path = 'invoices/'+b.id+'/'+Date.now()+'-'+safeName;
+  try{
+    const ref = storage.ref(path);
+    await ref.put(file, {contentType: file.type||undefined});
+    const url = await ref.getDownloadURL();
+    if(oldPath && oldPath!==path) storage.ref(oldPath).delete().catch(()=>{});
+    updateBudget(b, {invoice: {name:file.name, url, path, size:file.size, contentType:file.type||'', uploadedAt:Date.now()}});
+  }catch(err){
+    console.error('Villa & Vow invoice upload error:', err);
+    alert("Couldn't upload that file. Check your connection and try again.");
+    if(cell) buildInvoiceCell(cell, b);
+  }
+}
+async function deleteInvoiceFile(b){
+  if(!storageReady || !storage){ alert("Not connected right now - please try again after signing in."); return; }
+  const cell = invoiceCellFor(b);
+  if(cell) cell.innerHTML = '<span class="invoice-status">Deleting…</span>';
+  try{
+    if(b.invoice && b.invoice.path){
+      await storage.ref(b.invoice.path).delete().catch(err=>{ if(err.code!=='storage/object-not-found') throw err; });
+    }
+    updateBudget(b, {invoice: null});
+  }catch(err){
+    console.error('Villa & Vow invoice delete error:', err);
+    alert("Couldn't delete that file. Please try again.");
+    if(cell) buildInvoiceCell(cell, b);
+  }
+}
+async function downloadInvoiceFile(inv){
+  try{
+    const resp = await fetch(inv.url);
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl; a.download = inv.name || 'invoice';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  }catch(err){
+    console.error('Villa & Vow invoice download error:', err);
+    window.open(inv.url, '_blank', 'noopener');
+  }
+}
+function buildInvoiceCell(cell, b){
+  cell.innerHTML = '';
+  const inv = b.invoice;
+  if(inv && inv.url){
+    const wrap = document.createElement('div'); wrap.className = 'invoice-file';
+    const link = document.createElement('a');
+    link.href = inv.url; link.target = '_blank'; link.rel = 'noopener';
+    link.className = 'invoice-file-link';
+    link.title = 'View '+(inv.name||'invoice');
+    link.innerHTML = svg(ICON.paperclip) + '<span>'+esc(inv.name||'Invoice')+'</span>';
+    wrap.appendChild(link);
+    const actions = document.createElement('div'); actions.className = 'invoice-file-actions';
+    const dlBtn = document.createElement('button'); dlBtn.type='button'; dlBtn.className='icon-btn'; dlBtn.title='Download'; dlBtn.innerHTML = svg(ICON.download);
+    dlBtn.addEventListener('click', ()=> downloadInvoiceFile(inv));
+    const replaceBtn = document.createElement('button'); replaceBtn.type='button'; replaceBtn.className='icon-btn'; replaceBtn.title='Replace file'; replaceBtn.innerHTML = svg(ICON.upload);
+    replaceBtn.addEventListener('click', ()=> triggerInvoiceUpload(b));
+    const delBtn = document.createElement('button'); delBtn.type='button'; delBtn.className='icon-btn'; delBtn.title='Delete file'; delBtn.innerHTML = svg(ICON.trash);
+    delBtn.addEventListener('click', ()=>{
+      confirmAction("Delete the invoice/receipt for "+(b.item?'"'+b.item+'"':'this line')+"? This can't be undone.", ()=> deleteInvoiceFile(b));
+    });
+    actions.appendChild(dlBtn); actions.appendChild(replaceBtn); actions.appendChild(delBtn);
+    wrap.appendChild(actions);
+    cell.appendChild(wrap);
+  } else {
+    const btn = document.createElement('button'); btn.type='button'; btn.className='btn ghost small'; btn.innerHTML = svg(ICON.upload)+'<span>Attach</span>';
+    btn.addEventListener('click', ()=> triggerInvoiceUpload(b));
+    cell.appendChild(btn);
+  }
+}
+
 document.getElementById('btnAddBudget').addEventListener('click', ()=>{
   const cat=document.getElementById('bCategory'), item=document.getElementById('bItem'), est=document.getElementById('bEst'), act=document.getElementById('bAct');
   if(!item.value.trim()) return;

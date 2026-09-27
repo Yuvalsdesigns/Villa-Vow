@@ -206,15 +206,16 @@ function renderGiftBudgetSection(){
     return;
   }
   const breakdown = typeof budgetCategoryBreakdown==='function' ? budgetCategoryBreakdown() : null;
-  body.innerHTML = '<div class="table-scroll"><table class="budget-table"><thead><tr><th>Category</th><th>Item</th><th>Estimate (€)</th><th>Actual (€)</th><th>Paid</th><th>Notes</th><th></th></tr></thead><tbody id="giftBudgetTbody"></tbody></table></div>';
+  body.innerHTML = '<div class="table-scroll"><table class="budget-table"><thead><tr><th>Category</th><th>Item</th><th>Estimate (€)</th><th>Actual (€)</th><th>Paid</th><th>Notes</th><th>Invoice</th><th></th></tr></thead><tbody id="giftBudgetTbody"></tbody></table></div>';
   const tbody = document.getElementById('giftBudgetTbody');
   lines.forEach(b=>{
     const tr = document.createElement('tr');
+    tr.dataset.id = b.id;
     const catColor = breakdown ? budgetCategoryColor(breakdown.colorByKey, b.category) : null;
     tr.innerHTML = '<td><span class="budget-cat-cell">'+(catColor?'<span class="budget-row-swatch" style="background:'+catColor+'"></span>':'')+'<textarea class="cat-input" rows="1" placeholder="Category">'+esc(b.category)+'</textarea></span></td><td><textarea class="item-input" rows="1" placeholder="Item">'+esc(b.item)+'</textarea></td>'
       +'<td class="num-cell mono"><input type="number" data-k="est" value="'+(b.estCost??'')+'"></td>'
       +'<td class="num-cell mono"><input type="number" data-k="act" value="'+(b.actCost??'')+'"></td>'
-      +'<td></td><td></td><td></td>';
+      +'<td></td><td></td><td class="invoice-cell"></td><td></td>';
     tbody.appendChild(tr);
     const paidCell = tr.children[4];
     const pill = document.createElement('button'); pill.className='paid-pill'+(b.paid?'':' no'); pill.textContent = b.paid?'Paid':'Unpaid';
@@ -225,7 +226,8 @@ function renderGiftBudgetSection(){
     ni.addEventListener('input', ()=> autoGrowTextarea(ni));
     ni.addEventListener('change', ()=> updateBudget(b,{notes:ni.value}));
     notesCell.appendChild(ni);
-    const delCell = tr.children[6];
+    buildInvoiceCell(tr.children[6], b);
+    const delCell = tr.children[7];
     const delBtn = document.createElement('button'); delBtn.className='btn ghost small'; delBtn.innerHTML = svg(ICON.trash);
     delBtn.addEventListener('click', ()=>{
       const label = b.item ? '"'+b.item+'"' : 'this line';
