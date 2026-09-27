@@ -1265,6 +1265,19 @@ function invoiceCellFor(b){
   for(const cell of cells){ if(cell.offsetParent !== null) return cell; }
   return cells[0] || null;
 }
+/* A CORS-misconfigured Storage bucket doesn't reject an upload outright -
+   the SDK just keeps quietly retrying a blocked request, so without this
+   the UI would sit on "Uploading…" forever with no error at all. This
+   turns that into a clear, actionable message after a reasonable wait
+   instead of leaving it looking merely slow. */
+function withTimeout(promise, ms, timeoutMessage){
+  let timer;
+  const timeout = new Promise((_, reject)=>{
+    timer = setTimeout(()=> reject(Object.assign(new Error(timeoutMessage), {isTimeout:true})), ms);
+  });
+  return Promise.race([promise, timeout]).finally(()=> clearTimeout(timer));
+}
+const INVOICE_TIMEOUT_MESSAGE = "This is timing out, which usually means Firebase Storage's CORS settings haven't been configured to allow uploads from this website yet - see storage-cors.json in the repo for the fix.";
 async function uploadInvoiceFile(b, file){
   if(file.size > INVOICE_MAX_MB*1024*1024){ alert('That file is larger than '+INVOICE_MAX_MB+'MB - try a smaller scan or a compressed PDF.'); return; }
   const cell = invoiceCellFor(b);
@@ -1274,13 +1287,13 @@ async function uploadInvoiceFile(b, file){
   const path = 'invoices/'+b.id+'/'+Date.now()+'-'+safeName;
   try{
     const ref = storage.ref(path);
-    await ref.put(file, {contentType: file.type||undefined});
-    const url = await ref.getDownloadURL();
+    await withTimeout(ref.put(file, {contentType: file.type||undefined}), 25000, INVOICE_TIMEOUT_MESSAGE);
+    const url = await withTimeout(ref.getDownloadURL(), 15000, INVOICE_TIMEOUT_MESSAGE);
     if(oldPath && oldPath!==path) storage.ref(oldPath).delete().catch(()=>{});
     updateBudget(b, {invoice: {name:file.name, url, path, size:file.size, contentType:file.type||'', uploadedAt:Date.now()}});
   }catch(err){
     console.error('Villa & Vow invoice upload error:', err);
-    alert("Couldn't upload that file. Check your connection and try again.");
+    alert(err.isTimeout ? err.message : "Couldn't upload that file. Check your connection and try again.");
     if(cell) buildInvoiceCell(cell, b);
   }
 }
@@ -1290,12 +1303,12 @@ async function deleteInvoiceFile(b){
   if(cell) cell.innerHTML = '<span class="invoice-status">Deleting…</span>';
   try{
     if(b.invoice && b.invoice.path){
-      await storage.ref(b.invoice.path).delete().catch(err=>{ if(err.code!=='storage/object-not-found') throw err; });
+      await withTimeout(storage.ref(b.invoice.path).delete().catch(err=>{ if(err.code!=='storage/object-not-found') throw err; }), 15000, INVOICE_TIMEOUT_MESSAGE);
     }
     updateBudget(b, {invoice: null});
   }catch(err){
     console.error('Villa & Vow invoice delete error:', err);
-    alert("Couldn't delete that file. Please try again.");
+    alert(err.isTimeout ? err.message : "Couldn't delete that file. Please try again.");
     if(cell) buildInvoiceCell(cell, b);
   }
 }
