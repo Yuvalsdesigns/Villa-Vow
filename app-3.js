@@ -259,27 +259,163 @@ document.getElementById('btnAddGiftBudget')?.addEventListener('click', ()=>{
 });
 renderGiftBudgetSection();
 
-/* Templates mark a label bold with **like this**. A plain textarea can't
-   render that, and copying real bold (not literal asterisks) into an
-   email client needs an actual text/html clipboard flavor alongside the
-   plain-text one, so the body is shown as read-only rendered HTML rather
-   than a textarea. */
-function mdBoldToHtml(raw){ return esc(raw).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); }
-function mdBoldStrip(raw){ return raw.replace(/\*\*(.+?)\*\*/g, '$1'); }
+/* ---- Email Templates: editable, rich-text (bold + bullet lists), synced ----
+   Templates used to be hardcoded strings with a **bold** markdown-ish
+   marker, shown via white-space:pre-wrap - which depends on the browser
+   preserving literal newlines, and broke down to one unbroken block of
+   text wherever that CSS didn't apply. They're real HTML now
+   (state.emailTemplates, synced through Firestore like everything else),
+   edited in place with a small contenteditable toolbar (Bold / bullet
+   list / numbered list), and rendered with actual <p>/<ul><li> tags - so
+   paragraphs and bullets are correct everywhere without depending on
+   preserved whitespace, and the couple can rewrite the wording themselves
+   instead of asking for a change every time. */
+const EMAIL_ALLOWED_TAGS = new Set(['P','BR','B','STRONG','I','EM','UL','OL','LI','DIV']);
+function sanitizeEmailHtml(html){
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  (function walk(parent){
+    Array.from(parent.childNodes).forEach(node=>{
+      if(node.nodeType===Node.TEXT_NODE) return;
+      if(node.nodeType!==Node.ELEMENT_NODE){ parent.removeChild(node); return; }
+      walk(node);
+      if(EMAIL_ALLOWED_TAGS.has(node.tagName)){
+        while(node.attributes.length) node.removeAttribute(node.attributes[0].name);
+      }else{
+        while(node.firstChild) parent.insertBefore(node.firstChild, node);
+        parent.removeChild(node);
+      }
+    });
+  })(tpl.content);
+  return tpl.innerHTML;
+}
+/* One-time conversion of the old **bold** / "- bullet" seed text into real
+   HTML - only used to migrate the original templates into Firestore the
+   first time (see ensureEmailTemplatesMigration in firebase-sync.js). */
+function templateBodyToHtml(raw){
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  return raw.split(/\n{2,}/).map(block=>{
+    const lines = block.split('\n').filter(l=>l.length);
+    if(lines.length && lines.every(l=>/^[-•]\s+/.test(l))){
+      return '<ul>'+lines.map(l=> '<li>'+inline(l.replace(/^[-•]\s+/,''))+'</li>').join('')+'</ul>';
+    }
+    return '<p>'+lines.map(inline).join('<br>')+'</p>';
+  }).join('');
+}
+/* innerText (not textContent) so paragraph/list block boundaries become
+   real line breaks the same way a browser visually renders them - but it
+   needs the element attached and laid out first, hence the detached,
+   off-screen host div. */
+function htmlToPlainText(html){
+  const div = document.createElement('div');
+  div.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+  div.innerHTML = html;
+  div.querySelectorAll('li').forEach(li=> li.prepend(document.createTextNode('- ')));
+  document.body.appendChild(div);
+  const text = div.innerText;
+  document.body.removeChild(div);
+  return text.trim();
+}
+function updateEmailTemplate(t, data){
+  Object.assign(t, data);
+  if(dbReady) db.collection('emailTemplates').doc(t.id).update(data);
+  else renderEmails();
+}
+function addEmailTemplate(){
+  const maxOrder = state.emailTemplates.reduce((m,t)=>Math.max(m,t.order||0),0);
+  const data = {title:'New template', to:'', subject:'', bodyHtml:'<p>Write your email here…</p>', order:maxOrder+1};
+  if(dbReady) db.collection('emailTemplates').add(data);
+  else { localAdd(state.emailTemplates, data); renderEmails(); }
+}
+function deleteEmailTemplate(t){
+  confirmAction('Delete the "'+(t.title||'Untitled')+'" template? This can\'t be undone.', ()=>{
+    if(dbReady) db.collection('emailTemplates').doc(t.id).delete();
+    else { state.emailTemplates = state.emailTemplates.filter(x=>x.id!==t.id); renderEmails(); }
+  });
+}
 function renderEmails(){
   const wrap = document.getElementById('emailCards'); if(!wrap) return;
+  if(syncUnavailable && state.emailTemplates.length===0){
+    state.emailTemplates = EMAIL_TEMPLATES.map((t,i)=>({id:'local-email-'+i, title:t.title, to:t.to, subject:t.subject, bodyHtml:templateBodyToHtml(t.body), order:i}));
+  }
   wrap.innerHTML='';
-  EMAIL_TEMPLATES.forEach((t,i)=>{
-    const card = document.createElement('div'); card.className='email-card'+(t.highlight?'':''); if(t.highlight) card.style.borderColor='var(--brass)';
-    card.innerHTML = '<div class="email-head"><h4>'+t.title+'</h4><button class="btn small" data-i="'+i+'">Copy</button></div>'
-      + '<div class="to">To: '+esc(t.to)+'</div>'
-      + '<div class="subject">Subject: <b>'+esc(t.subject)+'</b></div>'
-      + '<div class="email-body-view">'+mdBoldToHtml(t.body)+'</div>';
+  (state.emailTemplates||[]).forEach(t=>{
+    const card = document.createElement('div'); card.className='email-card';
+    card.innerHTML =
+        '<div class="email-head">'
+          +'<input class="email-title-input" value="'+esc(t.title)+'" readonly>'
+          +'<div class="email-head-actions">'
+            +'<button type="button" class="btn small ghost edit-btn">Edit</button>'
+            +'<button type="button" class="btn small copy-btn">Copy</button>'
+            +'<button type="button" class="icon-btn del-btn" title="Delete template">'+svg(ICON.trash)+'</button>'
+          +'</div>'
+        +'</div>'
+        +'<label class="email-meta-field">To<input class="email-to-input" value="'+esc(t.to)+'" readonly></label>'
+        +'<label class="email-meta-field">Subject<input class="email-subject-input" value="'+esc(t.subject)+'" readonly></label>'
+        +'<div class="email-toolbar" hidden>'
+          +'<button type="button" data-cmd="bold" title="Bold"><b>B</b></button>'
+          +'<button type="button" data-cmd="insertUnorderedList" title="Bullet list">• List</button>'
+          +'<button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>'
+          +'<button type="button" data-cmd="removeFormat" title="Clear formatting">Clear</button>'
+        +'</div>'
+        +'<div class="email-body-view" spellcheck="false">'+t.bodyHtml+'</div>'
+        +'<div class="email-edit-actions" hidden>'
+          +'<button type="button" class="btn small ghost cancel-btn">Cancel</button>'
+          +'<button type="button" class="btn primary small save-btn">Save changes</button>'
+        +'</div>';
+    wrap.appendChild(card);
+
+    const titleInput = card.querySelector('.email-title-input');
+    const toInput = card.querySelector('.email-to-input');
+    const subjectInput = card.querySelector('.email-subject-input');
+    const toolbar = card.querySelector('.email-toolbar');
     const bodyEl = card.querySelector('.email-body-view');
-    card.querySelector('button').addEventListener('click', async ()=>{
-      const btn = card.querySelector('button');
-      const plainText = 'Subject: '+t.subject+'\n\n'+mdBoldStrip(t.body);
-      const html = 'Subject: <b>'+esc(t.subject)+'</b><br><br>'+mdBoldToHtml(t.body).replace(/\n/g,'<br>');
+    const editBtn = card.querySelector('.edit-btn');
+    const copyBtn = card.querySelector('.copy-btn');
+    const delBtn = card.querySelector('.del-btn');
+    const editActions = card.querySelector('.email-edit-actions');
+    const cancelBtn = card.querySelector('.cancel-btn');
+    const saveBtn = card.querySelector('.save-btn');
+    let preEditHtml = null;
+
+    function setEditing(on){
+      titleInput.readOnly = !on;
+      toInput.readOnly = !on;
+      subjectInput.readOnly = !on;
+      bodyEl.contentEditable = on ? 'true' : 'false';
+      toolbar.hidden = !on;
+      editActions.hidden = !on;
+      // .btn sets its own display:inline-flex unconditionally, which beats
+      // the hidden attribute's UA display:none at equal specificity - an
+      // inline style always wins over that regardless.
+      editBtn.style.display = on ? 'none' : '';
+      copyBtn.style.display = on ? 'none' : '';
+      card.classList.toggle('editing', on);
+      if(on){ preEditHtml = bodyEl.innerHTML; bodyEl.focus(); }
+    }
+    editBtn.addEventListener('click', ()=> setEditing(true));
+    cancelBtn.addEventListener('click', ()=>{
+      titleInput.value = t.title; toInput.value = t.to; subjectInput.value = t.subject;
+      bodyEl.innerHTML = preEditHtml;
+      setEditing(false);
+    });
+    saveBtn.addEventListener('click', ()=>{
+      updateEmailTemplate(t, {
+        title: titleInput.value.trim() || 'Untitled',
+        to: toInput.value.trim(),
+        subject: subjectInput.value.trim(),
+        bodyHtml: sanitizeEmailHtml(bodyEl.innerHTML),
+      });
+      setEditing(false);
+    });
+    toolbar.querySelectorAll('button[data-cmd]').forEach(btn=>{
+      btn.addEventListener('mousedown', e=> e.preventDefault());
+      btn.addEventListener('click', ()=>{ bodyEl.focus(); document.execCommand(btn.dataset.cmd); });
+    });
+    delBtn.addEventListener('click', ()=> deleteEmailTemplate(t));
+    copyBtn.addEventListener('click', async ()=>{
+      const plainText = 'Subject: '+t.subject+'\n\n'+htmlToPlainText(t.bodyHtml);
+      const html = 'Subject: <b>'+esc(t.subject)+'</b><br><br>'+t.bodyHtml;
       try{
         if(window.ClipboardItem){
           await navigator.clipboard.write([new ClipboardItem({
@@ -289,18 +425,17 @@ function renderEmails(){
         }else{
           await navigator.clipboard.writeText(plainText);
         }
-        btn.textContent='Copied';
+        copyBtn.textContent='Copied';
       }catch(e){
         const range = document.createRange(); range.selectNodeContents(bodyEl);
         const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
-        btn.textContent='Select & copy manually';
+        copyBtn.textContent='Select & copy manually';
       }
-      setTimeout(()=> btn.textContent='Copy', 1800);
+      setTimeout(()=> copyBtn.textContent='Copy', 1800);
     });
-    wrap.appendChild(card);
   });
 }
-renderEmails();
+document.getElementById('btnAddEmailTemplate')?.addEventListener('click', addEmailTemplate);
 renderGiftIdeas();
 
 /* ---------------- WEDDING DIY ---------------- */

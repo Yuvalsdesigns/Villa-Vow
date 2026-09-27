@@ -272,7 +272,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 
 let db = null, dbReady=false, syncUnavailable=false;
 let storage = null, storageReady=false;
-const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[] };
+const state = { todos:[], budget:[], pins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[], emailTemplates:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -647,6 +647,13 @@ async function initDb(){
       if(typeof renderVenueContacts==='function') renderVenueContacts();
       if(typeof renderVenues==='function') renderVenues();
     }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('emailTemplates').orderBy('order','asc').onSnapshot(snap=>{
+      state.emailTemplates = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()}))
+        : (typeof EMAIL_TEMPLATES!=='undefined' && typeof templateBodyToHtml==='function'
+            ? EMAIL_TEMPLATES.map((t,i)=>({id:'seed-email-'+i, title:t.title, to:t.to, subject:t.subject, bodyHtml:templateBodyToHtml(t.body), order:i}))
+            : []);
+      if(typeof renderEmails==='function') renderEmails();
+    }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('considerations').orderBy('order','asc').onSnapshot(snap=>{
       state.considerations = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_CONSIDERATIONS.map(([category,text],i)=>({id:'seed-consid-'+i, category, text, done:false, order:i}));
       renderConsiderations(); renderStart();
@@ -693,7 +700,7 @@ async function initDb(){
     }, err=>setSync(false,'sync error')));
   }catch(e){ syncUnavailable=true; setSync(false,'no live sync, changes stay on this device only'); renderAll(); }
 }
-function renderAll(){ renderTodos(); renderBudget(); renderBoard(); renderConsiderations(); renderVenues(); renderGuestApp(); renderStart(); }
+function renderAll(){ renderTodos(); renderBudget(); renderBoard(); renderConsiderations(); renderVenues(); renderGuestApp(); renderStart(); if(typeof renderEmails==='function') renderEmails(); }
 
 /* fallback local id for no-db mode */
 function localAdd(arr, data){ data.id = 'local-'+Math.random().toString(36).slice(2); arr.unshift(data); return data; }
