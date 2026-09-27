@@ -3,7 +3,7 @@
    Worker editor (Workers & Pages → Create → paste → Deploy). No CLI,
    no login flow, no npm packages needed. */
 
-const ALLOWED_EMAILS = ['yuvalsh99@gmail.com', 'yohan-levy@hotmail.fr'];
+const ALLOWED_EMAILS = ['yuvalsh99@gmail.com', 'yohan-levy@hotmail.fr', 'yuval.yohan@gmail.com'];
 const FIREBASE_PROJECT_ID = 'villa-vow';
 
 /* Double-check this is still a current model name at
