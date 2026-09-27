@@ -15,11 +15,14 @@
      runs at least once for everyone instead of being skipped forever. */
   const MIGRATIONS_VERSION=1;
   const MIGRATIONS_DONE_KEY='vvMigrationsVersion';
-  let firebaseReady=null,auth=null,firestore=null;
+  let firebaseReady=null,auth=null,firestore=null,storageReady=null;
   const PLANNER_WORKER_URL='https://villa-vow.yuvalsh99.workers.dev';
   window.VV_WORKER_URL=PLANNER_WORKER_URL;
   function loadScript(src){return new Promise((resolve,reject)=>{const existing=Array.from(document.scripts).find(s=>s.src===src);if(existing){if(existing.dataset.loaded==='1')return resolve();existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return;}const s=document.createElement('script');s.src=src;s.async=false;s.addEventListener('load',()=>{s.dataset.loaded='1';resolve();},{once:true});s.addEventListener('error',reject,{once:true});document.head.appendChild(s);});}
   async function ensureFirebase(){if(firebaseReady)return firebaseReady;firebaseReady=(async()=>{await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js');await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js');if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);auth=firebase.auth();firestore=firebase.firestore();await new Promise(resolve=>{const stop=auth.onAuthStateChanged(()=>{stop();resolve();},()=>resolve());});installAuthUi();return{auth,firestore};})();return firebaseReady;}
+  /* Loaded lazily, only once someone actually touches an invoice file -
+     the Storage SDK is sizeable and most page loads never need it. */
+  async function ensureStorage(){if(storageReady)return storageReady;storageReady=(async()=>{const services=await ensureFirebase();if(!services.auth.currentUser)return null;await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js');return firebase.storage();})();return storageReady;}
   async function ensureWeddingSeed(db){const setupRef=db.collection('meta').doc('setup');const setup=await setupRef.get();if(setup.exists)return;if(typeof SEED_TODOS==='undefined'||typeof SEED_CONSIDERATIONS==='undefined'||typeof SEED_BUDGET==='undefined')return;const batch=db.batch();SEED_TODOS.forEach(([category,text],i)=>batch.set(db.collection('todos').doc('seed-todo-'+i),{category,text,done:false,order:i}));SEED_CONSIDERATIONS.forEach(([category,text],i)=>batch.set(db.collection('considerations').doc('seed-consid-'+i),{category,text,done:false,order:i}));SEED_BUDGET.forEach((row,i)=>batch.set(db.collection('budget').doc('seed-budget-'+i),Object.assign({},row,{order:i})));batch.set(setupRef,{seeded:true,seededAt:firebase.firestore.FieldValue.serverTimestamp(),version:1});batch.set(db.collection('meta').doc('migration_rainplan_survivalkit'),{migratedAt:firebase.firestore.FieldValue.serverTimestamp(),includedInInitialSeed:true});batch.set(db.collection('meta').doc('migration_parking_check'),{migratedAt:firebase.firestore.FieldValue.serverTimestamp(),includedInInitialSeed:true});await batch.commit();}
   const RAIN_PLAN_TODO_MIGRATION=[['12+ months out','Confirm the venue has a real rain plan (indoor space that fits your full guest count, plus a clear Plan B and how last-minute the call can be) before signing anything']];
   const RAIN_PLAN_AND_SURVIVAL_KIT_CONSIDERATION_MIGRATION=[
@@ -172,6 +175,7 @@
       }
       return services.firestore;
     }catch(err){console.error('Villa & Vow Firebase sync error:',err);return null;}}
+    if(name==='storage'){try{ return await ensureStorage(); }catch(err){console.error('Villa & Vow storage sync error:',err);return null;}}
     if(name==='sample'){
       try{
         const services=await ensureFirebase();
