@@ -860,7 +860,11 @@
     .sidebar,.no-print{display:none !important;}
     main{padding:0;}
     .app{display:block;}
-    .view{display:block !important;}
+    /* Only the tab actually open should print - this used to force every
+       .view visible regardless of .active, so "Print / save budget as PDF"
+       and "Print guest list" both printed all 12 tabs back to back. */
+    .view{display:none !important;}
+    .view.active{display:block !important;}
   }
 
   /* ---------- Pinterest discovery shelf ---------- */

@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=20260925-4">
 <link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png?v=20260925-4">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260925-3">
-<link rel="stylesheet" href="styles.css?v=20260926-13">
+<link rel="stylesheet" href="styles.css?v=20260926-14">
 <link rel="stylesheet" href="mobile-app.css?v=20260926-3">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 
@@ -298,13 +298,13 @@
     <section class="view" id="view-guestapp">
       <div class="view-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <h2 style="margin-bottom:0;">Who's Coming</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn small" id="exportEmailsBtn">Download email list (CSV)</button>
           <button class="btn small" id="exportExcelBtn">Download full list (Excel)</button>
         </div>
       </div>
 
-      <div class="note-box">
+      <div class="note-box no-print">
         <b>How e-vites actually work:</b> there's no way to "send" from inside this app since it doesn't have email-sending built in, no planner app really does that safely. What you actually do is pick an e-vite service (<b>Paperless Post</b>, <b>Greenvelope</b>, <b>Zola</b>, <b>Joy</b>, etc.), then import your guest list into their platform, and they handle the bulk send and RSVP tracking for you. So the useful thing this app can do is give you an email field per guest, plus a one-click export of names and emails, so you can paste that list straight into whichever service you pick instead of retyping everyone by hand.
       </div>
 
