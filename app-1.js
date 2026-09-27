@@ -85,7 +85,7 @@ const TABS = [
   {id:'board', label:'Moodboard', icon:ICON.board},
   {id:'emails', label:'Email Templates', icon:ICON.mail},
   {id:'guestapp', label:'Guest App', icon:ICON.guests},
-  {id:'diy', label:'Wedding d.i.y', icon:ICON.scissors},
+  {id:'diy', label:'DIY and gifts', icon:ICON.scissors},
   {id:'travelguide', label:'Travel Guide', icon:ICON.compass},
 ];
 const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', venuereplies:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac', travelguide:'brass'};
