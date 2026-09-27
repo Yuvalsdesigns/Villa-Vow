@@ -78,8 +78,8 @@ const TABS = [
   {id:'considerations', label:'Things to Get', icon:ICON.list},
   {id:'venues', label:'Venues & Destinations', icon:ICON.map},
   {id:'venuereplies', label:'Venue Replies', icon:ICON.check2},
-  {id:'board', label:'Moodboard', icon:ICON.board},
   {id:'style', label:'Style Gallery', icon:ICON.style},
+  {id:'board', label:'Moodboard', icon:ICON.board},
   {id:'emails', label:'Email Templates', icon:ICON.mail},
   {id:'guestapp', label:'Guest App', icon:ICON.guests},
   {id:'diy', label:'Wedding d.i.y', icon:ICON.scissors},
@@ -133,6 +133,7 @@ function showTab(id){
   if(id==='budget' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
   if(id==='board' && typeof renderPinterestBoards==='function') renderPinterestBoards();
   if(id==='diy' && typeof renderDiyPinterestBoards==='function') renderDiyPinterestBoards();
+  if(id==='diy' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
   if((id==='todo' || id==='considerations' || id==='travelguide') && typeof resizeAllItemTextareas==='function') resizeAllItemTextareas();
   if(id==='venues' && typeof onVenuesTabShown==='function') onVenuesTabShown();
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}
@@ -965,7 +966,7 @@ function renderTravelGuide(){
    Firestore update while another tab is open). resizeAllBudgetNotes()
    re-measures every note once the tab is actually visible. */
 function autoGrowTextarea(el){ el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
-function resizeAllBudgetNotes(){ document.querySelectorAll('#view-budget .notes-input').forEach(autoGrowTextarea); }
+function resizeAllBudgetNotes(){ document.querySelectorAll('#view-budget .notes-input, #view-budget .cat-input, #view-budget .item-input, #giftBudgetBody .notes-input, #giftBudgetBody .cat-input, #giftBudgetBody .item-input').forEach(autoGrowTextarea); }
 
 /* Eight hand-picked, validated hues (fixed order - never cycled/reassigned
    by rank, so a category keeps its color as others come and go): the first
@@ -1161,7 +1162,8 @@ function renderBudget(){
   state.budget.forEach(b=>{
     const tr = document.createElement('tr');
     const catColor = budgetCategoryColor(budgetBreakdown.colorByKey, b.category);
-    tr.innerHTML = '<td><span class="budget-row-swatch" style="background:'+catColor+'"></span>'+esc(b.category)+'</td><td>'+esc(b.item)+'</td>'
+    tr.innerHTML = '<td><span class="budget-cat-cell"><span class="budget-row-swatch" style="background:'+catColor+'"></span><textarea class="cat-input" rows="1" placeholder="Category">'+esc(b.category)+'</textarea></span></td>'
+      +'<td><textarea class="item-input" rows="1" placeholder="Item">'+esc(b.item)+'</textarea></td>'
       +'<td class="num-cell mono">'+numInput('est',b)+'</td>'
       +'<td class="num-cell mono">'+numInput('act',b)+'</td>'
       +'<td></td><td></td><td></td>';
@@ -1187,6 +1189,14 @@ function renderBudget(){
     delCell.appendChild(delBtn);
     tr.querySelector('.num-cell input[data-k="est"]')?.addEventListener('change', e=> updateBudget(b,{estCost:Number(e.target.value)||0}));
     tr.querySelector('.num-cell input[data-k="act"]')?.addEventListener('change', e=> updateBudget(b,{actCost:Number(e.target.value)||0}));
+    const catTa = tr.querySelector('.cat-input');
+    autoGrowTextarea(catTa);
+    catTa.addEventListener('input', ()=> autoGrowTextarea(catTa));
+    catTa.addEventListener('change', ()=> updateBudget(b,{category:catTa.value.trim()}));
+    const itemTa = tr.querySelector('.item-input');
+    autoGrowTextarea(itemTa);
+    itemTa.addEventListener('input', ()=> autoGrowTextarea(itemTa));
+    itemTa.addEventListener('change', ()=> updateBudget(b,{item:itemTa.value.trim()}));
   });
   function numInput(k,b){ const val = k==='est'?(b.estCost??''):(b.actCost??''); return '<input type="number" data-k="'+k+'" value="'+val+'">'; }
   resizeAllBudgetNotes();

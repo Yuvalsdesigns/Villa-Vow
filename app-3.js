@@ -211,7 +211,7 @@ function renderGiftBudgetSection(){
   lines.forEach(b=>{
     const tr = document.createElement('tr');
     const catColor = breakdown ? budgetCategoryColor(breakdown.colorByKey, b.category) : null;
-    tr.innerHTML = '<td>'+(catColor?'<span class="budget-row-swatch" style="background:'+catColor+'"></span>':'')+esc(b.category)+'</td><td>'+esc(b.item)+'</td>'
+    tr.innerHTML = '<td><span class="budget-cat-cell">'+(catColor?'<span class="budget-row-swatch" style="background:'+catColor+'"></span>':'')+'<textarea class="cat-input" rows="1" placeholder="Category">'+esc(b.category)+'</textarea></span></td><td><textarea class="item-input" rows="1" placeholder="Item">'+esc(b.item)+'</textarea></td>'
       +'<td class="num-cell mono"><input type="number" data-k="est" value="'+(b.estCost??'')+'"></td>'
       +'<td class="num-cell mono"><input type="number" data-k="act" value="'+(b.actCost??'')+'"></td>'
       +'<td></td><td></td><td></td>';
@@ -237,6 +237,14 @@ function renderGiftBudgetSection(){
     delCell.appendChild(delBtn);
     tr.querySelector('input[data-k="est"]').addEventListener('change', e=> updateBudget(b,{estCost:Number(e.target.value)||0}));
     tr.querySelector('input[data-k="act"]').addEventListener('change', e=> updateBudget(b,{actCost:Number(e.target.value)||0}));
+    const catTa = tr.querySelector('.cat-input');
+    autoGrowTextarea(catTa);
+    catTa.addEventListener('input', ()=> autoGrowTextarea(catTa));
+    catTa.addEventListener('change', ()=> updateBudget(b,{category:catTa.value.trim()}));
+    const itemTa = tr.querySelector('.item-input');
+    autoGrowTextarea(itemTa);
+    itemTa.addEventListener('input', ()=> autoGrowTextarea(itemTa));
+    itemTa.addEventListener('change', ()=> updateBudget(b,{item:itemTa.value.trim()}));
   });
 }
 document.getElementById('btnAddGiftBudget')?.addEventListener('click', ()=>{
