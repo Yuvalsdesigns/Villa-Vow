@@ -80,7 +80,7 @@ const TABS = [
   {id:'venuereplies', label:'Venue Replies', icon:ICON.check2},
   {id:'board', label:'Moodboard', icon:ICON.board},
   {id:'style', label:'Style Gallery', icon:ICON.style},
-  {id:'emails', label:'Emails and Gifts', icon:ICON.mail},
+  {id:'emails', label:'Email Templates', icon:ICON.mail},
   {id:'guestapp', label:'Guest App', icon:ICON.guests},
   {id:'diy', label:'Wedding d.i.y', icon:ICON.scissors},
   {id:'travelguide', label:'Travel Guide', icon:ICON.compass},
@@ -1190,6 +1190,12 @@ function renderBudget(){
   });
   function numInput(k,b){ const val = k==='est'?(b.estCost??''):(b.actCost??''); return '<input type="number" data-k="'+k+'" value="'+val+'">'; }
   resizeAllBudgetNotes();
+  // The Wedding d.i.y page embeds its own editable view of the gift/favor
+  // budget lines (same Firestore collection, just filtered down) - kept in
+  // sync here rather than at every individual call site, so any path that
+  // already re-renders the main Budget page also refreshes that one for
+  // free, whichever page is actually open.
+  if(typeof renderGiftBudgetSection==='function') renderGiftBudgetSection();
 }
 function updateBudget(b, data){
   Object.assign(b,data);

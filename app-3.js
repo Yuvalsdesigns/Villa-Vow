@@ -187,6 +187,68 @@ function renderGiftIdeas(){
     wrap.appendChild(section);
   });
 }
+
+/* Bridesmaid gifts & guest favors moved here from Templates/Gift Ideas
+   since most of it ends up being d.i.y - this section's own editable
+   budget lines live in the exact same Firestore 'budget' collection as
+   the main Budget page (not a separate store), just filtered down to
+   gift/favor categories, so a change here shows up there and vice versa.
+   Matches any of the old combined seed category ("Gifts & favors") and
+   the two more specific ones this page's own "+ Add line" now offers,
+   so nothing already entered disappears from view after this split. */
+const GIFT_BUDGET_CATEGORIES = ['bridesmaid gifts','guest favors','gifts & favors'];
+function renderGiftBudgetSection(){
+  const body = document.getElementById('giftBudgetBody');
+  if(!body) return;
+  const lines = state.budget.filter(b=> GIFT_BUDGET_CATEGORIES.includes(String(b.category||'').trim().toLowerCase()));
+  if(!lines.length){
+    body.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">No gift or favor budget lines yet, add one below.</p>';
+    return;
+  }
+  const breakdown = typeof budgetCategoryBreakdown==='function' ? budgetCategoryBreakdown() : null;
+  body.innerHTML = '<div class="table-scroll"><table class="budget-table"><thead><tr><th>Category</th><th>Item</th><th>Estimate (€)</th><th>Actual (€)</th><th>Paid</th><th>Notes</th><th></th></tr></thead><tbody id="giftBudgetTbody"></tbody></table></div>';
+  const tbody = document.getElementById('giftBudgetTbody');
+  lines.forEach(b=>{
+    const tr = document.createElement('tr');
+    const catColor = breakdown ? budgetCategoryColor(breakdown.colorByKey, b.category) : null;
+    tr.innerHTML = '<td>'+(catColor?'<span class="budget-row-swatch" style="background:'+catColor+'"></span>':'')+esc(b.category)+'</td><td>'+esc(b.item)+'</td>'
+      +'<td class="num-cell mono"><input type="number" data-k="est" value="'+(b.estCost??'')+'"></td>'
+      +'<td class="num-cell mono"><input type="number" data-k="act" value="'+(b.actCost??'')+'"></td>'
+      +'<td></td><td></td><td></td>';
+    tbody.appendChild(tr);
+    const paidCell = tr.children[4];
+    const pill = document.createElement('button'); pill.className='paid-pill'+(b.paid?'':' no'); pill.textContent = b.paid?'Paid':'Unpaid';
+    pill.addEventListener('click', ()=> updateBudget(b,{paid:!b.paid}));
+    paidCell.appendChild(pill);
+    const notesCell = tr.children[5];
+    const ni = document.createElement('textarea'); ni.className='notes-input'; ni.rows=1; ni.value=b.notes||''; ni.placeholder='-';
+    ni.addEventListener('input', ()=> autoGrowTextarea(ni));
+    ni.addEventListener('change', ()=> updateBudget(b,{notes:ni.value}));
+    notesCell.appendChild(ni);
+    const delCell = tr.children[6];
+    const delBtn = document.createElement('button'); delBtn.className='btn ghost small'; delBtn.innerHTML = svg(ICON.trash);
+    delBtn.addEventListener('click', ()=>{
+      const label = b.item ? '"'+b.item+'"' : 'this line';
+      confirmAction('Are you sure you want to delete '+label+'?', ()=>{
+        if(dbReady) db.collection('budget').doc(b.id).delete();
+        else { state.budget = state.budget.filter(x=>x.id!==b.id); renderGiftBudgetSection(); if(typeof renderBudget==='function') renderBudget(); }
+      });
+    });
+    delCell.appendChild(delBtn);
+    tr.querySelector('input[data-k="est"]').addEventListener('change', e=> updateBudget(b,{estCost:Number(e.target.value)||0}));
+    tr.querySelector('input[data-k="act"]').addEventListener('change', e=> updateBudget(b,{actCost:Number(e.target.value)||0}));
+  });
+}
+document.getElementById('btnAddGiftBudget')?.addEventListener('click', ()=>{
+  const cat = document.getElementById('gbCategory'), item = document.getElementById('gbItem'), est = document.getElementById('gbEst'), act = document.getElementById('gbAct');
+  if(!item.value.trim()) return;
+  const data = {category:cat.value, item:item.value.trim(), estCost:Number(est.value)||0, actCost:Number(act.value)||0, paid:false, notes:'', order:Date.now()};
+  if(dbReady) db.collection('budget').add(data);
+  else { localAdd(state.budget, data); renderGiftBudgetSection(); if(typeof renderBudget==='function') renderBudget(); }
+  item.value=''; est.value=''; act.value='';
+});
+renderGiftBudgetSection();
+
 /* Templates mark a label bold with **like this**. A plain textarea can't
    render that, and copying real bold (not literal asterisks) into an
    email client needs an actual text/html clipboard flavor alongside the
