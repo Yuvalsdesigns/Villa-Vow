@@ -9,9 +9,24 @@ service cloud.firestore {
           'yohan.yuval@gmail.com'
         ];
     }
+    /* Budget, the guest list (and the invoice files and budget goal that
+       go with them), and the private notes-to-each-other stay wedding-
+       accounts-only to read. Everything else (checklist, venues, style
+       gallery, moodboard, email templates, DIY, travel guide) is public
+       to view - no sign-in needed - matching app-1.js's client-side tab
+       hiding and read-only lockdown for the same collections. Writes
+       anywhere always require a wedding account.
+       Note: this must stay a single rule per path rather than one broad
+       "allow read: if true" plus narrower exceptions - Firestore grants
+       access if ANY matching rule allows it, so a separate broad rule
+       would silently make these public again regardless of this one. */
+    function isPrivateDoc(coll, id) {
+      return coll in ['budget', 'guests', 'invoiceFiles', 'loveNotes']
+        || (coll == 'meta' && id == 'budgetGoal');
+    }
 
-    match /{document=**} {
-      allow read: if true;
+    match /{collection}/{docId} {
+      allow read: if isWeddingUser() || !isPrivateDoc(collection, docId);
       allow write: if isWeddingUser();
     }
   }
