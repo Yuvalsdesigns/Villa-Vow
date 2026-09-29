@@ -346,7 +346,7 @@ function renderEmails(){
           +'<input class="email-title-input" value="'+esc(t.title)+'" readonly>'
           +'<div class="email-head-actions">'
             +'<button type="button" class="btn small ghost edit-btn">Edit</button>'
-            +'<button type="button" class="btn small copy-btn">Copy</button>'
+            +'<button type="button" class="btn small copy-btn rz-safe">Copy</button>'
             +'<button type="button" class="icon-btn del-btn" title="Delete template">'+svg(ICON.trash)+'</button>'
           +'</div>'
         +'</div>'

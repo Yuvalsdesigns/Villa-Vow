@@ -1059,3 +1059,41 @@
   .paste-panel textarea{width:100%;font-family:var(--font-primary);font-size:12px;resize:vertical;}
   .paste-hint{font-size:11px;color:var(--ink-soft);line-height:1.5;}
   .paste-actions{display:flex;justify-content:flex-end;gap:8px;}
+
+  /* Read-only mode: family can now view the whole site with no account
+     at all, but only the three wedding accounts can save anything. The
+     actual enforcement is server-side (Firestore rules, plus a client-
+     side write-blocker in app-1.js's wrapReadOnlyDb so a stray edit fails
+     immediately instead of round-tripping to a rejected write) - this is
+     just the visual layer, so the UI doesn't look editable when it
+     silently wouldn't save. Nav (.tab-btn, mobile nav, .jump-card),
+     search/read actions, and anything marked .rz-safe stay interactive
+     since none of them write anything. */
+  .read-only-banner{display:none;position:sticky;top:0;z-index:250;background:var(--wine-ink);color:#fff;text-align:center;font:600 12.5px var(--font-primary);padding:9px 16px;}
+  .read-only-banner:not([hidden]){display:block;}
+  .read-only-banner.flash{background:var(--danger);}
+  body.read-only-mode #plannerFab,
+  body.read-only-mode #plannerPanel{display:none !important;}
+  body.read-only-mode input,
+  body.read-only-mode textarea,
+  body.read-only-mode select,
+  body.read-only-mode [contenteditable="true"]{
+    pointer-events:none;
+    opacity:.6;
+  }
+  body.read-only-mode .grip{pointer-events:none;opacity:.35;}
+  body.read-only-mode .btn,
+  body.read-only-mode .icon-btn,
+  body.read-only-mode .paid-pill,
+  body.read-only-mode .step-minus,
+  body.read-only-mode .step-plus,
+  body.read-only-mode .invite-btn,
+  body.read-only-mode .chk{
+    pointer-events:none;
+    opacity:.5;
+  }
+  body.read-only-mode .rz-safe,
+  body.read-only-mode .btn[data-jump]{
+    pointer-events:auto !important;
+    opacity:1 !important;
+  }
