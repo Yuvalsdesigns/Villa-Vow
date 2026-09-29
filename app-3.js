@@ -202,7 +202,9 @@ function renderGiftBudgetSection(){
   if(!body) return;
   const lines = state.budget.filter(b=> GIFT_BUDGET_CATEGORIES.includes(String(b.category||'').trim().toLowerCase()));
   if(!lines.length){
-    body.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">No gift or favor budget lines yet, add one below.</p>';
+    body.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">'
+      + (typeof canEdit!=='undefined' && !canEdit ? 'Budget details are private and not shown here.' : 'No gift or favor budget lines yet, add one below.')
+      + '</p>';
     return;
   }
   const breakdown = typeof budgetCategoryBreakdown==='function' ? budgetCategoryBreakdown() : null;

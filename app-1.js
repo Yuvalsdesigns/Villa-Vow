@@ -167,10 +167,13 @@ function renderStart(){
   const considDone = state.considerations.filter(t=>t.done).length;
   const estTotal = state.budget.reduce((s,b)=>s+(Number(b.estCost)||0),0);
   const pins = state.pins.length;
+  // Budget is private (hidden tab, and its own Firestore reads are denied
+  // for anyone but the three wedding accounts) - showing its total here
+  // regardless would defeat that, so this tile is wedding-accounts-only too.
   el.innerHTML = [
     tile(String(todoDone)+' / '+state.todos.length, 'Checklist tasks done', true),
     tile(String(considDone)+' / '+state.considerations.length, 'Things to get, settled'),
-    tile('€'+estTotal.toLocaleString(), 'Budget estimated so far'),
+    canEdit ? tile('€'+estTotal.toLocaleString(), 'Budget estimated so far') : '',
     tile(String(pins), 'Pins on your moodboard'),
   ].join('');
   document.querySelectorAll('[data-count]').forEach(c=>{
@@ -642,6 +645,24 @@ function showReadOnlyNotice(){
   const banner = document.getElementById('readOnlyBanner');
   if(banner){ banner.classList.add('flash'); setTimeout(()=> banner.classList.remove('flash'), 900); }
 }
+/* Budget and the guest list aren't just non-editable for a public viewer,
+   like everything else - they're not shown at all (matches firestore.rules'
+   isPrivateDoc list), so hide their nav entries, Start Here's own shortcut
+   buttons to them, and the private "Notes to each other". Without this a
+   public visitor could still click into an empty-looking Budget/Guest App
+   page, which reads as broken rather than intentionally private. */
+function applyContentRestrictions(){
+  const hiddenTabs = canEdit ? [] : ['budget','guestapp'];
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(b=>{ b.style.display = hiddenTabs.includes(b.dataset.tab) ? 'none' : ''; });
+  document.querySelectorAll('#vvMobileNav button[data-tab]').forEach(b=>{ b.style.display = hiddenTabs.includes(b.dataset.tab) ? 'none' : ''; });
+  document.querySelectorAll('.btn[data-jump="budget"], .btn[data-jump="guestapp"]').forEach(b=>{ b.style.display = canEdit ? '' : 'none'; });
+  const loveNotesSection = document.querySelector('.love-notes');
+  if(loveNotesSection) loveNotesSection.style.display = canEdit ? '' : 'none';
+  if(!canEdit){
+    const stuckOnHidden = hiddenTabs.some(id=> document.getElementById('view-'+id)?.classList.contains('active'));
+    if(stuckOnHidden) showTab('start');
+  }
+}
 
 async function initDb(){
   try{
@@ -655,6 +676,7 @@ async function initDb(){
     const roBanner = document.getElementById('readOnlyBanner');
     if(roBanner) roBanner.hidden = canEdit;
     setSync(true, canEdit ? 'synced' : 'viewing only');
+    applyContentRestrictions();
     unsub.push(db.collection('todos').orderBy('order','asc').onSnapshot(snap=>{
       state.todos = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_TODOS.map(([category,text],i)=>({id:'seed-todo-'+i, category, text, done:false, order:i}));
       renderTodos(); renderStart();
@@ -662,11 +684,15 @@ async function initDb(){
     unsub.push(db.collection('budget').orderBy('order','asc').onSnapshot(snap=>{
       state.budget = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderBudget(); renderStart();
-    }, err=>setSync(false,'sync error')));
+    // Budget is a wedding-accounts-only collection now - a permission-denied
+    // here is the expected, correct result for a public viewer (their tab
+    // is hidden entirely by applyContentRestrictions), not a real sync
+    // problem, so it shouldn't flip the whole app's status to "sync error".
+    }, err=>{ if(canEdit) setSync(false,'sync error'); }));
     unsub.push(db.collection('meta').doc('budgetGoal').onSnapshot(doc=>{
       state.budgetGoal = doc.exists ? (Number(doc.data().amount)||0) : state.budgetGoal;
       renderBudget(); renderStart();
-    }, err=>setSync(false,'sync error')));
+    }, err=>{ if(canEdit) setSync(false,'sync error'); }));
     unsub.push(db.collection('pinboard').orderBy('createdAt','desc').onSnapshot(snap=>{
       state.pins = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderBoard(); renderStart();
@@ -682,7 +708,7 @@ async function initDb(){
     unsub.push(db.collection('loveNotes').orderBy('createdAt','desc').limit(30).onSnapshot(snap=>{
       state.loveNotes = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderLoveNotes();
-    }, err=>setSync(false,'sync error')));
+    }, err=>{ if(canEdit) setSync(false,'sync error'); }));
     unsub.push(db.collection('diyIdeas').orderBy('createdAt','desc').onSnapshot(snap=>{
       state.diyIdeas = snap.docs.map(d=>({id:d.id, ...d.data()}));
       if(typeof renderDiyIdeas==='function') renderDiyIdeas();
@@ -710,7 +736,7 @@ async function initDb(){
     unsub.push(db.collection('guests').orderBy('order','asc').onSnapshot(snap=>{
       state.guests = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderGuestApp();
-    }, err=>setSync(false,'sync error')));
+    }, err=>{ if(canEdit) setSync(false,'sync error'); }));
     unsub.push(db.collection('meta').doc('labels').onSnapshot(doc=>{
       if(doc.exists){
         const d = doc.data();
