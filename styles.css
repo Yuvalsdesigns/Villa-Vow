@@ -1097,3 +1097,11 @@
     pointer-events:auto !important;
     opacity:1 !important;
   }
+  /* The sign-in box itself must stay usable in read-only mode - otherwise
+     nobody could ever sign in to become a wedding account in the first
+     place, since read-only-mode is the default state before that happens. */
+  body.read-only-mode #vvAuthBox,
+  body.read-only-mode #vvAuthBox *{
+    pointer-events:auto !important;
+    opacity:1 !important;
+  }
