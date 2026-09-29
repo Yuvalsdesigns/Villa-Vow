@@ -1094,7 +1094,13 @@ function budgetCategoryBreakdown(){
   const groups = new Map();
   state.budget.forEach(b=>{
     const est = Number(b.estCost)||0;
-    if(est<=0) return;
+    const act = Number(b.actCost)||0;
+    // A category only shows up once it has an estimate OR a real quoted/
+    // booked cost - a blank new line with neither shouldn't create an empty
+    // slice. Once vendors start getting booked, a category can have an
+    // actual cost with no estimate ever set (added straight from a quote),
+    // so this can't require est>0 alone the way it used to.
+    if(est<=0 && act<=0) return;
     // String(...) first, not just "||''": a truthy non-string category
     // (some old/hand-edited Firestore doc storing a number, say) has no
     // .trim() of its own and would throw here, silently breaking this
@@ -1104,8 +1110,10 @@ function budgetCategoryBreakdown(){
     // safely; this needs the same treatment since it calls .trim() directly.
     const label = String(b.category||'').trim() || 'Other';
     const key = label.toLowerCase();
-    if(!groups.has(key)) groups.set(key, {label, total:0});
-    groups.get(key).total += est;
+    if(!groups.has(key)) groups.set(key, {label, total:0, act:0});
+    const g = groups.get(key);
+    g.total += est;
+    g.act += act;
   });
   const sorted = [...groups.entries()].sort((a,b)=> b[1].total-a[1].total);
   const total = sorted.reduce((s,[,v])=>s+v.total,0);
@@ -1115,13 +1123,15 @@ function budgetCategoryBreakdown(){
     if(i < BUDGET_CHART_MAX_SLICES){
       const color = BUDGET_CHART_COLORS[i % BUDGET_CHART_COLORS.length];
       colorByKey.set(key, color);
-      entries.push({label:v.label, total:v.total, color});
+      entries.push({label:v.label, total:v.total, act:v.act, color});
     } else {
       colorByKey.set(key, BUDGET_CHART_OTHER_COLOR);
     }
   });
-  const restTotal = sorted.slice(BUDGET_CHART_MAX_SLICES).reduce((s,[,v])=>s+v.total,0);
-  if(restTotal > 0) entries.push({label:'Other', total:restTotal, color:BUDGET_CHART_OTHER_COLOR, isOther:true});
+  const rest = sorted.slice(BUDGET_CHART_MAX_SLICES);
+  const restTotal = rest.reduce((s,[,v])=>s+v.total,0);
+  const restAct = rest.reduce((s,[,v])=>s+v.act,0);
+  if(restTotal > 0 || restAct > 0) entries.push({label:'Other', total:restTotal, act:restAct, color:BUDGET_CHART_OTHER_COLOR, isOther:true});
   return {entries, total, colorByKey};
 }
 /* Same lookup the chart just built for a single category name - used to
@@ -1213,6 +1223,47 @@ function renderBudgetCategoryChart(breakdown){
     el.addEventListener('mouseleave', clearActive);
   });
 }
+/* Second chart, right under the estimate donut: one track per category
+   (same categories, same colors, same order as the donut above - built
+   from that exact same breakdown so the two can never disagree) showing
+   how much of that category's estimate has turned into a real, quoted or
+   booked cost. Early on every track just sits empty since actCost is
+   still 0 everywhere; as vendors get booked and actCost gets filled in
+   line by line, each track fills in on its own, category by category -
+   this is the "estimate vs. actual" view the estimate-only donut can't
+   show. A category that goes over its own estimate fills past 100% in
+   the warning color instead of the category color, which is the one
+   case worth calling out - the exact new total isn't the point here (the
+   line-item table already has that), just whether it's tracking to plan. */
+function renderBudgetActualChart(breakdown){
+  const card = document.getElementById('budgetActualChartCard');
+  if(!card) return;
+  const {entries} = breakdown;
+  const rows = entries.filter(e=> e.total>0 || e.act>0);
+  if(!rows.length){
+    card.innerHTML = '<h3 class="budget-chart-title">Actual vs. estimated by category</h3><div class="budget-chart-empty">Once you start getting quotes and booking vendors, fill in a line\'s Actual (€) below to track it against the estimate here.</div>';
+    return;
+  }
+  const maxVal = Math.max(...rows.map(e=> Math.max(e.total, e.act)), 1);
+  const rowsHtml = rows.map(e=>{
+    const estPct = Math.min(100, e.total/maxVal*100);
+    const actPct = Math.min(100, e.act/maxVal*100);
+    const over = e.total>0 && e.act>e.total;
+    const overAmt = e.act-e.total;
+    return '<li class="budget-actual-row">'
+      +'<div class="budget-actual-label"><span class="budget-legend-swatch" style="background:'+e.color+'"></span>'+esc(e.label)+'</div>'
+      +'<div class="budget-actual-track">'
+        +'<div class="budget-actual-est" style="width:'+estPct+'%;border-color:'+e.color+'"></div>'
+        +'<div class="budget-actual-fill'+(over?' over':'')+'" style="width:'+actPct+'%;background:'+(over?'var(--danger)':e.color)+'"></div>'
+      +'</div>'
+      +'<div class="budget-actual-values mono">€'+Math.round(e.act).toLocaleString()
+        +(e.total>0 ? ' <span class="budget-actual-of">of €'+Math.round(e.total).toLocaleString()+'</span>' : '')
+        +(over ? ' <span class="budget-actual-over">+€'+Math.round(overAmt).toLocaleString()+' over</span>' : '')
+      +'</div>'
+      +'</li>';
+  }).join('');
+  card.innerHTML = '<h3 class="budget-chart-title">Actual vs. estimated by category</h3><ul class="budget-actual-list">'+rowsHtml+'</ul>';
+}
 function renderBudget(){
   if(syncUnavailable && state.budget.length===0){
     state.budget = SEED_BUDGET.map((b,i)=>({id:'local-budget-'+i, ...b}));
@@ -1235,6 +1286,7 @@ function renderBudget(){
   // the same category - they're built from this one pass over the data.
   const budgetBreakdown = budgetCategoryBreakdown();
   renderBudgetCategoryChart(budgetBreakdown);
+  renderBudgetActualChart(budgetBreakdown);
   document.getElementById('budgetGoalInput').addEventListener('change', e=>{
     const val = Math.max(0, Number(e.target.value)||0);
     state.budgetGoal = val;
