@@ -15,6 +15,12 @@
      runs at least once for everyone instead of being skipped forever. */
   const MIGRATIONS_VERSION=2;
   const MIGRATIONS_DONE_KEY='vvMigrationsVersion';
+  /* Mirrors firestore.rules' isWeddingUser() and the Worker's own
+     ALLOWED_EMAILS - the three actually let you write; anyone else can
+     still read the site (Firestore rules allow public read) but every
+     write is blocked client-side too, in app-1.js's wrapReadOnlyDb(). */
+  const WEDDING_EMAILS=['yuvalsh99@gmail.com','yohan-levy@hotmail.fr','yohan.yuval@gmail.com'];
+  window.VV_WEDDING_EMAILS=WEDDING_EMAILS;
   let firebaseReady=null,auth=null,firestore=null;
   const PLANNER_WORKER_URL='https://villa-vow.yuvalsh99.workers.dev';
   window.VV_WORKER_URL=PLANNER_WORKER_URL;
@@ -169,15 +175,28 @@
   const existingClaude=window.claude||{};const existingUse=typeof existingClaude.use==='function'?existingClaude.use.bind(existingClaude):null;window.claude=existingClaude;window.claude.use=async function(name){
     if(name==='db'){try{
       const services=await ensureFirebase();
-      if(!services.auth.currentUser)return null;
-      let migrationsAlreadyDone=false;
-      try{ migrationsAlreadyDone = localStorage.getItem(MIGRATIONS_DONE_KEY)===String(MIGRATIONS_VERSION); }catch(e){}
-      if(!migrationsAlreadyDone){
-        await ensureWeddingSeed(services.firestore);await ensureRainPlanAndSurvivalKitMigration(services.firestore);await ensureParkingCheckMigration(services.firestore);await ensureBudgetGoalDefault(services.firestore);await ensureBudgetEstimatesMigration(services.firestore);await ensureBudgetCostCuttingNotesMigration(services.firestore);await ensureBudgetLeanIseoUpdateMigration(services.firestore);await ensureGuestAppMigration(services.firestore);await ensureGuestPlusConfirmedMigration(services.firestore);await ensureRsvpLikelihoodSplitMigration(services.firestore);await ensureCastrumVenueContactMigration(services.firestore);await ensureVillaPortaVenueContactMigration(services.firestore);await ensureVillaPortaBrochureMigration(services.firestore);await ensureVillaPortaBrochureSpacingFixMigration(services.firestore);await ensurePinterestLinkTypeMigration(services.firestore);await ensureTravelGuideSeedMigration(services.firestore);await ensureBeautyLineRestoreMigration(services.firestore);await ensureChecklistGapFillMigration(services.firestore);await ensureEmailTemplatesMigration(services.firestore);
-        try{ localStorage.setItem(MIGRATIONS_DONE_KEY, String(MIGRATIONS_VERSION)); }catch(e){}
+      // Firestore rules allow anyone to read now (so family can view without
+      // an account) but only WEDDING_EMAILS to write, so this used to be the
+      // only gate - requiring sign-in before Firestore was touched at all.
+      // Returning the firestore handle unconditionally lets read-only
+      // visitors' onSnapshot listeners work; migrations (which write) still
+      // only run for the actual wedding accounts.
+      const email=services.auth.currentUser&&services.auth.currentUser.email;
+      if(email&&WEDDING_EMAILS.includes(email)){
+        let migrationsAlreadyDone=false;
+        try{ migrationsAlreadyDone = localStorage.getItem(MIGRATIONS_DONE_KEY)===String(MIGRATIONS_VERSION); }catch(e){}
+        if(!migrationsAlreadyDone){
+          await ensureWeddingSeed(services.firestore);await ensureRainPlanAndSurvivalKitMigration(services.firestore);await ensureParkingCheckMigration(services.firestore);await ensureBudgetGoalDefault(services.firestore);await ensureBudgetEstimatesMigration(services.firestore);await ensureBudgetCostCuttingNotesMigration(services.firestore);await ensureBudgetLeanIseoUpdateMigration(services.firestore);await ensureGuestAppMigration(services.firestore);await ensureGuestPlusConfirmedMigration(services.firestore);await ensureRsvpLikelihoodSplitMigration(services.firestore);await ensureCastrumVenueContactMigration(services.firestore);await ensureVillaPortaVenueContactMigration(services.firestore);await ensureVillaPortaBrochureMigration(services.firestore);await ensureVillaPortaBrochureSpacingFixMigration(services.firestore);await ensurePinterestLinkTypeMigration(services.firestore);await ensureTravelGuideSeedMigration(services.firestore);await ensureBeautyLineRestoreMigration(services.firestore);await ensureChecklistGapFillMigration(services.firestore);await ensureEmailTemplatesMigration(services.firestore);
+          try{ localStorage.setItem(MIGRATIONS_DONE_KEY, String(MIGRATIONS_VERSION)); }catch(e){}
+        }
       }
       return services.firestore;
     }catch(err){console.error('Villa & Vow Firebase sync error:',err);return null;}}
+    if(name==='canEdit'){try{
+      const services=await ensureFirebase();
+      const email=services.auth.currentUser&&services.auth.currentUser.email;
+      return !!(email&&WEDDING_EMAILS.includes(email));
+    }catch(err){return false;}}
     if(name==='sample'){
       try{
         const services=await ensureFirebase();

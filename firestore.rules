@@ -11,7 +11,8 @@ service cloud.firestore {
     }
 
     match /{document=**} {
-      allow read, write: if isWeddingUser();
+      allow read: if true;
+      allow write: if isWeddingUser();
     }
   }
 }

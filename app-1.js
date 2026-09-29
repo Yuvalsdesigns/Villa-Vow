@@ -270,7 +270,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 
 "use strict";
 
-let db = null, dbReady=false, syncUnavailable=false;
+let db = null, dbReady=false, syncUnavailable=false, canEdit=true;
 const state ={ todos:[], budget:[], pins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[], emailTemplates:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
@@ -601,13 +601,60 @@ function setSync(ok, text){
   t.textContent = text;
 }
 
+/* Family can now view the site with no account at all (Firestore rules
+   allow public read), but only the three wedding accounts can write. That's
+   enforced server-side by the rules regardless of this - this is a second,
+   client-side layer so a read-only viewer's own accidental edits fail
+   immediately and quietly instead of round-tripping to Firestore first and
+   getting a permission-denied error back. It wraps the single `db` handle
+   every collection().add/update/delete/set/batch() call in the whole app
+   already goes through, so nothing else needed to change to cover all of
+   them - reads (onSnapshot/get/where/orderBy/limit) pass through untouched. */
+function wrapReadOnlyDb(realDb){
+  function blocked(){ showReadOnlyNotice(); return Promise.resolve(); }
+  function wrapDocRef(ref){
+    return new Proxy(ref, { get(target, prop){
+      if(prop==='update' || prop==='set' || prop==='delete') return blocked;
+      const val = target[prop];
+      return typeof val==='function' ? val.bind(target) : val;
+    }});
+  }
+  function wrapCollectionRef(ref){
+    return new Proxy(ref, { get(target, prop){
+      if(prop==='add') return blocked;
+      if(prop==='doc') return (...args)=> wrapDocRef(target.doc(...args));
+      const val = target[prop];
+      return typeof val==='function' ? val.bind(target) : val;
+    }});
+  }
+  return new Proxy(realDb, { get(target, prop){
+    if(prop==='collection') return (...args)=> wrapCollectionRef(target.collection(...args));
+    if(prop==='batch') return ()=> ({ set:()=>{}, update:()=>{}, delete:()=>{}, commit: blocked });
+    const val = target[prop];
+    return typeof val==='function' ? val.bind(target) : val;
+  }});
+}
+let readOnlyNoticeShownAt = 0;
+function showReadOnlyNotice(){
+  const now = Date.now();
+  if(now - readOnlyNoticeShownAt < 4000) return; // don't stack alerts if several fields blur at once
+  readOnlyNoticeShownAt = now;
+  const banner = document.getElementById('readOnlyBanner');
+  if(banner){ banner.classList.add('flash'); setTimeout(()=> banner.classList.remove('flash'), 900); }
+}
+
 async function initDb(){
   try{
     if(!window.claude || !window.claude.use){ syncUnavailable=true; setSync(false,'no live sync in this view'); renderAll(); return; }
     db = await window.claude.use('db');
     if(!db){ syncUnavailable=true; setSync(false,'no live sync in this view, changes stay on this device only'); renderAll(); return; }
     dbReady = true;
-    setSync(true,'synced');
+    canEdit = await window.claude.use('canEdit');
+    if(!canEdit) db = wrapReadOnlyDb(db);
+    document.body.classList.toggle('read-only-mode', !canEdit);
+    const roBanner = document.getElementById('readOnlyBanner');
+    if(roBanner) roBanner.hidden = canEdit;
+    setSync(true, canEdit ? 'synced' : 'viewing only');
     unsub.push(db.collection('todos').orderBy('order','asc').onSnapshot(snap=>{
       state.todos = snap.docs.length ? snap.docs.map(d=>({id:d.id, ...d.data()})) : SEED_TODOS.map(([category,text],i)=>({id:'seed-todo-'+i, category, text, done:false, order:i}));
       renderTodos(); renderStart();
@@ -1414,7 +1461,7 @@ function buildInvoiceCell(cell, b){
     viewBtn.addEventListener('click', ()=> viewInvoiceFile(inv));
     wrap.appendChild(viewBtn);
     const actions = document.createElement('div'); actions.className = 'invoice-file-actions';
-    const dlBtn = document.createElement('button'); dlBtn.type='button'; dlBtn.className='icon-btn'; dlBtn.title='Download'; dlBtn.innerHTML = svg(ICON.download);
+    const dlBtn = document.createElement('button'); dlBtn.type='button'; dlBtn.className='icon-btn rz-safe'; dlBtn.title='Download'; dlBtn.innerHTML = svg(ICON.download);
     dlBtn.addEventListener('click', ()=> downloadInvoiceFile(inv));
     const replaceBtn = document.createElement('button'); replaceBtn.type='button'; replaceBtn.className='icon-btn'; replaceBtn.title='Replace file'; replaceBtn.innerHTML = svg(ICON.upload);
     replaceBtn.addEventListener('click', ()=> triggerInvoiceUpload(b));
