@@ -152,38 +152,75 @@ Thank you so much for considering it, and congratulations on your gorgeous produ
 Warmly,
 [Your name]`},
 ];
-const GIFT_IDEAS = [
-  {group:'Bridesmaid gifts', tint:'blush', ideas:[
-    {title:'Monogrammed robe or pajama set', how:'diy', note:'Buy plain robes/pajamas and personalize with a Cricut iron-on vinyl monogram or name, no sewing machine needed.'},
-    {title:'Embroidered pouch or handkerchief', how:'diy', note:'A simple hand-embroidered initial on a small makeup pouch or hankie, using your sewing skills.'},
-    {title:'Personalized tote bag', how:'diy', note:'Plain canvas tote + Cricut vinyl name or a small floral design in your wedding colors.'},
-    {title:'"Getting ready" kit', how:'diy', note:'Robe + a mini bottle of something local (see the producer gifting template) + a handwritten note, tied together. Costs little beyond the robe.'},
-    {title:'Skincare, jewelry, or robe brand set', how:'brand', note:'Use the bridesmaid gifting template to ask a small brand for a discounted or gifted set for the group.'}
-  ]},
-  {group:'Guest favors', tint:'coral', ideas:[
-    {title:'Mini local wine or olive oil bottles', how:'brand', note:'Douro is Port wine country and Iseo sits right by Franciacorta. A local producer is a very natural, on-theme favor. Use the producer gifting template.'},
-    {title:'Custom favor tags or labels', how:'diy', note:'Cricut-cut labels or stickers for jars of jam, honey, or the mini bottles above. Ties every favor together visually for almost no cost.'},
-    {title:'Seed packets or mini candles', how:'budget', note:'Cheap, useful, no expiry pressure, easy to source in bulk.'},
-    {title:'Sunscreen or fan favors', how:'budget', note:'Genuinely useful for a hot pool-day weekend, and easy to label with a Cricut sticker.'}
-  ]}
+/* The starter ideas below used to be this hardcoded, read-only array -
+   now just the offline fallback (see renderGiftIdeas) for when there's no
+   Firestore connection at all. The real, editable source is the
+   'giftIdeas' collection, seeded once from this exact same content by
+   ensureGiftIdeasMigration in firebase-sync.js, so the couple can add
+   their own ideas alongside these instead of being stuck with a fixed list. */
+const GIFT_IDEA_GROUPS = [
+  {group:'Bridesmaid gifts', tint:'blush'},
+  {group:'Guest favors', tint:'coral'},
 ];
+const GIFT_IDEA_LOCAL_SEED = [
+  {group:'Bridesmaid gifts', how:'diy', title:'Monogrammed robe or pajama set', note:'Buy plain robes/pajamas and personalize with a Cricut iron-on vinyl monogram or name, no sewing machine needed.'},
+  {group:'Bridesmaid gifts', how:'diy', title:'Embroidered pouch or handkerchief', note:'A simple hand-embroidered initial on a small makeup pouch or hankie, using your sewing skills.'},
+  {group:'Bridesmaid gifts', how:'diy', title:'Personalized tote bag', note:'Plain canvas tote + Cricut vinyl name or a small floral design in your wedding colors.'},
+  {group:'Bridesmaid gifts', how:'diy', title:'"Getting ready" kit', note:'Robe + a mini bottle of something local (see the producer gifting template) + a handwritten note, tied together. Costs little beyond the robe.'},
+  {group:'Bridesmaid gifts', how:'brand', title:'Skincare, jewelry, or robe brand set', note:'Use the bridesmaid gifting template to ask a small brand for a discounted or gifted set for the group.'},
+  {group:'Guest favors', how:'brand', title:'Mini local wine or olive oil bottles', note:'Douro is Port wine country and Iseo sits right by Franciacorta. A local producer is a very natural, on-theme favor. Use the producer gifting template.'},
+  {group:'Guest favors', how:'diy', title:'Custom favor tags or labels', note:'Cricut-cut labels or stickers for jars of jam, honey, or the mini bottles above. Ties every favor together visually for almost no cost.'},
+  {group:'Guest favors', how:'budget', title:'Seed packets or mini candles', note:'Cheap, useful, no expiry pressure, easy to source in bulk.'},
+  {group:'Guest favors', how:'budget', title:'Sunscreen or fan favors', note:'Genuinely useful for a hot pool-day weekend, and easy to label with a Cricut sticker.'},
+];
+const GIFT_HOW_LABEL = {diy:'d.i.y', brand:'Ask a brand', budget:'Budget buy'};
+function giftIdeaCard(idea, tint){
+  const card = document.createElement('div'); card.className='style-card';
+  card.innerHTML = '<span class="tint-'+tint+'" style="display:inline-block;font-size:10.5px;font-family:var(--font-primary);text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:20px;margin-bottom:6px;">'+(GIFT_HOW_LABEL[idea.how]||idea.how)+'</span>'
+    + '<h5>'+esc(idea.title)+'</h5><p>'+esc(idea.note)+'</p>'
+    + (idea.id ? '<button class="btn small ghost del-gift-idea" type="button">Delete</button>' : '');
+  card.querySelector('.del-gift-idea')?.addEventListener('click', ()=>{
+    confirmAction('Delete "'+(idea.title||'this idea')+'"?', ()=>{
+      if(dbReady) db.collection('giftIdeas').doc(idea.id).delete();
+      else { state.giftIdeas = state.giftIdeas.filter(x=>x.id!==idea.id); renderGiftIdeas(); }
+    });
+  });
+  return card;
+}
+function addGiftIdeaCard(group){
+  const card = document.createElement('div'); card.className='budget-add'; card.style.cssText='align-items:flex-end;';
+  card.innerHTML = '<label class="field">Idea<input type="text" class="gift-idea-title" placeholder="e.g. Personalized tote bag"></label>'
+    + '<label class="field">How<select class="gift-idea-how"><option value="diy">d.i.y</option><option value="brand">Ask a brand</option><option value="budget">Budget buy</option></select></label>'
+    + '<label class="field">Note<input type="text" class="gift-idea-note" placeholder="Short note on how to do it"></label>'
+    + '<button class="btn primary small" type="button">+ Add idea</button>';
+  card.querySelector('button').addEventListener('click', ()=>{
+    const titleInput = card.querySelector('.gift-idea-title');
+    const title = titleInput.value.trim();
+    const note = card.querySelector('.gift-idea-note').value.trim();
+    const how = card.querySelector('.gift-idea-how').value;
+    if(!title) return;
+    const data = {group, how, title, note, order:Date.now()};
+    if(dbReady) db.collection('giftIdeas').add(data);
+    else { localAdd(state.giftIdeas, data); renderGiftIdeas(); }
+    titleInput.value=''; card.querySelector('.gift-idea-note').value='';
+  });
+  return card;
+}
 function renderGiftIdeas(){
   const wrap = document.getElementById('giftIdeas'); if(!wrap) return;
+  if(syncUnavailable && state.giftIdeas.length===0){
+    state.giftIdeas = GIFT_IDEA_LOCAL_SEED.map((g,i)=>({id:'local-gift-'+i, ...g, order:i}));
+  }
   wrap.innerHTML='';
-  const howLabel = {diy:'d.i.y', brand:'Ask a brand', budget:'Budget buy'};
-  GIFT_IDEAS.forEach(g=>{
+  GIFT_IDEA_GROUPS.forEach(g=>{
     const section = document.createElement('div'); section.className='style-section';
     const head = document.createElement('div'); head.className='style-head';
     head.innerHTML = '<h3 class="tint-text-'+g.tint+'">'+g.group+'</h3>';
     section.appendChild(head);
     const grid = document.createElement('div'); grid.className='style-grid';
-    g.ideas.forEach(idea=>{
-      const card = document.createElement('div'); card.className='style-card';
-      card.innerHTML = '<span class="tint-'+g.tint+'" style="display:inline-block;font-size:10.5px;font-family:var(--font-primary);text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:20px;margin-bottom:6px;">'+howLabel[idea.how]+'</span>'
-        + '<h5>'+esc(idea.title)+'</h5><p>'+esc(idea.note)+'</p>';
-      grid.appendChild(card);
-    });
+    state.giftIdeas.filter(idea=> idea.group===g.group).forEach(idea=> grid.appendChild(giftIdeaCard(idea, g.tint)));
     section.appendChild(grid);
+    section.appendChild(addGiftIdeaCard(g.group));
     wrap.appendChild(section);
   });
 }

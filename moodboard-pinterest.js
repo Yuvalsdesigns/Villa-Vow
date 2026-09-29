@@ -673,9 +673,15 @@
       const replacePhotoHtml=p.type==='photo'
         ? '<button type="button" class="pin-replace-photo">Change photo</button><input type="file" accept="image/*" class="pin-replace-photo-input" style="display:none;">'
         : '';
-      el.innerHTML=inner+'<div class="pin-body"><select class="pin-tag-select" aria-label="Category">'+tagOptionsHtml+'</select><input class="pin-title-input" type="text" value="'+esc(p.title||'')+'" placeholder="Untitled">'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:var(--font-primary);">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+replacePhotoHtml+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
+      el.innerHTML=inner+'<div class="pin-body"><select class="pin-tag-select" aria-label="Category">'+tagOptionsHtml+'</select><textarea class="pin-title-input" rows="1" placeholder="Untitled">'+esc(p.title||'')+'</textarea>'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:var(--font-primary);">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+replacePhotoHtml+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
       const titleInput=el.querySelector('.pin-title-input');
       const titleCommitted=titleInput.value;
+      // A long title used to just sit clipped in a single-line box, only
+      // readable by clicking in and scrolling across it - autoGrowTextarea
+      // (same helper the Budget table's own textareas use) lets it wrap and
+      // grow tall enough to show the whole thing at rest instead.
+      autoGrowTextarea(titleInput);
+      titleInput.addEventListener('input',function(){ autoGrowTextarea(titleInput); });
       titleInput.addEventListener('keydown',function(e){
         if(e.key==='Enter'){ e.preventDefault(); titleInput.blur(); }
       });
