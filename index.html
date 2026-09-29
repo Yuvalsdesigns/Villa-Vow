@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=20260925-4">
 <link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png?v=20260925-4">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260925-3">
-<link rel="stylesheet" href="styles.css?v=20260929-2">
+<link rel="stylesheet" href="styles.css?v=20260929-3">
 <link rel="stylesheet" href="mobile-app.css?v=20260926-6">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 
@@ -197,25 +197,26 @@
       <div class="view-head">
         <h2>Budget</h2>
       </div>
+      <div class="section-private-note no-print" id="budgetPublicNote" hidden>Only the estimated budget is shown here — line items, vendor names, actual costs, notes and invoices are private to the wedding accounts.</div>
       <div class="budget-dashboard">
         <div class="stat-row" id="budgetStats"></div>
         <div class="budget-chart-card" id="budgetChartCard"></div>
         <div class="budget-chart-card" id="budgetActualChartCard"></div>
       </div>
-      <div class="table-scroll">
+      <div class="table-scroll" id="budgetTableWrap">
         <table class="budget-table">
           <thead><tr><th>Category</th><th>Item</th><th>Estimate (€)</th><th>Actual (€)</th><th>Paid</th><th>Notes</th><th>Invoice</th><th></th></tr></thead>
           <tbody id="budgetBody"></tbody>
         </table>
       </div>
-      <div class="budget-add no-print">
+      <div class="budget-add no-print" id="budgetAddRow">
         <label class="field">Category<input type="text" id="bCategory" placeholder="e.g. Catering"></label>
         <label class="field">Item<input type="text" id="bItem" placeholder="e.g. Kosher dinner, 60pp"></label>
         <label class="field">Estimate<input type="number" id="bEst" placeholder="0"></label>
         <label class="field">Actual<input type="number" id="bAct" placeholder="0"></label>
         <button class="btn primary" id="btnAddBudget">+ Add line</button>
       </div>
-      <p class="no-print" style="margin-top:16px;display:flex;gap:10px;">
+      <p class="no-print" style="margin-top:16px;display:flex;gap:10px;" id="budgetFooterActions">
         <button class="btn small rz-safe" onclick="window.print()">Print / save budget as PDF</button>
         <button class="btn small" id="btnAskBudget">Ask planner to sanity-check this</button>
       </p>
@@ -303,13 +304,16 @@
     <section class="view" id="view-guestapp">
       <div class="view-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <h2 style="margin-bottom:0;">Who's Coming</h2>
-        <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="no-print" id="guestAppActions" style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn small rz-safe" id="exportEmailsBtn">Download email list (CSV)</button>
           <button class="btn small rz-safe" id="exportExcelBtn">Download full list (Excel)</button>
           <button class="btn small rz-safe" onclick="window.print()">Print guest list</button>
         </div>
       </div>
 
+      <div class="section-private-note no-print" id="guestAppPrivateNote" hidden>The guest list is private — sign in with a wedding account to view or manage it.</div>
+
+      <div id="guestAppContent">
       <div class="note-box no-print">
         <b>How e-vites actually work:</b> there's no way to "send" from inside this app since it doesn't have email-sending built in, no planner app really does that safely. What you actually do is pick an e-vite service (<b>Paperless Post</b>, <b>Greenvelope</b>, <b>Zola</b>, <b>Joy</b>, etc.), then import your guest list into their platform, and they handle the bulk send and RSVP tracking for you. So the useful thing this app can do is give you an email field per guest, plus a one-click export of names and emails, so you can paste that list straight into whichever service you pick instead of retyping everyone by hand.
       </div>
@@ -360,6 +364,7 @@
       <p class="no-print" style="margin-top:16px;font-size:11.5px;color:var(--ink-faint);line-height:1.6;">
         Drag the grip on the left of a row to reorder within its side. Use the − / + stepper to adjust plus-ones without typing, and the small "+1:" dropdown next to it if the plus-one's own status differs from the guest's. Click a row to expand dietary/kosher notes, table, and free-text notes.
       </p>
+      </div>
     </section>
 
 <!-- WEDDING DIY -->
@@ -528,7 +533,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="firebase-sync.js?v=20260928-1"></script>
-<script src="app-1.js?v=20260929-1"></script>
+<script src="app-1.js?v=20260929-2"></script>
 <script src="app-4.js?v=20260913-25"></script>
 <script src="app-2.js?v=20260926-17"></script>
 <script src="app-3.js?v=20260928-2"></script>
