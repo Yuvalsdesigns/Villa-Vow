@@ -344,6 +344,11 @@
     .budget-actual-row{grid-template-columns:1fr;gap:5px;}
     .budget-actual-label{white-space:normal;}
   }
+  /* Shown in place of a tab's real content for a signed-out visitor, on any
+     tab that's partly or fully private (Budget, Guest App) rather than
+     hiding the tab outright - so a shared link still shows a full site
+     with no dead nav entries, just an honest label on what isn't there. */
+  .section-private-note{margin:0 0 18px;padding:11px 14px;border:1px solid var(--wine-ink);border-radius:var(--radius);background:var(--surface-2);color:var(--wine-ink);font-size:12.5px;font-weight:600;line-height:1.5;}
   /* The same swatch, inline before a category name in the line-item table,
      using the exact color the chart/legend above just picked for that
      category (or Other's gray, if it isn't broken out as its own slice

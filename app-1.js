@@ -274,7 +274,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 "use strict";
 
 let db = null, dbReady=false, syncUnavailable=false, canEdit=true;
-const state ={ todos:[], budget:[], pins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[], emailTemplates:[] };
+const state ={ todos:[], budget:[], pins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, publicBudgetSummary:null, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], venueContacts:[], travelGuide:[], emailTemplates:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -645,23 +645,32 @@ function showReadOnlyNotice(){
   const banner = document.getElementById('readOnlyBanner');
   if(banner){ banner.classList.add('flash'); setTimeout(()=> banner.classList.remove('flash'), 900); }
 }
-/* Budget and the guest list aren't just non-editable for a public viewer,
-   like everything else - they're not shown at all (matches firestore.rules'
-   isPrivateDoc list), so hide their nav entries, Start Here's own shortcut
-   buttons to them, and the private "Notes to each other". Without this a
-   public visitor could still click into an empty-looking Budget/Guest App
-   page, which reads as broken rather than intentionally private. */
+/* Budget and Guest App tabs both stay visible and reachable for a public
+   viewer (so a shared link still shows a full site, not a nav with holes
+   in it) but swap their private content for a placeholder/summary:
+   Guest App shows nothing but a "this is private" note (matches
+   firestore.rules - the guests collection itself is never readable by
+   anyone but a wedding account, so there's no guest data to leak here
+   even in the browser's network tab); Budget shows only the estimated
+   total/category chart, fed from the separate public summary doc
+   maintained by renderBudget() (see budgetCategoryBreakdown callers) -
+   the real budget collection with actual costs, vendor names, notes and
+   invoices stays exactly as private as the guest list. The private
+   "Notes to each other" section stays hidden entirely, same as before. */
 function applyContentRestrictions(){
-  const hiddenTabs = canEdit ? [] : ['budget','guestapp'];
-  document.querySelectorAll('.tab-btn[data-tab]').forEach(b=>{ b.style.display = hiddenTabs.includes(b.dataset.tab) ? 'none' : ''; });
-  document.querySelectorAll('#vvMobileNav button[data-tab]').forEach(b=>{ b.style.display = hiddenTabs.includes(b.dataset.tab) ? 'none' : ''; });
-  document.querySelectorAll('.btn[data-jump="budget"], .btn[data-jump="guestapp"]').forEach(b=>{ b.style.display = canEdit ? '' : 'none'; });
+  document.querySelectorAll('.btn[data-jump="budget"], .btn[data-jump="guestapp"]').forEach(b=>{ b.style.display = ''; });
   const loveNotesSection = document.querySelector('.love-notes');
   if(loveNotesSection) loveNotesSection.style.display = canEdit ? '' : 'none';
-  if(!canEdit){
-    const stuckOnHidden = hiddenTabs.some(id=> document.getElementById('view-'+id)?.classList.contains('active'));
-    if(stuckOnHidden) showTab('start');
-  }
+  document.getElementById('budgetPublicNote').hidden = canEdit;
+  document.getElementById('budgetStats').style.display = canEdit ? '' : 'none';
+  document.getElementById('budgetActualChartCard').style.display = canEdit ? '' : 'none';
+  document.getElementById('budgetTableWrap').style.display = canEdit ? '' : 'none';
+  document.getElementById('budgetAddRow').style.display = canEdit ? '' : 'none';
+  document.getElementById('budgetFooterActions').style.display = canEdit ? '' : 'none';
+  document.getElementById('guestAppActions').style.display = canEdit ? '' : 'none';
+  document.getElementById('guestAppPrivateNote').hidden = canEdit;
+  document.getElementById('guestAppContent').style.display = canEdit ? '' : 'none';
+  if(!canEdit) renderPublicBudgetChart();
 }
 
 async function initDb(){
@@ -685,14 +694,26 @@ async function initDb(){
       state.budget = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderBudget(); renderStart();
     // Budget is a wedding-accounts-only collection now - a permission-denied
-    // here is the expected, correct result for a public viewer (their tab
-    // is hidden entirely by applyContentRestrictions), not a real sync
-    // problem, so it shouldn't flip the whole app's status to "sync error".
+    // here is the expected, correct result for a public viewer (their view
+    // of the Budget tab is swapped for the public estimate-only summary by
+    // applyContentRestrictions/renderPublicBudgetChart, not this data), not
+    // a real sync problem, so it shouldn't flip the app's status to "sync error".
     }, err=>{ if(canEdit) setSync(false,'sync error'); }));
     unsub.push(db.collection('meta').doc('budgetGoal').onSnapshot(doc=>{
       state.budgetGoal = doc.exists ? (Number(doc.data().amount)||0) : state.budgetGoal;
       renderBudget(); renderStart();
     }, err=>{ if(canEdit) setSync(false,'sync error'); }));
+    // The estimate-only, public-readable summary a wedding account's own
+    // browser republishes from renderBudget() below every time the real
+    // (private) budget collection changes - see the comment there. Every
+    // visitor, signed in or not, can read this one; only what's shown here
+    // matters for a public viewer, so this listener also drives their
+    // Budget tab's chart via renderPublicBudgetChart(), not the (denied)
+    // 'budget' listener above.
+    unsub.push(db.collection('meta').doc('budgetEstimatePublic').onSnapshot(doc=>{
+      state.publicBudgetSummary = doc.exists ? doc.data() : null;
+      if(!canEdit) renderPublicBudgetChart();
+    }, err=>setSync(false,'sync error')));
     unsub.push(db.collection('pinboard').orderBy('createdAt','desc').onSnapshot(snap=>{
       state.pins = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderBoard(); renderStart();
@@ -1156,12 +1177,12 @@ function ensureBudgetChartTooltip(){
    most 7 circles), so it's always in sync with whatever renderBudget() just
    recomputed - editing an estimate, changing a category, or adding/deleting
    a line all flow straight through to this chart with no separate wiring. */
-function renderBudgetCategoryChart(breakdown){
+function renderBudgetCategoryChart(breakdown, emptyMessage){
   const card = document.getElementById('budgetChartCard');
   if(!card) return;
   const {entries, total} = breakdown;
   if(!entries.length){
-    card.innerHTML = '<h3 class="budget-chart-title">Estimated budget by category</h3><div class="budget-chart-empty">Add an estimate to a line below to see the breakdown by category here.</div>';
+    card.innerHTML = '<h3 class="budget-chart-title">Estimated budget by category</h3><div class="budget-chart-empty">'+(emptyMessage || 'Add an estimate to a line below to see the breakdown by category here.')+'</div>';
     return;
   }
   const R = 56, STROKE = 16, C = 2*Math.PI*R, GAP = entries.length>1 ? 3 : 0;
@@ -1264,6 +1285,22 @@ function renderBudgetActualChart(breakdown){
   }).join('');
   card.innerHTML = '<h3 class="budget-chart-title">Actual vs. estimated by category</h3><ul class="budget-actual-list">'+rowsHtml+'</ul>';
 }
+/* The public, estimate-only view of the same donut for anyone without a
+   wedding account: colors are re-derived the exact same way as the private
+   chart (BUDGET_CHART_COLORS by sort position, Other in gray), just fed
+   from state.publicBudgetSummary - the small {total, categories} doc that
+   renderBudget() below keeps in sync from the real budgetCategoryBreakdown()
+   - since a public viewer's own read of the real 'budget' collection is
+   denied by firestore.rules, and rightly so: actual costs, vendor names,
+   line items, notes and invoices never leave the server for them at all. */
+function renderPublicBudgetChart(){
+  const summary = state.publicBudgetSummary;
+  const entries = (summary && summary.categories || []).map((c,i)=>({
+    label: c.label, total: c.total,
+    color: c.isOther ? BUDGET_CHART_OTHER_COLOR : BUDGET_CHART_COLORS[i % BUDGET_CHART_COLORS.length],
+  }));
+  renderBudgetCategoryChart({entries, total: (summary && summary.total) || 0}, 'The estimated budget hasn\'t been shared yet.');
+}
 function renderBudget(){
   if(syncUnavailable && state.budget.length===0){
     state.budget = SEED_BUDGET.map((b,i)=>({id:'local-budget-'+i, ...b}));
@@ -1287,6 +1324,19 @@ function renderBudget(){
   const budgetBreakdown = budgetCategoryBreakdown();
   renderBudgetCategoryChart(budgetBreakdown);
   renderBudgetActualChart(budgetBreakdown);
+  // Keep the public, estimate-only summary a wedding account's own browser
+  // republishes here in sync with what's actually in the (private) budget
+  // collection - actCost, item names, notes and invoices are deliberately
+  // left out, so this is the only piece of the real budget a signed-out
+  // visitor's browser is ever handed. Only a wedding account ever reaches
+  // this line for real (a public viewer's db is wrapReadOnlyDb'd into a
+  // no-op, and their own read of 'budget' is denied so budgetBreakdown
+  // would be empty for them anyway), so no extra canEdit check is needed.
+  if(dbReady) db.collection('meta').doc('budgetEstimatePublic').set({
+    total: budgetBreakdown.total,
+    categories: budgetBreakdown.entries.map(e=>({label:e.label, total:e.total, isOther:!!e.isOther})),
+    updatedAt: Date.now(),
+  });
   document.getElementById('budgetGoalInput').addEventListener('change', e=>{
     const val = Math.max(0, Number(e.target.value)||0);
     state.budgetGoal = val;
