@@ -324,6 +324,26 @@
   .budget-legend-label{color:var(--ink);font-weight:600;}
   .budget-legend-value{color:var(--ink-soft);font-variant-numeric:tabular-nums;}
   .budget-legend-pct{color:var(--ink-faint);}
+  /* Second chart: one horizontal track per category, sharing the exact
+     colors/order from the donut's breakdown above. The est outline marks
+     where the category's estimate sits on a shared scale; the solid fill
+     is how much of that has become a real, quoted/booked actual cost -
+     empty until the couple starts filling in Actual (€) on the table
+     below, then grows line by line as vendors get booked. */
+  .budget-actual-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
+  .budget-actual-row{display:grid;grid-template-columns:150px 1fr 170px;align-items:center;gap:14px;}
+  .budget-actual-label{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .budget-actual-track{position:relative;height:16px;background:var(--surface-2);border-radius:999px;overflow:hidden;}
+  .budget-actual-est{position:absolute;top:0;left:0;height:100%;border-right:2px solid;box-sizing:border-box;background:transparent;}
+  .budget-actual-fill{position:absolute;top:0;left:0;height:100%;border-radius:999px;transition:width .2s;}
+  .budget-actual-fill.over{box-shadow:0 0 0 1px var(--danger) inset;}
+  .budget-actual-values{font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .budget-actual-of{color:var(--ink-faint);font-weight:400;}
+  .budget-actual-over{color:var(--danger);font-weight:700;margin-left:4px;}
+  @media (max-width:640px){
+    .budget-actual-row{grid-template-columns:1fr;gap:5px;}
+    .budget-actual-label{white-space:normal;}
+  }
   /* The same swatch, inline before a category name in the line-item table,
      using the exact color the chart/legend above just picked for that
      category (or Other's gray, if it isn't broken out as its own slice
