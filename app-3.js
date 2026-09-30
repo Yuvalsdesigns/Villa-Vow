@@ -188,7 +188,12 @@ function giftIdeaCard(idea, tint){
     + (idea.id ? '<button class="btn small ghost del-gift-idea" type="button">Delete</button>' : '');
   const titleTa = card.querySelector('.gift-idea-title-edit');
   const noteTa = card.querySelector('.gift-idea-note-edit');
-  autoGrowTextarea(titleTa); autoGrowTextarea(noteTa);
+  // Not sized here: the card isn't attached to the document yet at this
+  // point, so scrollHeight would read 0 and lock the box too short (the
+  // browser's own textarea min-height then masks this for a short line,
+  // which is why it looked fine at first, but a longer note past that
+  // floor was left clipped). renderGiftIdeas() sizes every card in one
+  // pass right after they're all appended, once layout is real.
   titleTa.addEventListener('input', ()=> autoGrowTextarea(titleTa));
   noteTa.addEventListener('input', ()=> autoGrowTextarea(noteTa));
   titleTa.addEventListener('change', ()=> updateGiftIdea(idea, {title: titleTa.value.trim()}));
@@ -238,7 +243,16 @@ function renderGiftIdeas(){
     section.appendChild(addGiftIdeaCard(g.group));
     wrap.appendChild(section);
   });
+  resizeAllGiftIdeaTextareas();
 }
+/* A textarea's scrollHeight reads 0 - not just while it's detached from the
+   document, but also whenever an ancestor (here, the DIY tab itself while
+   some other tab is open) is display:none - so a card built while this tab
+   wasn't the active one still ends up locked too short despite the pass at
+   the end of renderGiftIdeas() above. showTab() below re-runs this the
+   moment the DIY tab actually becomes visible, the same fix already in
+   place for the Budget table's own textareas via resizeAllBudgetNotes(). */
+function resizeAllGiftIdeaTextareas(){ document.querySelectorAll('#giftIdeas .gift-idea-title-edit, #giftIdeas .gift-idea-note-edit').forEach(autoGrowTextarea); }
 
 /* Bridesmaid gifts & guest favors moved here from Templates/Gift Ideas
    since most of it ends up being d.i.y - this section's own editable
