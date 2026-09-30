@@ -208,7 +208,7 @@ function giftIdeaCard(idea, tint){
   return card;
 }
 function addGiftIdeaCard(group){
-  const card = document.createElement('div'); card.className='budget-add'; card.style.cssText='align-items:flex-end;';
+  const card = document.createElement('div'); card.className='budget-add'; card.style.cssText='align-items:flex-end;margin-bottom:16px;';
   card.innerHTML = '<label class="field">Idea<input type="text" class="gift-idea-title" placeholder="e.g. Personalized tote bag"></label>'
     + '<label class="field">How<select class="gift-idea-how"><option value="diy">d.i.y</option><option value="brand">Ask a brand</option><option value="budget">Budget buy</option></select></label>'
     + '<label class="field">Note<input type="text" class="gift-idea-note" placeholder="Short note on how to do it"></label>'
@@ -237,10 +237,10 @@ function renderGiftIdeas(){
     const head = document.createElement('div'); head.className='style-head';
     head.innerHTML = '<h3 class="tint-text-'+g.tint+'">'+g.group+'</h3>';
     section.appendChild(head);
+    section.appendChild(addGiftIdeaCard(g.group));
     const grid = document.createElement('div'); grid.className='style-grid';
     state.giftIdeas.filter(idea=> idea.group===g.group).forEach(idea=> grid.appendChild(giftIdeaCard(idea, g.tint)));
     section.appendChild(grid);
-    section.appendChild(addGiftIdeaCard(g.group));
     wrap.appendChild(section);
   });
   resizeAllGiftIdeaTextareas();
