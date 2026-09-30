@@ -174,11 +174,26 @@ const GIFT_IDEA_LOCAL_SEED = [
   {group:'Guest favors', how:'budget', title:'Sunscreen or fan favors', note:'Genuinely useful for a hot pool-day weekend, and easy to label with a Cricut sticker.'},
 ];
 const GIFT_HOW_LABEL = {diy:'d.i.y', brand:'Ask a brand', budget:'Budget buy'};
+function updateGiftIdea(idea, data){
+  Object.assign(idea, data);
+  if(dbReady) db.collection('giftIdeas').doc(idea.id).update(data);
+  else renderGiftIdeas();
+}
 function giftIdeaCard(idea, tint){
   const card = document.createElement('div'); card.className='style-card';
-  card.innerHTML = '<span class="tint-'+tint+'" style="display:inline-block;font-size:10.5px;font-family:var(--font-primary);text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:20px;margin-bottom:6px;">'+(GIFT_HOW_LABEL[idea.how]||idea.how)+'</span>'
-    + '<h5>'+esc(idea.title)+'</h5><p>'+esc(idea.note)+'</p>'
+  const howOptions = Object.keys(GIFT_HOW_LABEL).map(k=> '<option value="'+k+'"'+(idea.how===k?' selected':'')+'>'+GIFT_HOW_LABEL[k]+'</option>').join('');
+  card.innerHTML = '<select class="gift-idea-how-edit tint-'+tint+'" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:20px;margin-bottom:6px;">'+howOptions+'</select>'
+    + '<textarea class="gift-idea-title-edit" rows="1" placeholder="Idea">'+esc(idea.title)+'</textarea>'
+    + '<textarea class="gift-idea-note-edit" rows="2" placeholder="Short note on how to do it">'+esc(idea.note)+'</textarea>'
     + (idea.id ? '<button class="btn small ghost del-gift-idea" type="button">Delete</button>' : '');
+  const titleTa = card.querySelector('.gift-idea-title-edit');
+  const noteTa = card.querySelector('.gift-idea-note-edit');
+  autoGrowTextarea(titleTa); autoGrowTextarea(noteTa);
+  titleTa.addEventListener('input', ()=> autoGrowTextarea(titleTa));
+  noteTa.addEventListener('input', ()=> autoGrowTextarea(noteTa));
+  titleTa.addEventListener('change', ()=> updateGiftIdea(idea, {title: titleTa.value.trim()}));
+  noteTa.addEventListener('change', ()=> updateGiftIdea(idea, {note: noteTa.value.trim()}));
+  card.querySelector('.gift-idea-how-edit').addEventListener('change', e=> updateGiftIdea(idea, {how: e.target.value}));
   card.querySelector('.del-gift-idea')?.addEventListener('click', ()=>{
     confirmAction('Delete "'+(idea.title||'this idea')+'"?', ()=>{
       if(dbReady) db.collection('giftIdeas').doc(idea.id).delete();
@@ -669,7 +684,8 @@ function renderDiyIdeas(){
       (idea.thumbnail ? '<img src="'+esc(idea.thumbnail)+'" class="diy-thumb" alt="">' : '<div class="diy-thumb diy-thumb-empty">'+svg(ICON.scissors)+'</div>')
       + '<div class="diy-body">'
       + (editing
-          ? '<textarea class="diy-desc-edit" rows="3">'+esc(idea.description)+'</textarea>'
+          ? '<label class="field" style="margin-bottom:8px;">Link<input type="text" class="diy-url-edit" value="'+esc(idea.url)+'"></label>'
+            + '<textarea class="diy-desc-edit" rows="3">'+esc(idea.description)+'</textarea>'
             + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
             + '<button class="btn small ghost" type="button" id="diyEditFetchThumbBtn">Fetch thumbnail from link</button>'
             + '<label class="btn small ghost" style="cursor:pointer;">'+(idea.thumbnail?'Or change it':'Or upload one')+'<input type="file" id="diyEditThumbInput" accept="image/*" style="display:none;"></label>'
@@ -716,8 +732,10 @@ function renderDiyIdeas(){
     });
     card.querySelector('.save-diy')?.addEventListener('click', ()=>{
       const text = card.querySelector('.diy-desc-edit').value.trim();
-      if(!text) return;
-      const data = {description:text, thumbnail: editingDiyThumb};
+      let url = card.querySelector('.diy-url-edit').value.trim();
+      if(!text || !url) return;
+      if(!/^https?:\/\//i.test(url)) url = 'https://'+url;
+      const data = {url, description:text, thumbnail: editingDiyThumb};
       if(dbReady) db.collection('diyIdeas').doc(idea.id).update(data).catch(err=>{ console.error('[DIY] update failed', err); alert('Could not save: '+err.message); });
       else Object.assign(idea, data);
       editingDiyId = null; editingDiyThumb=''; renderDiyIdeas();
