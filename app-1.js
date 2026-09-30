@@ -135,8 +135,10 @@ function showTab(id){
   if(typeof syncMobileNav==='function') syncMobileNav(id);
   if(id==='budget' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
   if(id==='board' && typeof renderPinterestBoards==='function') renderPinterestBoards();
+  if(id==='board' && typeof resizeAllPinTitles==='function') resizeAllPinTitles();
   if(id==='diy' && typeof renderDiyPinterestBoards==='function') renderDiyPinterestBoards();
   if(id==='diy' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
+  if(id==='diy' && typeof resizeAllGiftIdeaTextareas==='function') resizeAllGiftIdeaTextareas();
   if((id==='todo' || id==='considerations' || id==='travelguide') && typeof resizeAllItemTextareas==='function') resizeAllItemTextareas();
   if(id==='venues' && typeof onVenuesTabShown==='function') onVenuesTabShown();
   try{ localStorage.setItem('vv_active_tab', id); }catch(e){}

@@ -679,8 +679,10 @@
       // A long title used to just sit clipped in a single-line box, only
       // readable by clicking in and scrolling across it - autoGrowTextarea
       // (same helper the Budget table's own textareas use) lets it wrap and
-      // grow tall enough to show the whole thing at rest instead.
-      autoGrowTextarea(titleInput);
+      // grow tall enough to show the whole thing at rest instead. Not sized
+      // right here though: el isn't attached to grid yet at this point, so
+      // scrollHeight would read 0 - the loop below sizes every pin's title
+      // in one pass once they're all actually in the document.
       titleInput.addEventListener('input',function(){ autoGrowTextarea(titleInput); });
       titleInput.addEventListener('keydown',function(e){
         if(e.key==='Enter'){ e.preventDefault(); titleInput.blur(); }
@@ -729,8 +731,17 @@
       });
       grid.appendChild(el);
     });
+    resizeAllPinTitles();
     if(hasBoardPinterest){ ensurePinterestScript(); requestPinterestBuild(); }
   };
+  /* A textarea's scrollHeight reads 0 not just while detached from the
+     document, but also whenever an ancestor (the Moodboard tab itself,
+     while some other tab is open) is display:none - so a pin built while
+     this tab wasn't the active one still ends up locked too short despite
+     the pass at the end of renderBoard() above. showTab() re-runs this the
+     moment the Moodboard tab actually becomes visible, the same fix
+     already in place for the Budget table's own textareas. */
+  window.resizeAllPinTitles=function(){ document.querySelectorAll('.pin-title-input').forEach(autoGrowTextarea); };
 
   function replacePinterestSaveHandler(){
     const old=document.getElementById('savePinterest');
