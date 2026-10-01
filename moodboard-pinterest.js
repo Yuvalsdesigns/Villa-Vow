@@ -616,6 +616,30 @@
     let hasBoardPinterest=false;
     pins.forEach(function(p){
       const el=document.createElement('div'); el.className='pin';
+      el.draggable=true;
+      el.dataset.pinId=p.id;
+      // Horizontal (left/right), not vertical, since the moodboard flows
+      // as a multi-column grid, not a single-column list - see
+      // reorderPins for how the actual move is applied once dropped.
+      el.addEventListener('dragstart',function(e){ el.classList.add('dragging'); e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed='move'; });
+      el.addEventListener('dragend',function(){ el.classList.remove('dragging'); });
+      el.addEventListener('dragover',function(e){
+        e.preventDefault();
+        const rect=el.getBoundingClientRect();
+        const before=(e.clientX-rect.left)<rect.width/2;
+        el.classList.toggle('drag-over-left', before);
+        el.classList.toggle('drag-over-right', !before);
+      });
+      el.addEventListener('dragleave',function(){ el.classList.remove('drag-over-left','drag-over-right'); });
+      el.addEventListener('drop',function(e){
+        e.preventDefault();
+        el.classList.remove('drag-over-left','drag-over-right');
+        const draggedId=e.dataTransfer.getData('text/plain');
+        if(!draggedId||draggedId===p.id) return;
+        const rect=el.getBoundingClientRect();
+        const before=(e.clientX-rect.left)<rect.width/2;
+        reorderPins(draggedId, p.id, before);
+      });
       let inner='';
       let previewError=null;
       if(p.type==='photo'){
@@ -709,7 +733,23 @@
             ? '<div class="pin-privacy on">🔒 Private to you <button type="button" class="pin-privacy-toggle">Share with everyone</button></div>'
             : '<button type="button" class="pin-privacy-toggle pin-privacy-off">Keep private to you</button>')
         : '';
-      el.innerHTML=inner+'<div class="pin-body"><select class="pin-tag-select" aria-label="Category">'+tagOptionsHtml+'</select><textarea class="pin-title-input" rows="1" placeholder="Untitled">'+esc(p.title||'')+'</textarea>'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:var(--font-primary);">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+replacePhotoHtml+privacyHtml+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
+      el.innerHTML=inner+'<div class="pin-body"><select class="pin-tag-select" aria-label="Category">'+tagOptionsHtml+'</select><textarea class="pin-title-input" rows="1" placeholder="Untitled">'+esc(p.title||'')+'</textarea><textarea class="pin-note-input" rows="1" placeholder="Add a note…">'+esc(p.note||'')+'</textarea>'+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:var(--font-primary);">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+replacePhotoHtml+privacyHtml+'</div><button class="pin-grip grip" aria-label="Drag to reorder">'+svg(ICON.grip)+'</button><button class="del-pin">'+svg(ICON.x)+'</button>';
+      const noteInput=el.querySelector('.pin-note-input');
+      const noteCommitted=noteInput.value;
+      // Not sized here - el isn't attached to grid yet at this point, so
+      // scrollHeight would read 0 (see the comment above titleInput).
+      // resizeAllPinTextareas sizes every pin's title AND note in one pass
+      // once they're all actually in the document.
+      noteInput.addEventListener('input',function(){ autoGrowTextarea(noteInput); });
+      noteInput.addEventListener('keydown',function(e){
+        if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); noteInput.blur(); }
+      });
+      noteInput.addEventListener('blur',function(){
+        const val=noteInput.value.trim();
+        if(val===noteCommitted) return;
+        if(dbReady) pinCollectionRef(p.privateToEmail).doc(p.id).update({note:val});
+        else { p.note=val; }
+      });
       el.querySelector('.pin-privacy-toggle')?.addEventListener('click',function(){
         const makePrivate = !p.privateToEmail;
         if(dbReady){
@@ -787,9 +827,19 @@
           else {state.pins=state.pins.filter(function(x){return x.id!==p.id;});renderBoard();renderStart();}
         });
       });
+      // Native HTML5 drag (wired on el itself, above) never fires from a
+      // touchscreen - wire the same reorder behavior to real touch events
+      // on just this grip, so scrolling the grid by touching anywhere else
+      // on the card still works normally (same split used for the
+      // Checklist's own drag handle).
+      wireTouchDrag(el.querySelector('.pin-grip'), el, function(targetEl, before){
+        const targetId=targetEl.dataset.pinId;
+        if(!targetId||targetId===p.id) return;
+        reorderPins(p.id, targetId, before);
+      }, '.pin', 'horizontal');
       grid.appendChild(el);
     });
-    resizeAllPinTitles();
+    resizeAllPinTextareas();
     if(hasBoardPinterest){ ensurePinterestScript(); requestPinterestBuild(); }
   };
   /* A textarea's scrollHeight reads 0 not just while detached from the
@@ -799,7 +849,7 @@
      the pass at the end of renderBoard() above. showTab() re-runs this the
      moment the Moodboard tab actually becomes visible, the same fix
      already in place for the Budget table's own textareas. */
-  window.resizeAllPinTitles=function(){ document.querySelectorAll('.pin-title-input').forEach(autoGrowTextarea); };
+  window.resizeAllPinTextareas=function(){ document.querySelectorAll('.pin-title-input, .pin-note-input').forEach(autoGrowTextarea); };
 
   function replacePinterestSaveHandler(){
     const old=document.getElementById('savePinterest');

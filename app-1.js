@@ -135,7 +135,7 @@ function showTab(id){
   if(typeof syncMobileNav==='function') syncMobileNav(id);
   if(id==='budget' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
   if(id==='board' && typeof renderPinterestBoards==='function') renderPinterestBoards();
-  if(id==='board' && typeof resizeAllPinTitles==='function') resizeAllPinTitles();
+  if(id==='board' && typeof resizeAllPinTextareas==='function') resizeAllPinTextareas();
   if(id==='diy' && typeof renderDiyPinterestBoards==='function') renderDiyPinterestBoards();
   if(id==='diy' && typeof resizeAllBudgetNotes==='function') resizeAllBudgetNotes();
   if(id==='diy' && typeof resizeAllGiftIdeaTextareas==='function') resizeAllGiftIdeaTextareas();
@@ -729,7 +729,11 @@ async function initDb(){
     // recomputes the same merged, re-sorted list, so the two can never
     // show stale data relative to each other.
     function mergePins(){
-      state.pins = [...state.publicPins, ...state.myPrivatePins].sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+      // order is what the drag-to-reorder feature actually moves (see
+      // reorderPins) - falling back to createdAt keeps every pin from
+      // before that feature existed sorted exactly where it already was,
+      // with no migration needed.
+      state.pins = [...state.publicPins, ...state.myPrivatePins].sort((a,b)=> (b.order??b.createdAt??0)-(a.order??a.createdAt??0));
       renderBoard(); renderStart();
     }
     unsub.push(db.collection('pinboard').orderBy('createdAt','desc').onSnapshot(snap=>{
@@ -854,6 +858,32 @@ function pinCollectionRef(privateToEmail){
     ? db.collection('privatePins').doc(privateToEmail).collection('items')
     : db.collection('pinboard');
 }
+/* Reordering works across the public/private split the same way rendering
+   already does: state.pins is the one merged, already-sorted list (see
+   mergePins), so the move itself is a plain array splice against it, same
+   as reorderItems elsewhere in this file - just not scoped to a single
+   category, since the moodboard has no such grouping. Each pin's new
+   order is written back to WHICHEVER collection it actually lives in
+   (pinCollectionRef), since a private and a public pin can end up right
+   next to each other after a drag. */
+function reorderPins(draggedId, targetId, before){
+  const list = state.pins.slice();
+  const fromIdx = list.findIndex(x=>x.id===draggedId);
+  if(fromIdx<0) return;
+  const [item] = list.splice(fromIdx,1);
+  let toIdx = list.findIndex(x=>x.id===targetId);
+  if(toIdx<0) toIdx = list.length;
+  list.splice(before ? toIdx : toIdx+1, 0, item);
+  const base = Date.now();
+  list.forEach((p,i)=>{
+    const newOrder = base-i; // descending, so the first card keeps the highest order
+    if(p.order !== newOrder){
+      p.order = newOrder;
+      if(dbReady) pinCollectionRef(p.privateToEmail).doc(p.id).update({order:newOrder});
+    }
+  });
+  if(!dbReady){ state.pins = list; renderBoard(); }
+}
 
 
 "use strict";
@@ -962,15 +992,25 @@ function itemRow(it, coll){
    manually with elementFromPoint on every move, same technique any
    from-scratch touch-drag implementation needs since there is no native
    touch drag-and-drop API. */
-function wireTouchDrag(handle, row, onDrop){
+function wireTouchDrag(handle, row, onDrop, rowSelector, orientation){
+  rowSelector = rowSelector || '.item-row';
+  // 'vertical' (top/bottom, for a single-column list like the Checklist)
+  // or 'horizontal' (left/right, for a multi-column grid like the
+  // moodboard, where up/down is which ROW you're in, not which SIDE of a
+  // card you're dropping on).
+  const startCls = orientation==='horizontal' ? 'drag-over-left' : 'drag-over-top';
+  const endCls = orientation==='horizontal' ? 'drag-over-right' : 'drag-over-bottom';
   let active = false;
   function rowAt(x, y){
     const el = document.elementFromPoint(x, y);
-    return el && el.closest ? el.closest('.item-row') : null;
+    return el && el.closest ? el.closest(rowSelector) : null;
+  }
+  function isBefore(touch, rect){
+    return orientation==='horizontal' ? (touch.clientX - rect.left) < rect.width/2 : (touch.clientY - rect.top) < rect.height/2;
   }
   function clearDropHighlight(){
-    document.querySelectorAll('.item-row.drag-over-top, .item-row.drag-over-bottom').forEach(r=>{
-      r.classList.remove('drag-over-top','drag-over-bottom');
+    document.querySelectorAll(rowSelector+'.'+startCls+', '+rowSelector+'.'+endCls).forEach(r=>{
+      r.classList.remove(startCls, endCls);
     });
   }
   handle.addEventListener('touchstart', ()=>{
@@ -985,9 +1025,9 @@ function wireTouchDrag(handle, row, onDrop){
     clearDropHighlight();
     if(target && target!==row){
       const rect = target.getBoundingClientRect();
-      const before = (touch.clientY - rect.top) < rect.height/2;
-      target.classList.toggle('drag-over-top', before);
-      target.classList.toggle('drag-over-bottom', !before);
+      const before = isBefore(touch, rect);
+      target.classList.toggle(startCls, before);
+      target.classList.toggle(endCls, !before);
     }
   }, {passive:false});
   handle.addEventListener('touchend', e=>{
@@ -999,7 +1039,7 @@ function wireTouchDrag(handle, row, onDrop){
     clearDropHighlight();
     if(target && target!==row){
       const rect = target.getBoundingClientRect();
-      const before = (touch.clientY - rect.top) < rect.height/2;
+      const before = isBefore(touch, rect);
       onDrop(target, before);
     }
   });
