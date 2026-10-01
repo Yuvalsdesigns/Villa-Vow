@@ -175,6 +175,15 @@
   const pinPreviewInFlight=new Set();
 
   async function resolvePinPreview(pin, cleanUrl, provider){
+    // Called from inside renderBoard()'s own render loop (for a pin with no
+    // cached preview yet) - if the "not signed in" check below ever fired
+    // before this function's first real await, that renderBoard() call
+    // triggered here would run reentrantly INSIDE the outer renderBoard()
+    // that's still mid-loop, clearing and rebuilding the grid underneath
+    // it and leaving a duplicate element behind once the outer loop's own
+    // append resumes. Yielding once up front guarantees every branch below
+    // only ever calls renderBoard() after the outer call has fully finished.
+    await Promise.resolve();
     if(pinPreviewInFlight.has(cleanUrl)) return;
     pinPreviewInFlight.add(cleanUrl);
     try{
@@ -656,6 +665,11 @@
               if(preview&&preview.failed) previewError=preview.reason||'Preview failed';
               else resolvePinPreview(p,video.url,video.provider);
             }
+          }else if(p.pinThumbnail){
+            // A plain link with no auto-fetched preview (not a Pinterest pin,
+            // not a recognized video) still shows a thumbnail the couple
+            // uploaded by hand via the "Add thumbnail" button below.
+            inner='<img src="'+esc(p.pinThumbnail)+'" alt="">';
           }else{
             inner='<div class="pin-icon-wrap tint-brass">'+svg(ICON.external)+'</div>';
           }
@@ -667,12 +681,22 @@
       const tagOptionsHtml=PIN_TAG_OPTIONS.map(function(t){
         return '<option value="'+t[0]+'"'+(t[0]===currentTag?' selected':'')+'>'+t[1]+'</option>';
       }).join('');
-      /* Only a photo's own picture can meaningfully be "replaced": a
-         Pinterest/link pin's image is just a fetched preview of the real
-         source, not something this app owns a copy of. */
+      /* A photo pin's own picture can be replaced outright (imageDataUrl).
+         A Pinterest/link pin can't have its own picture replaced the same
+         way - its thumbnail is normally a live fetched preview of the real
+         source - but the fetch can fail, or fetch the wrong image, or the
+         link may not support a preview at all, so it can still be given a
+         hand-uploaded thumbnail (pinThumbnail), which the rendering above
+         always prefers over a fetched one. Not offered for a Pinterest
+         board or section embed though: those render as their own widget,
+         not a single image, so a thumbnail here would just never show. */
+      const thumbParsed=(p.type==='pinterest'||p.type==='link')?classifyPinterestUrl(p.url):null;
+      const thumbKind=p.pinterestKind||(thumbParsed&&thumbParsed.kind);
       const replacePhotoHtml=p.type==='photo'
-        ? '<button type="button" class="pin-replace-photo">Change photo</button><input type="file" accept="image/*" class="pin-replace-photo-input" style="display:none;">'
-        : '';
+        ? '<button type="button" class="pin-replace-photo" data-field="imageDataUrl">Change photo</button><input type="file" accept="image/*" class="pin-replace-photo-input" style="display:none;">'
+        : ((p.type==='pinterest'||p.type==='link') && thumbKind!=='board' && thumbKind!=='section')
+          ? '<button type="button" class="pin-replace-photo" data-field="pinThumbnail">'+(p.pinThumbnail?'Change thumbnail':'Add thumbnail')+'</button><input type="file" accept="image/*" class="pin-replace-photo-input" style="display:none;">'
+          : '';
       // Only a wedding account ever sees this control - a public visitor
       // can't write anyway, and this pin wouldn't even have reached their
       // browser in the first place if it were private to someone else
@@ -716,16 +740,17 @@
         if(dbReady) db.collection('pinboard').doc(p.id).update({tag:val});
         else { p.tag=val; }
       });
-      if(p.type==='photo'){
-        const changeBtn=el.querySelector('.pin-replace-photo');
+      const changeBtn=el.querySelector('.pin-replace-photo');
+      if(changeBtn){
+        const field=changeBtn.dataset.field;
         const replaceInput=el.querySelector('.pin-replace-photo-input');
         changeBtn.addEventListener('click',function(){ replaceInput.click(); });
         replaceInput.addEventListener('change',function(){
           const file=replaceInput.files[0];
           if(!file) return;
           compressPinImageFile(file,function(url){
-            if(dbReady) db.collection('pinboard').doc(p.id).update({imageDataUrl:url});
-            else { p.imageDataUrl=url; renderBoard(); }
+            if(dbReady) db.collection('pinboard').doc(p.id).update({[field]:url});
+            else { p[field]=url; renderBoard(); }
           },function(){
             alert('This image is still too large after compression. Try a smaller or simpler photo.');
           });
