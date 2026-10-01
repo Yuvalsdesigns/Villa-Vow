@@ -872,6 +872,17 @@ function openModal(pane){
   document.querySelectorAll('.modal-tabs button').forEach(b=>b.classList.toggle('active', b.dataset.pane===pane));
   document.querySelectorAll('.modal-pane').forEach(p=>p.classList.toggle('active', p.id==='pane-'+pane));
 }
+/* Dress pins default to private (see stampPinPrivacy) - this just lets
+   whoever's adding one know that's about to happen, right as they pick
+   the tag, rather than it silently vanishing from the shared view after
+   saving with no explanation. */
+[['photoTag','photoDressHint'],['pinterestTag','pinterestDressHint'],['linkTag','linkDressHint']].forEach(([selectId,hintId])=>{
+  const select = document.getElementById(selectId), hint = document.getElementById(hintId);
+  if(!select || !hint) return;
+  const sync = ()=>{ hint.style.display = select.value==='dress' ? 'block' : 'none'; };
+  select.addEventListener('change', sync);
+  sync();
+});
 function closeModal(){ backdrop.classList.remove('open'); resetPhotoForm(); }
 document.getElementById('btnAddPhoto').addEventListener('click', ()=>openModal('photo'));
 document.getElementById('btnAddLink').addEventListener('click', ()=>openModal('link'));
@@ -981,7 +992,7 @@ function resetPhotoForm(){
 }
 document.getElementById('savePhoto').addEventListener('click', ()=>{
   if(!pendingDataUrl) return;
-  const data = {type:'photo', imageDataUrl:pendingDataUrl, title:document.getElementById('photoTitle').value.trim()||'Untitled', tag:document.getElementById('photoTag').value, createdAt:Date.now()};
+  const data = stampPinPrivacy({type:'photo', imageDataUrl:pendingDataUrl, title:document.getElementById('photoTitle').value.trim()||'Untitled', tag:document.getElementById('photoTag').value, createdAt:Date.now()});
   if(dbReady) db.collection('pinboard').add(data).catch(()=>{
     document.getElementById('photoWarn').textContent='Could not save, the image may be too large. Try a smaller photo.';
     document.getElementById('photoWarn').style.display='block';
@@ -1015,7 +1026,7 @@ document.getElementById('pasteClipboard')?.addEventListener('click', async ()=>{
 document.getElementById('savePinterest')?.addEventListener('click', ()=>{
   const url=document.getElementById('pinterestUrl').value.trim();
   if(!url) return;
-  const data={type:'pinterest',url,title:document.getElementById('pinterestTitle').value.trim()||'Pinterest Pin',note:document.getElementById('pinterestNote').value.trim(),tag:document.getElementById('pinterestTag').value,createdAt:Date.now()};
+  const data=stampPinPrivacy({type:'pinterest',url,title:document.getElementById('pinterestTitle').value.trim()||'Pinterest Pin',note:document.getElementById('pinterestNote').value.trim(),tag:document.getElementById('pinterestTag').value,createdAt:Date.now()});
   if(dbReady) db.collection('pinboard').add(data); else {localAdd(state.pins,data);renderBoard();renderStart();}
   document.getElementById('pinterestUrl').value=''; document.getElementById('pinterestTitle').value=''; document.getElementById('pinterestNote').value='';
   closeModal();
@@ -1034,6 +1045,7 @@ document.getElementById('saveLink').addEventListener('click', ()=>{
   }else{
     data = {type:'link', url, title:title||url, note, tag, createdAt:Date.now()};
   }
+  data = stampPinPrivacy(data);
   if(dbReady) db.collection('pinboard').add(data);
   else { localAdd(state.pins,data); renderBoard(); renderStart(); }
   document.getElementById('linkUrl').value=''; document.getElementById('linkTitle').value=''; document.getElementById('linkNote').value='';

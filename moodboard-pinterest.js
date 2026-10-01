@@ -673,7 +673,25 @@
       const replacePhotoHtml=p.type==='photo'
         ? '<button type="button" class="pin-replace-photo">Change photo</button><input type="file" accept="image/*" class="pin-replace-photo-input" style="display:none;">'
         : '';
-      el.innerHTML=inner+'<div class="pin-body"><select class="pin-tag-select" aria-label="Category">'+tagOptionsHtml+'</select><textarea class="pin-title-input" rows="1" placeholder="Untitled">'+esc(p.title||'')+'</textarea>'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:var(--font-primary);">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+replacePhotoHtml+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
+      // Only a wedding account ever sees this control - a public visitor
+      // can't write anyway, and this pin wouldn't even have reached their
+      // browser in the first place if it were private to someone else
+      // (firestore.rules' pinVisibleTo denies the read server-side, not
+      // just visually). If it IS private, the only account it could be
+      // showing for right now is the one it's private to - there's no
+      // "whose is this" ambiguity to display.
+      const privacyHtml = (typeof canEdit!=='undefined' && canEdit)
+        ? (p.privateToEmail
+            ? '<div class="pin-privacy on">🔒 Private to you <button type="button" class="pin-privacy-toggle">Share with everyone</button></div>'
+            : '<button type="button" class="pin-privacy-toggle pin-privacy-off">Keep private to you</button>')
+        : '';
+      el.innerHTML=inner+'<div class="pin-body"><select class="pin-tag-select" aria-label="Category">'+tagOptionsHtml+'</select><textarea class="pin-title-input" rows="1" placeholder="Untitled">'+esc(p.title||'')+'</textarea>'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:var(--font-primary);">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+replacePhotoHtml+privacyHtml+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
+      el.querySelector('.pin-privacy-toggle')?.addEventListener('click',function(){
+        const makePrivate = !p.privateToEmail;
+        const data = {privateToEmail: makePrivate ? currentUserEmail : null};
+        if(dbReady) db.collection('pinboard').doc(p.id).update(data);
+        else { p.privateToEmail = data.privateToEmail; renderBoard(); }
+      });
       const titleInput=el.querySelector('.pin-title-input');
       const titleCommitted=titleInput.value;
       // A long title used to just sit clipped in a single-line box, only
@@ -760,7 +778,7 @@
       }
       const url=parsed.url;
       const defaultTitle=parsed.kind==='board'?'Pinterest Board':parsed.kind==='section'?'Pinterest Section':'Pinterest Pin';
-      const data={type:'pinterest',pinterestKind:parsed.kind,url:url,title:document.getElementById('pinterestTitle').value.trim()||defaultTitle,note:document.getElementById('pinterestNote').value.trim(),tag:document.getElementById('pinterestTag').value,createdAt:Date.now()};
+      const data=stampPinPrivacy({type:'pinterest',pinterestKind:parsed.kind,url:url,title:document.getElementById('pinterestTitle').value.trim()||defaultTitle,note:document.getElementById('pinterestNote').value.trim(),tag:document.getElementById('pinterestTag').value,createdAt:Date.now()});
       if(dbReady) db.collection('pinboard').add(data);
       else {localAdd(state.pins,data);renderBoard();renderStart();}
       document.getElementById('pinterestUrl').value='';

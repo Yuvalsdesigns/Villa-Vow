@@ -275,7 +275,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 
 "use strict";
 
-let db = null, dbReady=false, syncUnavailable=false, canEdit=true;
+let db = null, dbReady=false, syncUnavailable=false, canEdit=true, currentUserEmail=null;
 const state ={ todos:[], budget:[], pins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, publicBudgetSummary:null, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], giftIdeas:[], venueContacts:[], travelGuide:[], emailTemplates:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
@@ -682,6 +682,7 @@ async function initDb(){
     if(!db){ syncUnavailable=true; setSync(false,'no live sync in this view, changes stay on this device only'); renderAll(); return; }
     dbReady = true;
     canEdit = await window.claude.use('canEdit');
+    currentUserEmail = canEdit ? await window.claude.use('currentUserEmail') : null;
     if(!canEdit) db = wrapReadOnlyDb(db);
     document.body.classList.toggle('read-only-mode', !canEdit);
     const roBanner = document.getElementById('readOnlyBanner');
@@ -802,6 +803,16 @@ function renderAll(){ renderTodos(); renderBudget(); renderBoard(); renderConsid
 
 /* fallback local id for no-db mode */
 function localAdd(arr, data){ data.id = 'local-'+Math.random().toString(36).slice(2); arr.unshift(data); return data; }
+/* A dress pin defaults to private-to-whoever-added-it (a wedding dress is
+   usually meant as a surprise from the other partner), matching
+   firestore.rules' pinVisibleTo. Every other tag, and every call site that
+   doesn't pass through this, stays visible to everyone as before - this
+   only ever adds the field, never removes a privacy choice already made
+   (editing an existing pin goes through updatePin, not this). */
+function stampPinPrivacy(data){
+  if(data.tag==='dress' && currentUserEmail && data.privateToEmail===undefined) data.privateToEmail = currentUserEmail;
+  return data;
+}
 
 
 "use strict";
