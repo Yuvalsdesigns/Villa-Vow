@@ -214,7 +214,7 @@
         pinPreviewCache.set(cleanUrl,{failed:true,reason}); window.renderBoard(); return;
       }
       pinPreviewCache.set(cleanUrl,{thumbnailUrl:data.thumbnailUrl,title:data.title,resolvedUrl:data.url});
-      if(dbReady&&pin.id) db.collection('pinboard').doc(pin.id).update({pinThumbnail:data.thumbnailUrl,pinResolvedUrl:data.url});
+      if(dbReady&&pin.id) pinCollectionRef(pin.privateToEmail).doc(pin.id).update({pinThumbnail:data.thumbnailUrl,pinResolvedUrl:data.url});
       else { pin.pinThumbnail=data.thumbnailUrl; pin.pinResolvedUrl=data.url; }
       window.renderBoard();
     }catch(e){
@@ -712,9 +712,24 @@
       el.innerHTML=inner+'<div class="pin-body"><select class="pin-tag-select" aria-label="Category">'+tagOptionsHtml+'</select><textarea class="pin-title-input" rows="1" placeholder="Untitled">'+esc(p.title||'')+'</textarea>'+(p.note?'<p>'+esc(p.note)+'</p>':'')+(previewError?'<p style="color:#b3372f;font-size:10.5px;font-family:var(--font-primary);">'+esc(previewError)+'</p>':'')+((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')+replacePhotoHtml+privacyHtml+'</div><button class="del-pin">'+svg(ICON.x)+'</button>';
       el.querySelector('.pin-privacy-toggle')?.addEventListener('click',function(){
         const makePrivate = !p.privateToEmail;
-        const data = {privateToEmail: makePrivate ? currentUserEmail : null};
-        if(dbReady) db.collection('pinboard').doc(p.id).update(data);
-        else { p.privateToEmail = data.privateToEmail; renderBoard(); }
+        if(dbReady){
+          // A pin's privacy isn't just a field to flip - it's WHICH
+          // collection the document lives in (see pinCollectionRef), so
+          // "un-hide"/"hide" has to actually move it: write the full pin
+          // to its new home, then remove it from the old one, batched so
+          // it's never briefly in both places or neither.
+          const {id, ...rest} = p;
+          if(makePrivate) rest.privateToEmail = currentUserEmail; else delete rest.privateToEmail;
+          const oldRef = pinCollectionRef(p.privateToEmail).doc(p.id);
+          const newRef = pinCollectionRef(makePrivate ? currentUserEmail : null).doc();
+          const batch = db.batch();
+          batch.set(newRef, rest);
+          batch.delete(oldRef);
+          batch.commit();
+        } else {
+          p.privateToEmail = makePrivate ? currentUserEmail : null;
+          renderBoard();
+        }
       });
       const titleInput=el.querySelector('.pin-title-input');
       const titleCommitted=titleInput.value;
@@ -732,12 +747,12 @@
       titleInput.addEventListener('blur',function(){
         const val=titleInput.value.trim();
         if(val===titleCommitted) return;
-        if(dbReady) db.collection('pinboard').doc(p.id).update({title:val});
+        if(dbReady) pinCollectionRef(p.privateToEmail).doc(p.id).update({title:val});
         else { p.title=val; }
       });
       el.querySelector('.pin-tag-select').addEventListener('change',function(e){
         const val=e.target.value;
-        if(dbReady) db.collection('pinboard').doc(p.id).update({tag:val});
+        if(dbReady) pinCollectionRef(p.privateToEmail).doc(p.id).update({tag:val});
         else { p.tag=val; }
       });
       const changeBtn=el.querySelector('.pin-replace-photo');
@@ -749,7 +764,7 @@
           const file=replaceInput.files[0];
           if(!file) return;
           compressPinImageFile(file,function(url){
-            if(dbReady) db.collection('pinboard').doc(p.id).update({[field]:url});
+            if(dbReady) pinCollectionRef(p.privateToEmail).doc(p.id).update({[field]:url});
             else { p[field]=url; renderBoard(); }
           },function(){
             alert('This image is still too large after compression. Try a smaller or simpler photo.');
@@ -768,7 +783,7 @@
       el.querySelector('.del-pin').addEventListener('click',function(){
         const label=p.title?'"'+p.title+'"':'this item';
         confirmAction('Are you sure you want to delete '+label+'?',function(){
-          if(dbReady) db.collection('pinboard').doc(p.id).delete();
+          if(dbReady) pinCollectionRef(p.privateToEmail).doc(p.id).delete();
           else {state.pins=state.pins.filter(function(x){return x.id!==p.id;});renderBoard();renderStart();}
         });
       });
@@ -804,7 +819,7 @@
       const url=parsed.url;
       const defaultTitle=parsed.kind==='board'?'Pinterest Board':parsed.kind==='section'?'Pinterest Section':'Pinterest Pin';
       const data=stampPinPrivacy({type:'pinterest',pinterestKind:parsed.kind,url:url,title:document.getElementById('pinterestTitle').value.trim()||defaultTitle,note:document.getElementById('pinterestNote').value.trim(),tag:document.getElementById('pinterestTag').value,createdAt:Date.now()});
-      if(dbReady) db.collection('pinboard').add(data);
+      if(dbReady) pinCollectionRef(data.privateToEmail).add(data);
       else {localAdd(state.pins,data);renderBoard();renderStart();}
       document.getElementById('pinterestUrl').value='';
       document.getElementById('pinterestTitle').value='';

@@ -852,7 +852,7 @@ function renderBoard(){
       + ((p.type==='link'||p.type==='pinterest')?'<a target="_blank" rel="noopener" href="'+esc(p.url)+'">Open source ↗</a>':'')
       + '</div><button class="del-pin">'+svg(ICON.x)+'</button>';
     el.querySelector('.del-pin').addEventListener('click', ()=>{
-      if(dbReady) db.collection('pinboard').doc(p.id).delete();
+      if(dbReady) pinCollectionRef(p.privateToEmail).doc(p.id).delete();
       else { state.pins = state.pins.filter(x=>x.id!==p.id); renderBoard(); renderStart(); }
     });
     grid.appendChild(el);
@@ -993,7 +993,7 @@ function resetPhotoForm(){
 document.getElementById('savePhoto').addEventListener('click', ()=>{
   if(!pendingDataUrl) return;
   const data = stampPinPrivacy({type:'photo', imageDataUrl:pendingDataUrl, title:document.getElementById('photoTitle').value.trim()||'Untitled', tag:document.getElementById('photoTag').value, createdAt:Date.now()});
-  if(dbReady) db.collection('pinboard').add(data).catch(()=>{
+  if(dbReady) pinCollectionRef(data.privateToEmail).add(data).catch(()=>{
     document.getElementById('photoWarn').textContent='Could not save, the image may be too large. Try a smaller photo.';
     document.getElementById('photoWarn').style.display='block';
   });
@@ -1027,7 +1027,7 @@ document.getElementById('savePinterest')?.addEventListener('click', ()=>{
   const url=document.getElementById('pinterestUrl').value.trim();
   if(!url) return;
   const data=stampPinPrivacy({type:'pinterest',url,title:document.getElementById('pinterestTitle').value.trim()||'Pinterest Pin',note:document.getElementById('pinterestNote').value.trim(),tag:document.getElementById('pinterestTag').value,createdAt:Date.now()});
-  if(dbReady) db.collection('pinboard').add(data); else {localAdd(state.pins,data);renderBoard();renderStart();}
+  if(dbReady) pinCollectionRef(data.privateToEmail).add(data); else {localAdd(state.pins,data);renderBoard();renderStart();}
   document.getElementById('pinterestUrl').value=''; document.getElementById('pinterestTitle').value=''; document.getElementById('pinterestNote').value='';
   closeModal();
 });
@@ -1046,7 +1046,7 @@ document.getElementById('saveLink').addEventListener('click', ()=>{
     data = {type:'link', url, title:title||url, note, tag, createdAt:Date.now()};
   }
   data = stampPinPrivacy(data);
-  if(dbReady) db.collection('pinboard').add(data);
+  if(dbReady) pinCollectionRef(data.privateToEmail).add(data);
   else { localAdd(state.pins,data); renderBoard(); renderStart(); }
   document.getElementById('linkUrl').value=''; document.getElementById('linkTitle').value=''; document.getElementById('linkNote').value='';
   closeModal();

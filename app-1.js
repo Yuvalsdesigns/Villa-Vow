@@ -276,7 +276,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 "use strict";
 
 let db = null, dbReady=false, syncUnavailable=false, canEdit=true, currentUserEmail=null;
-const state ={ todos:[], budget:[], pins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, publicBudgetSummary:null, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], giftIdeas:[], venueContacts:[], travelGuide:[], emailTemplates:[] };
+const state ={ todos:[], budget:[], pins:[], publicPins:[], myPrivatePins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, publicBudgetSummary:null, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], giftIdeas:[], venueContacts:[], travelGuide:[], emailTemplates:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -620,6 +620,11 @@ function wrapReadOnlyDb(realDb){
   function wrapDocRef(ref){
     return new Proxy(ref, { get(target, prop){
       if(prop==='update' || prop==='set' || prop==='delete') return blocked;
+      // A subcollection under this doc (privatePins/{email}/items, say)
+      // needs the exact same wrapping as a top-level one - without this,
+      // a non-editor's write to it would slip through unblocked once the
+      // chain goes one level deeper than collection().doc().
+      if(prop==='collection') return (...args)=> wrapCollectionRef(target.collection(...args));
       const val = target[prop];
       return typeof val==='function' ? val.bind(target) : val;
     }});
@@ -717,10 +722,26 @@ async function initDb(){
       state.publicBudgetSummary = doc.exists ? doc.data() : null;
       if(!canEdit) renderPublicBudgetChart();
     }, err=>setSync(false,'sync error')));
-    unsub.push(db.collection('pinboard').orderBy('createdAt','desc').onSnapshot(snap=>{
-      state.pins = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    // state.pins is the merge of the public pinboard (everyone) and, only
+    // when signed in, this account's own privatePins/{email}/items (see
+    // pinCollectionRef's comment for why a private pin lives at that path
+    // instead of just a flag on a pinboard doc). Either listener firing
+    // recomputes the same merged, re-sorted list, so the two can never
+    // show stale data relative to each other.
+    function mergePins(){
+      state.pins = [...state.publicPins, ...state.myPrivatePins].sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
       renderBoard(); renderStart();
+    }
+    unsub.push(db.collection('pinboard').orderBy('createdAt','desc').onSnapshot(snap=>{
+      state.publicPins = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      mergePins();
     }, err=>setSync(false,'sync error')));
+    if(currentUserEmail){
+      unsub.push(db.collection('privatePins').doc(currentUserEmail).collection('items').orderBy('createdAt','desc').onSnapshot(snap=>{
+        state.myPrivatePins = snap.docs.map(d=>({id:d.id, ...d.data()}));
+        mergePins();
+      }, err=>setSync(false,'sync error')));
+    }
     unsub.push(db.collection('pinterestBoards').orderBy('addedAt','asc').onSnapshot(snap=>{
       state.pinterestBoards = snap.docs.map(d=>({id:d.id, ...d.data()}));
       if(typeof renderPinterestBoards==='function') renderPinterestBoards();
@@ -804,14 +825,34 @@ function renderAll(){ renderTodos(); renderBudget(); renderBoard(); renderConsid
 /* fallback local id for no-db mode */
 function localAdd(arr, data){ data.id = 'local-'+Math.random().toString(36).slice(2); arr.unshift(data); return data; }
 /* A dress pin defaults to private-to-whoever-added-it (a wedding dress is
-   usually meant as a surprise from the other partner), matching
-   firestore.rules' pinVisibleTo. Every other tag, and every call site that
-   doesn't pass through this, stays visible to everyone as before - this
-   only ever adds the field, never removes a privacy choice already made
-   (editing an existing pin goes through updatePin, not this). */
+   usually meant as a surprise from the other partner). Every other tag,
+   and every call site that doesn't pass through this, stays visible to
+   everyone as before - this only ever adds the field, never removes a
+   privacy choice already made (editing an existing pin goes through
+   pinCollectionRef below, not this). */
 function stampPinPrivacy(data){
   if(data.tag==='dress' && currentUserEmail && data.privateToEmail===undefined) data.privateToEmail = currentUserEmail;
   return data;
+}
+/* Where a pin actually lives in Firestore. A public pin is a flat document
+   in 'pinboard', same as always. A private one lives at
+   privatePins/{that one email}/items/{pinId} instead - NOT in 'pinboard'
+   with a privateToEmail field, which was the first version of this and
+   turned out not to work: Firestore only enforces a per-document field
+   condition like that for a direct get() of one known document, not for
+   the live list query the moodboard actually runs to show the grid - a
+   list query just ignores that part of the rule and returns every
+   document regardless (confirmed against a real Firestore emulator, not
+   just inferred). A path segment, by contrast, is something Firestore can
+   and does enforce correctly for a list query, the same way every other
+   privacy boundary in this app already works (see firestore.rules) - so
+   that's what decides visibility now, with the privateToEmail field kept
+   alongside purely so the UI can still tell at a glance whose pin it is,
+   not as the actual access check. */
+function pinCollectionRef(privateToEmail){
+  return privateToEmail
+    ? db.collection('privatePins').doc(privateToEmail).collection('items')
+    : db.collection('pinboard');
 }
 
 
