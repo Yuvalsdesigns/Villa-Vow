@@ -1625,7 +1625,7 @@ function renderStyleSections(){
     c.innerHTML='<img src="'+esc(img)+'" alt=""><div class="body"><div class="eyebrow tint-text-'+(tagTint[tag]||'cypress')+'">'+esc(title)+'</div><h4>'+esc(desc)+'</h4><button class="btn small">Pin this</button></div>';
     c.querySelector('button').addEventListener('click',()=>{
       const data=stampPinPrivacy({type:'photo',imageDataUrl:img,title:desc,tag,createdAt:Date.now()});
-      if(dbReady) db.collection('pinboard').add(data); else {localAdd(state.pins,data);renderBoard();renderStart();}
+      if(dbReady) pinCollectionRef(data.privateToEmail).add(data); else {localAdd(state.pins,data);renderBoard();renderStart();}
       showTab('board');
     });
     vg.appendChild(c);
@@ -1684,7 +1684,7 @@ function pinStyle(key,label,section){
   const photo = STYLE_PHOTOS[key];
   const data = stampPinPrivacy(photo ? {type:'photo', imageDataUrl:photo, title:label, note:section, tag:sectionTag(section), createdAt:Date.now()}
     : {type:'style', icon:key, title:label, note:section, tag:sectionTag(section), createdAt:Date.now()});
-  if(dbReady) db.collection('pinboard').add(data);
+  if(dbReady) pinCollectionRef(data.privateToEmail).add(data);
   else { localAdd(state.pins,data); renderBoard(); renderStart(); }
   showTab('board');
 }
@@ -1713,7 +1713,7 @@ function customStyleCard(s, sectionTitle){
     + '<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;"><button class="btn small pin-custom">Pin this</button><button class="btn small ghost del-custom">Delete</button></div>';
   card.querySelector('.pin-custom').addEventListener('click', ()=>{
     const data = stampPinPrivacy({type:'photo', imageDataUrl:s.image, title:s.name, note:s.description||'', tag:sectionTag(sectionTitle), createdAt:Date.now()});
-    if(dbReady) db.collection('pinboard').add(data); else { localAdd(state.pins,data); renderBoard(); renderStart(); }
+    if(dbReady) pinCollectionRef(data.privateToEmail).add(data); else { localAdd(state.pins,data); renderBoard(); renderStart(); }
     showTab('board');
   });
   card.querySelector('.del-custom').addEventListener('click', ()=>{
