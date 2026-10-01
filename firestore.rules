@@ -24,10 +24,33 @@ service cloud.firestore {
       return coll in ['budget', 'guests', 'invoiceFiles', 'loveNotes']
         || (coll == 'meta' && id == 'budgetGoal');
     }
+    /* A single moodboard pin can also be hidden from the OTHER wedding
+       accounts, not just the public - e.g. a wedding dress pin kept as a
+       surprise from the groom. Setting privateToEmail on a pin restricts
+       it to exactly that one signed-in email; leaving it unset (every pin
+       before this feature, and every pin by default) keeps it visible to
+       everyone, same as any other moodboard pin. request.auth can be null
+       here (a public visitor), so email is passed in rather than read
+       directly off request.auth.token. */
+    function pinVisibleTo(email, data) {
+      return data.get('privateToEmail', null) == null || data.get('privateToEmail', null) == email;
+    }
 
     match /{collection}/{docId} {
-      allow read: if isWeddingUser() || !isPrivateDoc(collection, docId);
-      allow write: if isWeddingUser();
+      allow read: if collection == 'pinboard'
+        ? pinVisibleTo(request.auth != null ? request.auth.token.email : null, resource.data)
+        : (isWeddingUser() || !isPrivateDoc(collection, docId));
+      // A new pin can only be marked private to the account creating it -
+      // otherwise one wedding account could lock another one out of a pin
+      // they just added. An existing private pin can only be touched
+      // (edited, un-hidden, deleted) by the one account it's private to;
+      // a non-private pin, as always, is editable by any wedding account.
+      allow create: if collection == 'pinboard'
+        ? (isWeddingUser() && pinVisibleTo(request.auth.token.email, request.resource.data))
+        : isWeddingUser();
+      allow update, delete: if collection == 'pinboard'
+        ? (isWeddingUser() && pinVisibleTo(request.auth.token.email, resource.data))
+        : isWeddingUser();
     }
   }
 }

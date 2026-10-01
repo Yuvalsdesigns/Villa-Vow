@@ -214,6 +214,10 @@
       const email=services.auth.currentUser&&services.auth.currentUser.email;
       return !!(email&&WEDDING_EMAILS.includes(email));
     }catch(err){return false;}}
+    if(name==='currentUserEmail'){try{
+      const services=await ensureFirebase();
+      return services.auth.currentUser&&services.auth.currentUser.email||null;
+    }catch(err){return null;}}
     if(name==='sample'){
       try{
         const services=await ensureFirebase();
