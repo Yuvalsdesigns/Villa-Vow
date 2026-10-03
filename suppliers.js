@@ -93,7 +93,6 @@ function ensureSupplierModal(){
   renderSupplierCategoryOptions('supCategory', false);
   const close = ()=> m.classList.remove('open');
   m.querySelector('#supModalClose').addEventListener('click', close);
-  m.addEventListener('click', e=>{ if(e.target===m) close(); });
   m.querySelector('#supCancel').addEventListener('click', close);
   m.querySelector('#supImage').addEventListener('input', updateSupplierPreview);
   const drop = m.querySelector('#supDropZone'), file = m.querySelector('#supFileInput');
@@ -327,7 +326,6 @@ function ensureSupplierContactModal(){
   document.body.appendChild(m);
   const close = ()=> m.classList.remove('open');
   m.querySelector('#scModalClose').addEventListener('click', close);
-  m.addEventListener('click', e=>{ if(e.target===m) close(); });
   m.querySelector('#scCancel').addEventListener('click', close);
   const drop = m.querySelector('#scDropZone'), file = m.querySelector('#scFileInput');
   drop.addEventListener('click', ()=> file.click());
