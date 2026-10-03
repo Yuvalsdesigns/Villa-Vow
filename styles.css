@@ -1172,3 +1172,8 @@
   .venue-hero .edit-supplier,.venue-hero .del-supplier{z-index:3;background:rgba(0,0,0,.4);color:#fff;border-radius:50%;width:26px;height:26px;align-items:center;justify-content:center;padding:0;}
   .venue-hero .edit-supplier:hover,.venue-hero .del-supplier:hover{background:rgba(0,0,0,.65);color:#fff;}
   .venue-hero.image-failed.supplier-hero-fix::before{content:'Photo could not load, edit this supplier to add a different one';}
+  /* Suppliers' filter bar has 4 controls (not venues' 5, not venue-replies'
+     1), so it gets its own column count rather than either of those,
+     the existing .venue-discovery{grid-template-columns:1fr !important}
+     mobile rule still stacks it to one column on a phone same as venues. */
+  .venue-discovery.supplier-discovery{grid-template-columns:1.3fr .9fr .9fr .9fr;}
