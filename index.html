@@ -264,6 +264,41 @@
       <div id="venueContactsGrid" class="venue-contacts-grid"></div>
     </section>
 
+<!-- SUPPLIERS -->
+    <section class="view" id="view-suppliers">
+      <div class="view-head">
+        <h2>Suppliers</h2>
+      </div>
+      <div class="discovery-note">Photographers, caterers, florists, and anyone else you're messaging about the wedding. Add one as soon as you start reaching out, then keep it updated as you hear back.</div>
+      <div class="style-head">
+        <h3 class="tint-text-wine">Your suppliers</h3>
+        <button class="btn small" id="addSupplierBtn">+ Add a supplier</button>
+      </div>
+      <div class="venue-discovery venue-discovery-replies">
+        <input id="supplierSearch" type="text" placeholder="Search a name or category…">
+        <select id="supplierCategoryFilter"><option value="">All categories</option></select>
+        <select id="supplierContactedFilter"><option value="">Contacted or not</option><option value="contacted">Contacted</option><option value="not">Not contacted</option></select>
+        <select id="supplierShortlistedFilter"><option value="">Shortlisted or not</option><option value="shortlisted">Shortlisted</option><option value="not">Not shortlisted</option></select>
+      </div>
+      <div class="venue-grid" id="supplierGrid"></div>
+    </section>
+
+<!-- SUPPLIER REPLIES -->
+    <section class="view" id="view-supplierreplies">
+      <div class="view-head">
+        <h2>Supplier Replies</h2>
+      </div>
+      <div class="discovery-note">Log what each supplier tells you here. Click "Reply" on a supplier's card in the Suppliers tab to jump straight to its entry, or add one from scratch below.</div>
+      <div class="style-head">
+        <h3 class="tint-text-wine">Suppliers you've contacted</h3>
+        <button class="btn small" id="addSupplierContactBtn">+ Add a reply</button>
+      </div>
+      <div class="venue-discovery venue-discovery-replies">
+        <select id="scDecisionFilter"><option value="">All decisions</option><option value="none">No decision yet</option><option value="explore">Explore more</option><option value="not-fit">Not a fit</option></select>
+      </div>
+      <div id="supplierContactsGrid" class="venue-contacts-grid"></div>
+    </section>
+
 <!-- STYLE GALLERY -->
     <section class="view" id="view-style">
       <div class="view-head">
@@ -536,9 +571,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="firebase-sync.js?v=20261001-2"></script>
-<script src="app-1.js?v=20261001-3"></script>
+<script src="app-1.js?v=20261003-1"></script>
 <script src="app-4.js?v=20260913-25"></script>
 <script src="app-2.js?v=20261001-2"></script>
 <script src="app-3.js?v=20261001-2"></script>
 <script src="venue-map.js?v=20260926-11"></script>
 <script src="moodboard-pinterest.js?v=37"></script>
+<script src="suppliers.js?v=1"></script>
