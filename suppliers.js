@@ -37,6 +37,18 @@ function resizeDataUrlForSupplierPhoto(dataUrl, onDone){
   img.src = dataUrl;
 }
 
+/* A vendor's Instagram is often all they give out, no separate photo/caterer
+   website at all, so this is its own field rather than folded into Website.
+   Typing a bare handle (with or without the @) is turned into a real link at
+   render time, a full URL (already pasted from the share sheet, say) is left
+   exactly as given. */
+function normalizeInstagramLink(value){
+  const v = (value||'').trim();
+  if(!v) return '';
+  if(/^https?:\/\//i.test(v)) return v;
+  return 'https://instagram.com/'+v.replace(/^@/,'');
+}
+
 /* ---------------- SUPPLIERS TAB ---------------- */
 let editingSupplierId = null;
 function renderSupplierCategoryOptions(selectId, includeAll){
@@ -58,7 +70,8 @@ function ensureSupplierModal(){
     + '<label class="field">Name / business<input type="text" id="supName" placeholder="e.g. Studio Luce Photography"></label>'
     + '<label class="field">Category<select id="supCategory"></select></label>'
     + '<label class="field">Price (optional)<input type="text" id="supPrice" placeholder="e.g. €2,500 or TBD: inquire"></label>'
-    + '<label class="field">Website / Instagram (optional)<input type="url" id="supWebsite" placeholder="https://…"></label>'
+    + '<label class="field">Website (optional)<input type="url" id="supWebsite" placeholder="https://…"></label>'
+    + '<label class="field">Instagram (optional)<input type="text" id="supInstagram" placeholder="@theirhandle or https://instagram.com/…"></label>'
     + '<label class="field">Photo URL<input type="url" id="supImage" placeholder="Paste a direct picture link, or upload one below"></label>'
     + '<div class="drop-zone" id="supDropZone">Click to choose a photo, or drag one here</div>'
     + '<input type="file" id="supFileInput" accept="image/*" style="display:none;">'
@@ -126,6 +139,7 @@ function openSupplierModal(existing){
   m.querySelector('#supCategory').value = existing ? (existing.category||'') : '';
   m.querySelector('#supPrice').value = existing ? (existing.price||'') : '';
   m.querySelector('#supWebsite').value = existing ? (existing.website||'') : '';
+  m.querySelector('#supInstagram').value = existing ? (existing.instagram||'') : '';
   m.querySelector('#supImage').value = existing ? (existing.image||'') : '';
   SUPPLIER_EXTRA_FIELDS.forEach(([key])=>{ m.querySelector('#sup_'+key).value = existing ? (existing[key]||'') : ''; });
   m.querySelector('#supNotes').value = existing ? (existing.notes||'') : '';
@@ -145,6 +159,7 @@ function saveSupplier(){
     category: m.querySelector('#supCategory').value,
     price: m.querySelector('#supPrice').value.trim(),
     website: m.querySelector('#supWebsite').value.trim(),
+    instagram: m.querySelector('#supInstagram').value.trim(),
     image: m.querySelector('#supImage').value.trim(),
     notes: m.querySelector('#supNotes').value.trim(),
   };
@@ -199,7 +214,10 @@ function renderSuppliers(){
       + '<div class="venue-body">'
       + '<div><h3>'+esc(s.name)+'</h3></div>'
       + (linkedReply && linkedReply.decision ? '<span class="decision-badge '+linkedReply.decision+'">'+(linkedReply.decision==='explore'?'Explore more':'Not a fit')+'</span>' : '')
-      + (s.website ? '<a class="src-link" target="_blank" rel="noopener" href="'+esc(s.website)+'">Website / Instagram ↗</a>' : '')
+      + (s.website || s.instagram ? '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+          + (s.website ? '<a class="src-link" target="_blank" rel="noopener" href="'+esc(s.website)+'">Website ↗</a>' : '')
+          + (s.instagram ? '<a class="src-link" target="_blank" rel="noopener" href="'+esc(normalizeInstagramLink(s.instagram))+'">Instagram ↗</a>' : '')
+        + '</div>' : '')
       + (()=>{
           const bullets = SUPPLIER_EXTRA_FIELDS.filter(([key])=> (s[key]||'').trim()).map(([key,label])=> '<li><b>'+esc(label)+':</b> '+esc(s[key])+'</li>').join('');
           return bullets ? '<ul class="venue-contact-bullets">'+bullets+'</ul>' : '';
