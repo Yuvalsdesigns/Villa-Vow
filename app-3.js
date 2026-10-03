@@ -583,14 +583,18 @@ async function fetchPageText(url, onSuccess, onError){
   }catch(e){ console.error('[page text] unexpected error', e); onError('Request failed: '+(e&&e.message||e)); }
 }
 let pendingDiyThumb = '';
+/* max was 300 (vs. 900 for every other photo in the app - venues, pins,
+   suppliers), far below the ~300-400px a .diy-card actually renders at in
+   the grid, so the browser had to upscale an already-cropped-down source to
+   fill the card, which is what was showing up as blurry/stretched. */
 function resizeDataUrlForDiyThumb(dataUrl, onDone){
   const img = new Image();
   img.onload = ()=>{
-    const max = 300, scale = Math.min(1, max/Math.max(img.width,img.height));
+    const max = 900, scale = Math.min(1, max/Math.max(img.width,img.height));
     const canvas = document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
     canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
     let q=.8, url=canvas.toDataURL('image/jpeg',q);
-    while(url.length>150000 && q>.4){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
+    while(url.length>350000 && q>.4){ q-=.1; url=canvas.toDataURL('image/jpeg',q); }
     onDone(url);
   };
   img.onerror = ()=> onDone(dataUrl);
