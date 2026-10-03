@@ -1164,3 +1164,11 @@
     pointer-events:auto !important;
     opacity:1 !important;
   }
+
+  /* ---------- Suppliers (reuses .venue-grid/.venue-card/.venue-hero/
+     .venue-contacts-grid/.venue-contact-card as-is, these two rules only
+     cover what's specific to a supplier card: its own edit/delete button
+     classes, and a photo-failed message that doesn't talk about a venue) ---------- */
+  .venue-hero .edit-supplier,.venue-hero .del-supplier{z-index:3;background:rgba(0,0,0,.4);color:#fff;border-radius:50%;width:26px;height:26px;align-items:center;justify-content:center;padding:0;}
+  .venue-hero .edit-supplier:hover,.venue-hero .del-supplier:hover{background:rgba(0,0,0,.65);color:#fff;}
+  .venue-hero.image-failed.supplier-hero-fix::before{content:'Photo could not load, edit this supplier to add a different one';}

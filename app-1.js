@@ -69,6 +69,7 @@ const ICON = {
   paperclip:'<path d="M8 12.5l6.5-6.5a3.5 3.5 0 115 5L9.5 21a5 5 0 11-7-7L13 3.5"/>',
   upload:'<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/>',
   download:'<path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/>',
+  camera:'<path d="M4 8h3l2-2h6l2 2h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/>',
 };
 function svg(paths, extra){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" '+(extra||'')+'>'+paths+'</svg>'; }
 
@@ -81,6 +82,8 @@ const TABS = [
   {id:'considerations', label:'Things to Get', icon:ICON.list},
   {id:'venues', label:'Venues & Destinations', icon:ICON.map},
   {id:'venuereplies', label:'Venue Replies', icon:ICON.check2},
+  {id:'suppliers', label:'Suppliers', icon:ICON.camera},
+  {id:'supplierreplies', label:'Supplier Replies', icon:ICON.check2},
   {id:'style', label:'Style Gallery', icon:ICON.style},
   {id:'board', label:'Moodboard', icon:ICON.board},
   {id:'emails', label:'Email Templates', icon:ICON.mail},
@@ -88,7 +91,7 @@ const TABS = [
   {id:'diy', label:'DIY and gifts', icon:ICON.scissors},
   {id:'travelguide', label:'Travel Guide', icon:ICON.compass},
 ];
-const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', venuereplies:'wine', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac', travelguide:'brass'};
+const TAB_TINTS = {start:'blush', todo:'coral', budget:'butter', considerations:'lilac', venues:'wine', venuereplies:'wine', suppliers:'brass', supplierreplies:'brass', board:'cypress', style:'brass', emails:'blush', guestapp:'coral', diy:'lilac', travelguide:'brass'};
 const tabNav = document.getElementById('tabNav');
 const tabsScrollArrow = document.getElementById('tabsScrollArrow');
 const tabsScrollArrowLeft = document.getElementById('tabsScrollArrowLeft');
@@ -276,7 +279,7 @@ document.getElementById('loveNoteSend')?.addEventListener('click', ()=>{
 "use strict";
 
 let db = null, dbReady=false, syncUnavailable=false, canEdit=true, currentUserEmail=null;
-const state ={ todos:[], budget:[], pins:[], publicPins:[], myPrivatePins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, publicBudgetSummary:null, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], giftIdeas:[], venueContacts:[], travelGuide:[], emailTemplates:[] };
+const state ={ todos:[], budget:[], pins:[], publicPins:[], myPrivatePins:[], considerations:[], venues:{}, venueOverrides:{}, customStyles:[], customVenues:[], budgetGoal:100000, publicBudgetSummary:null, guests:[], labels:{mineLabel:'Your guests', partnerLabel:"Fiancé's guests"}, pinterestBoards:[], diyPinterestBoards:[], loveNotes:[], diyIdeas:[], giftIdeas:[], venueContacts:[], travelGuide:[], emailTemplates:[], suppliers:[], supplierContacts:[] };
 
 /* Ballpark estimates for a ~90-guest, 2-3 day villa/masseria wedding in
    Italy or Portugal (Provence would run similar or a bit higher). These
@@ -822,9 +825,18 @@ async function initDb(){
       if(typeof renderVenueFilters==='function') renderVenueFilters();
       renderVenues();
     }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('suppliers').orderBy('createdAt','desc').onSnapshot(snap=>{
+      state.suppliers = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(typeof renderSuppliers==='function') renderSuppliers();
+    }, err=>setSync(false,'sync error')));
+    unsub.push(db.collection('supplierContacts').orderBy('createdAt','desc').onSnapshot(snap=>{
+      state.supplierContacts = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(typeof renderSupplierContacts==='function') renderSupplierContacts();
+      if(typeof renderSuppliers==='function') renderSuppliers();
+    }, err=>setSync(false,'sync error')));
   }catch(e){ syncUnavailable=true; setSync(false,'no live sync, changes stay on this device only'); renderAll(); }
 }
-function renderAll(){ renderTodos(); renderBudget(); renderBoard(); renderConsiderations(); renderVenues(); renderGuestApp(); renderStart(); if(typeof renderEmails==='function') renderEmails(); if(typeof renderGiftIdeas==='function') renderGiftIdeas(); }
+function renderAll(){ renderTodos(); renderBudget(); renderBoard(); renderConsiderations(); renderVenues(); renderGuestApp(); renderStart(); if(typeof renderEmails==='function') renderEmails(); if(typeof renderGiftIdeas==='function') renderGiftIdeas(); if(typeof renderSuppliers==='function') renderSuppliers(); if(typeof renderSupplierContacts==='function') renderSupplierContacts(); }
 
 /* fallback local id for no-db mode */
 function localAdd(arr, data){ data.id = 'local-'+Math.random().toString(36).slice(2); arr.unshift(data); return data; }
