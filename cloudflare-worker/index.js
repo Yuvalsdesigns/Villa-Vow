@@ -532,6 +532,37 @@ async function handleResolvePageText(rawUrl) {
   return json({ error: 'No readable text found on that page' }, 404);
 }
 
+/* Instagram blocks almost all generic server-side HTML scraping outright
+   (429/403, or a login-wall page with no real og:image tag), even from a
+   known crawler user-agent like facebookexternalhit, which is why the
+   fetch below fails far more often than it does for an ordinary vendor
+   website. A public post/reel/IGTV page still has this old, much simpler
+   "media" redirect that resolves straight to the real photo on Instagram's
+   own CDN with no HTML to parse and no login wall involved, so it's tried
+   first, before the generic scrape loop - either it works outright, or it
+   returns null and falls straight through to that loop unchanged. */
+async function tryInstagramDirectMedia(url) {
+  const match = url.pathname.match(/^\/(p|reel|tv)\/([^/]+)\/?/);
+  if (!/(^|\.)instagram\.com$/.test(url.hostname) || !match) return null;
+  const mediaUrl = `https://www.instagram.com/${match[1]}/${match[2]}/media/?size=l`;
+  try {
+    const resp = await fetch(mediaUrl, {
+      redirect: 'follow',
+      headers: { 'User-Agent': LINK_PREVIEW_USER_AGENTS[0] },
+    });
+    if (!resp.ok) return null;
+    const contentType = (resp.headers.get('content-type') || '').split(';')[0].trim();
+    if (!contentType.startsWith('image/')) return null;
+    const declaredLength = Number(resp.headers.get('content-length') || 0);
+    if (declaredLength && declaredLength > MAX_INLINE_IMAGE_BYTES) return null;
+    const buffer = await resp.arrayBuffer();
+    if (buffer.byteLength > MAX_INLINE_IMAGE_BYTES) return null;
+    const base64 = await arrayBufferToBase64(buffer);
+    return { url: url.toString(), title: '', thumbnailUrl: 'data:' + contentType + ';base64,' + base64, sourceImageUrl: mediaUrl, inlined: true };
+  } catch {
+    return null;
+  }
+}
 async function handleResolveLinkPreview(rawUrl) {
   let url;
   try {
@@ -542,6 +573,9 @@ async function handleResolveLinkPreview(rawUrl) {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     return json({ error: 'Only http(s) links are supported' }, 400);
   }
+  const directMedia = await tryInstagramDirectMedia(url);
+  if (directMedia) return json(directMedia);
+  const isInstagram = /(^|\.)instagram\.com$/.test(url.hostname);
   let lastStatus = null;
   for (const userAgent of LINK_PREVIEW_USER_AGENTS) {
     let result;
@@ -571,6 +605,9 @@ async function handleResolveLinkPreview(rawUrl) {
         inlined: !!dataUri,
       });
     }
+  }
+  if (isInstagram) {
+    return json({ error: 'Instagram blocked this fetch, which it does most of the time for links like this - this is on their end, not a bad link. Upload the photo directly instead.' }, 404);
   }
   if (lastStatus) return json({ error: 'Could not fetch that page', status: lastStatus }, 502);
   return json({ error: 'No preview image found on that page' }, 404);
