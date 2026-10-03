@@ -75,11 +75,14 @@ function ensureSupplierModal(){
     + '<label class="field">Photo URL<input type="url" id="supImage" placeholder="Paste a direct picture link, or fetch/upload one below"></label>'
     + '<div class="drop-zone" id="supDropZone">Click to choose a photo, or drag one here</div>'
     + '<input type="file" id="supFileInput" accept="image/*" style="display:none;">'
-    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-      + '<button class="btn small ghost" id="supFetchWebsite" type="button">Fetch photo from website</button>'
-      + '<button class="btn small ghost" id="supFetchInstagram" type="button">Fetch photo from Instagram</button>'
+    + '<button class="btn small ghost" id="supFetchWebsite" type="button" style="align-self:flex-start;">Fetch photo from website</button>'
+    + '<div class="field">'
+      + '<label>Fetch a photo from Instagram (paste a link to one specific photo or reel, not your profile page)</label>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+        + '<input type="url" id="supInstagramPhotoLink" placeholder="https://instagram.com/p/…" style="flex:1;min-width:220px;">'
+        + '<button class="btn small ghost" id="supFetchInstagram" type="button">Fetch from this link</button>'
+      + '</div>'
     + '</div>'
-    + '<p style="font-size:11.5px;color:var(--ink-faint);margin:-6px 0 0;">A link to one specific photo or post works better than a bare profile link, which usually only has a generic cover image.</p>'
     + '<div id="supPreviewWrap" style="display:none;"><img id="supPreview" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;"></div>'
     + SUPPLIER_EXTRA_FIELDS.map(([key,label,placeholder])=> '<label class="field">'+esc(label)+'<input type="text" id="sup_'+key+'" placeholder="'+esc(placeholder)+'"></label>').join('')
     + '<label class="field">Notes (optional)<textarea id="supNotes" rows="2" placeholder="Anything else worth remembering"></textarea></label>'
@@ -175,10 +178,10 @@ function fetchSupplierPhotoFromWebsite(){
 }
 function fetchSupplierPhotoFromInstagram(){
   const m = document.getElementById('supplierModal');
-  const ig = m.querySelector('#supInstagram').value.trim();
+  const link = m.querySelector('#supInstagramPhotoLink').value.trim();
   const warn = m.querySelector('#supWarn'); warn.style.display='none';
-  if(!ig){ warn.textContent='Paste their Instagram above first.'; warn.style.display='block'; return; }
-  fetchSupplierPhotoFromUrl(normalizeInstagramLink(ig), m.querySelector('#supFetchInstagram'), 'Fetch photo from Instagram');
+  if(!link){ warn.textContent='Paste a link to a specific Instagram photo or reel above first.'; warn.style.display='block'; return; }
+  fetchSupplierPhotoFromUrl(normalizeInstagramLink(link), m.querySelector('#supFetchInstagram'), 'Fetch from this link');
 }
 function openSupplierModal(existing){
   editingSupplierId = existing ? existing.id : null;
@@ -189,6 +192,7 @@ function openSupplierModal(existing){
   m.querySelector('#supPrice').value = existing ? (existing.price||'') : '';
   m.querySelector('#supWebsite').value = existing ? (existing.website||'') : '';
   m.querySelector('#supInstagram').value = existing ? (existing.instagram||'') : '';
+  m.querySelector('#supInstagramPhotoLink').value = existing ? (existing.instagramPhotoLink||'') : '';
   m.querySelector('#supImage').value = existing ? (existing.image||'') : '';
   SUPPLIER_EXTRA_FIELDS.forEach(([key])=>{ m.querySelector('#sup_'+key).value = existing ? (existing[key]||'') : ''; });
   m.querySelector('#supNotes').value = existing ? (existing.notes||'') : '';
@@ -209,6 +213,7 @@ function saveSupplier(){
     price: m.querySelector('#supPrice').value.trim(),
     website: m.querySelector('#supWebsite').value.trim(),
     instagram: m.querySelector('#supInstagram').value.trim(),
+    instagramPhotoLink: m.querySelector('#supInstagramPhotoLink').value.trim(),
     image: m.querySelector('#supImage').value.trim(),
     notes: m.querySelector('#supNotes').value.trim(),
   };
