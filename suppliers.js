@@ -72,9 +72,14 @@ function ensureSupplierModal(){
     + '<label class="field">Price (optional)<input type="text" id="supPrice" placeholder="e.g. €2,500 or TBD: inquire"></label>'
     + '<label class="field">Website (optional)<input type="url" id="supWebsite" placeholder="https://…"></label>'
     + '<label class="field">Instagram (optional)<input type="text" id="supInstagram" placeholder="@theirhandle or https://instagram.com/…"></label>'
-    + '<label class="field">Photo URL<input type="url" id="supImage" placeholder="Paste a direct picture link, or upload one below"></label>'
+    + '<label class="field">Photo URL<input type="url" id="supImage" placeholder="Paste a direct picture link, or fetch/upload one below"></label>'
     + '<div class="drop-zone" id="supDropZone">Click to choose a photo, or drag one here</div>'
     + '<input type="file" id="supFileInput" accept="image/*" style="display:none;">'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<button class="btn small ghost" id="supFetchWebsite" type="button">Fetch photo from website</button>'
+      + '<button class="btn small ghost" id="supFetchInstagram" type="button">Fetch photo from Instagram</button>'
+    + '</div>'
+    + '<p style="font-size:11.5px;color:var(--ink-faint);margin:-6px 0 0;">A link to one specific photo or post works better than a bare profile link, which usually only has a generic cover image.</p>'
     + '<div id="supPreviewWrap" style="display:none;"><img id="supPreview" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;"></div>'
     + SUPPLIER_EXTRA_FIELDS.map(([key,label,placeholder])=> '<label class="field">'+esc(label)+'<input type="text" id="sup_'+key+'" placeholder="'+esc(placeholder)+'"></label>').join('')
     + '<label class="field">Notes (optional)<textarea id="supNotes" rows="2" placeholder="Anything else worth remembering"></textarea></label>'
@@ -98,6 +103,8 @@ function ensureSupplierModal(){
       if(evt==='drop' && e.dataTransfer.files[0]) readSupplierPhoto(e.dataTransfer.files[0]);
     });
   });
+  m.querySelector('#supFetchWebsite').addEventListener('click', fetchSupplierPhotoFromWebsite);
+  m.querySelector('#supFetchInstagram').addEventListener('click', fetchSupplierPhotoFromInstagram);
   m.querySelector('#supSave').addEventListener('click', saveSupplier);
   m.querySelector('#supDelete').addEventListener('click', ()=>{
     if(!editingSupplierId) return;
@@ -130,6 +137,48 @@ function readSupplierPhoto(file){
     });
   };
   reader.readAsDataURL(file);
+}
+/* Same og:image lookup the Venues modal already uses (fetchLinkPreviewThumbnail,
+   via the shared Worker), just pointed at whichever of the supplier's two
+   link fields the couple picks a button for, instead of only ever reading
+   one "website" field. */
+function fetchSupplierPhotoFromUrl(url, btn, idleLabel){
+  const m = document.getElementById('supplierModal');
+  const warn = m.querySelector('#supWarn'); warn.style.display='none';
+  btn.disabled = true; btn.textContent='Fetching…';
+  fetchLinkPreviewThumbnail(url,
+    (thumbUrl)=>{
+      btn.disabled = false; btn.textContent=idleLabel;
+      if(/^data:/.test(thumbUrl)){
+        resizeDataUrlForSupplierPhoto(thumbUrl, resizedUrl=>{
+          m.querySelector('#supImage').value = resizedUrl;
+          updateSupplierPreview();
+        });
+      } else {
+        m.querySelector('#supImage').value = thumbUrl;
+        updateSupplierPreview();
+      }
+    },
+    (err)=>{
+      btn.disabled = false; btn.textContent=idleLabel;
+      warn.textContent = err+' You can still paste a direct picture link into the Photo URL field, or upload one instead.';
+      warn.style.display='block';
+    }
+  );
+}
+function fetchSupplierPhotoFromWebsite(){
+  const m = document.getElementById('supplierModal');
+  const website = m.querySelector('#supWebsite').value.trim();
+  const warn = m.querySelector('#supWarn'); warn.style.display='none';
+  if(!website){ warn.textContent='Paste their website above first.'; warn.style.display='block'; return; }
+  fetchSupplierPhotoFromUrl(website, m.querySelector('#supFetchWebsite'), 'Fetch photo from website');
+}
+function fetchSupplierPhotoFromInstagram(){
+  const m = document.getElementById('supplierModal');
+  const ig = m.querySelector('#supInstagram').value.trim();
+  const warn = m.querySelector('#supWarn'); warn.style.display='none';
+  if(!ig){ warn.textContent='Paste their Instagram above first.'; warn.style.display='block'; return; }
+  fetchSupplierPhotoFromUrl(normalizeInstagramLink(ig), m.querySelector('#supFetchInstagram'), 'Fetch photo from Instagram');
 }
 function openSupplierModal(existing){
   editingSupplierId = existing ? existing.id : null;
