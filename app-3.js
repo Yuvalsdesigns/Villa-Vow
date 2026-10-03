@@ -891,7 +891,6 @@ function closeModal(){ backdrop.classList.remove('open'); resetPhotoForm(); }
 document.getElementById('btnAddPhoto').addEventListener('click', ()=>openModal('photo'));
 document.getElementById('btnAddLink').addEventListener('click', ()=>openModal('link'));
 document.getElementById('modalClose').addEventListener('click', closeModal);
-backdrop.addEventListener('click', e=>{ if(e.target===backdrop) closeModal(); });
 document.querySelectorAll('.modal-tabs button').forEach(b=> b.addEventListener('click', ()=>openModal(b.dataset.pane)));
 document.getElementById('cancelPhoto').addEventListener('click', closeModal);
 document.getElementById('btnAddPinterest')?.addEventListener('click', ()=>openModal('pinterest'));

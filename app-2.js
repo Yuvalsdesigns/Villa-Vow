@@ -993,7 +993,6 @@ function ensureCustomVenueModal(){
   document.body.appendChild(m);
   const close = ()=> m.classList.remove('open');
   m.querySelector('#cvModalClose').addEventListener('click', close);
-  m.addEventListener('click', e=>{ if(e.target===m) close(); });
   m.querySelector('#cvCancel').addEventListener('click', close);
   m.querySelector('#cvImage').addEventListener('input', updateCustomVenuePreview);
   m.querySelector('#cvFetchPhoto').addEventListener('click', fetchCustomVenuePhoto);
@@ -1744,7 +1743,6 @@ function ensureStyleModal(){
   document.body.appendChild(m);
   const close = ()=> m.classList.remove('open');
   m.querySelector('#styleModalClose').addEventListener('click', close);
-  m.addEventListener('click', e=>{ if(e.target===m) close(); });
   m.querySelector('#styleCancel').addEventListener('click', close);
   const drop = m.querySelector('#styleDropZone'), file = m.querySelector('#styleFileInput');
   drop.addEventListener('click', ()=> file.click());
@@ -1975,7 +1973,6 @@ function ensureVenueContactModal(){
   document.body.appendChild(m);
   const close = ()=> m.classList.remove('open');
   m.querySelector('#vcModalClose').addEventListener('click', close);
-  m.addEventListener('click', e=>{ if(e.target===m) close(); });
   m.querySelector('#vcCancel').addEventListener('click', close);
   const drop = m.querySelector('#vcDropZone'), file = m.querySelector('#vcFileInput');
   drop.addEventListener('click', ()=> file.click());
